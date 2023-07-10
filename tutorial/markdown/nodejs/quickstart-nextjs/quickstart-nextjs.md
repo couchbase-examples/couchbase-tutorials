@@ -20,6 +20,7 @@ sdk_language:
 length: 45 Mins
 ---
 
+<!-- TODO: update this to be sure its working -->
 [![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=nextjs-quickstart-repo&source=devPortal)](https://gitpod.io/#https://github.com/couchbase-examples/nextjs-quickstart)
 
 ## Prerequisites
@@ -55,11 +56,10 @@ git clone https://github.com/couchbase-examples/nextjs-quickstart
 ### Update environment variables appropriately
 
 We've included a `.env.local.example` file with blank values for you to copy into a file called `.env.local` and fill in the values. We've also included a `.env.default` file for testing and running in GitPod. In most cases, you can ignore the default config file.
-- `COUCHBASE_USERNAME` - The username of an authorized user on your cluster. Follow [these instructions](https://docs.couchbase.com/cloud/clusters/manage-database-users.html#create-database-credentials) to create database credentials on Capella
-- `COUCHBASE_PASSWORD` - The password that corresponds to the user specified above
-- `COUCHBASE_ENDPOINT` - The Couchbase endpoint to connect to. Use `localhost` for a local/Docker cluster, or the Wide Area Network address for a Capella instance (formatted like `cb.<xxxxxx>.cloud.couchbase.com`)
-- `COUCHBASE_BUCKET` - The bucket you'd like to connect to. Set this to `user_profiles` for this tutorial.
-- `IS_CAPELLA` - `true` if you are trying to connect to an instance of Couchbase Capella, `false` otherwise.
+- `CB_USERNAME` - The username of an authorized user on your cluster. Follow [these instructions](https://docs.couchbase.com/cloud/clusters/manage-database-users.html#create-database-credentials) to create database credentials on Capella
+- `CB_PASSWORD` - The password that corresponds to the user specified above
+- `CB_CONNECT_STRING` - The Couchbase endpoint to connect to. Use `couchbase://localhost` for a local/Docker cluster, or the connection string for a Capella database (formatted like `couchbase://cb.<xxxxxx>.cloud.couchbase.com`)
+- `CB_BUCKET` - The bucket you'd like to connect to. Set this to `user_profiles` for this tutorial.
 
 **NOTE on TLS:** The connection logic in this sample app ignores mismatched certificates with the parameter `tls_verify=none`. While this is helpful in streamlining the connection process for development purposes, it should **NOT** be used in production. To learn how to better secure your connection with proper certificates, see [the Node.js TLS connection tutorial](https://developer.couchbase.com/tutorial-nodejs-tls-connection).
 
@@ -92,7 +92,7 @@ npm run init-db:local
 ```sh
 npm run build-indexes
 ```
-This is because the index creation code is contained within the database initialization script, which we don't use for Capella clusters. Learn more in the [ensure-indexes]§ section, and take a look at the example code in the `util/initializeCbServer.js` file to learn how you can programmatically create buckets, collections, and indexes.
+This is because the index creation code is contained within the database initialization script, which we don't use for Capella clusters. Learn more in the section on [Creating Primary Indexes](#creating-primary-indexes) section, and take a look at the example code in the `util/initializeCbServer.js` file to learn how you can programmatically create buckets, collections, and indexes.
 
 Now we're ready to run our application:
 ```sh
@@ -101,15 +101,14 @@ npm run dev
 
 ## Document Structure
 
-We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
+We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, and an email. For this demo we will store individual profiles in documents that belong to collection named `profile`:
 
 ```json
 {
   "pid": "b181551f-071a-4539-96a5-8a3fe8717faf",
   "firstName": "John",
   "lastName": "Wick",
-  "email": "johnwick@couchbase.com",
-  "password": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC"
+  "email": "johnwick@couchbase.com"
 }
 ```
 
@@ -124,7 +123,7 @@ The `couchbase.js` file contains all logic for connecting to the database. It va
 ```js
 export async function connectToDatabase() {
   const cluster = await createCouchbaseCluster()
-  const bucket = cluster.bucket(COUCHBASE_BUCKET);
+  const bucket = cluster.bucket(CB_BUCKET);
   const collection = bucket.defaultCollection();
   const profileCollection = bucket.collection('profile');
 
@@ -161,19 +160,18 @@ The logic for checking the connection can be viewed in the file and is included 
 **`pages/_app.js`**
 This file just provides a wrapper App component to provide more control on page initialization. This allows us to use the global stylesheet. See <https://nextjs.org/docs/advanced-features/custom-app[this> article] from the Next.js docs for more info.
 
-[[ensure-indexes]]
-== Creating Primary Indexes
+## Creating Primary Indexes
 
 In order to ensure queries run, we need to create two primary indexes, one for our user_profile bucket and another for our `profile` collection. The collection index is used by the `"/api/user"` GET endpoint that utilizes a N1QL query to search the database for profile documents where `firstName` or `lastName` match the search value. The bucket index can be used in the case that any documents are added to the bucket's default collection or manually from the Couchbase Web UI.
 
 There are several ways to build these indexes. For example, you could run the following `CREATE PRIMARY INDEX ...` lines as queries in the query workbench on the web UI. However, the following function accomplishes index creation and can be called from `util/initializeCbServer.js` so that indexes will be automatically created along with the buckets and collections (using `npm run init-db:local`).
 
 ```js
-export const ensureIndexes = async(COUCHBASE_BUCKET) => {
+export const ensureIndexes = async(CB_BUCKET) => {
   let {cluster} = await connectToDatabase();
   try {
-    const bucketIndex = `CREATE PRIMARY INDEX ON ${COUCHBASE_BUCKET}`
-    const collectionIndex = `CREATE PRIMARY INDEX ON default:${COUCHBASE_BUCKET}._default.profile;`
+    const bucketIndex = `CREATE PRIMARY INDEX ON ${CB_BUCKET}`
+    const collectionIndex = `CREATE PRIMARY INDEX ON default:${CB_BUCKET}._default.profile;`
     await cluster.query(bucketIndex)
     await cluster.query(collectionIndex)
     console.log(`Index Creation: SUCCESS`)
@@ -213,42 +211,44 @@ Next, we'll fill in logic to handle each of the request types.
 
 ## POST a Profile
 
-After checking that the body contains the proper fields, we create a profile document using the SDK `.insert()` method using the `profileCollection`. Note that you will need to install bcryptjs (to hash passwords) and uid (to generate unique IDs) with npm or yarn and import them in `user.js`.
+After checking that the body contains the proper fields, we create a profile document using the SDK `.insert()` method using the `profileCollection`. Note that you will need to install the `uuid` package (to generate unique IDs) via npm or yarn and import them in `user.js`.
 
 ```js
-if (!body.email || !body.pass) {
-      return res.status(400).send({
-        "message": `${!body.email ? 'email ' : ''}${
-            (!body.email && !body.pass)
-                ? 'and pass are required' : (body.email && !body.pass)
-                ? 'pass is required' : 'is required'
-        }`
+if (req.method === 'POST') {
+  /**
+   *  POST HANDLER
+   */
+  if (!body.email) {
+    return res.status(400).send({
+      "message": 'email is required'
+    })
+  }
+
+  const id = v4();
+  const profile = {
+    pid: id,
+    ...body,
+  }
+  await profileCollection.insert(profile.pid, profile)
+      .then((result) => {
+        res.status(201).send({...profile, ...result});
       })
-    }
-
-    const id = v4();
-    const profile = {
-      pid: id,
-      ...body,
-      pass: bcrypt.hashSync(body.pass, 10)
-    }
-
-    await collection.insert(profile.pid, profile)
-        .then((result) => {
-          res.send(result);
+      .catch((e) => {
+        res.status(500).send({
+          "message": `Profile Insert Failed: ${e.message}`
         })
-        .catch((e) => {
-          res.status(500).send({
-            "message": `Profile Insert Failed: ${e.message}`
-          })
-        })
+      })
+}
 ```
 
 Let’s break this code down.
 
-First, we check that both an email and password exist and then create a `profile` object based on the data that was sent in the request. The `pid` that we’re saving into the account object is a unique key.
+First, we check that an email was sent with the body and then create a `profile` object based on the data that was sent in the request. The `pid` that we’re saving into the account object is a unique key.
 
-After we check for required body parameters, we create an async call to the `profileCollection` using the `insert` method and then return the document saved and the result all as part of the same object back to the user. We utilize the spread operator again to make this simple. `insert` is a basic key-value operation.
+After we check for required body parameters, we can asynchronously write to the `profileCollection` using the `insert` method and then return the document saved back to the user. We utilize the spread operator again to make this simple. `insert` is a basic key-value operation.
+
+### Create Profile UI
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
 
 Next, lets add a simple front-end form to create user profiles. On the `index.js` page, remove all markup between the &lt;main&gt; tags and add the following form:
 
@@ -257,7 +257,6 @@ Next, lets add a simple front-end form to create user profiles. On the `index.js
     <input type="text" placeholder="First Name" name="firstName"/>
     <input type="text" placeholder="Last Name" name="lastName"/>
     <input type="email" placeholder="Email" name="email"/>
-    <input type="password" placeholder="Password" name="password"/>
     <button type="submit">Post Profile</button>
 </form>
 ```
@@ -272,7 +271,6 @@ const handleProfilePost = async (event) => {
             firstName: event.target.firstName.value,
             lastName: event.target.lastName.value,
             email: event.target.email.value,
-            pass: event.target.password.value,
         })
     })
 }
@@ -311,6 +309,9 @@ You can now call this function from `getServerSideProps()` and simply inject the
 
 Note that we'll stringify then re-parse the data to avoid any issues with JSON serialization. This is just a quirk of Next.js that can sometimes cause a bug, so it's better to ensure proper serialization.
 
+### Read Profile UI
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The demo app uses a `UserRow` component rather than a `UserCard`, but the functionality of each is roughly the same.
+
 To display the user we've fetched, we'll also add a custom React component. To accomplish this, create a new directory outside of `pages/` and call it `components`. Within `components/` add a `UserCard.js` file for the following component:
 
 ```js
@@ -347,8 +348,7 @@ Update a Profile by Profile ID by using the SDK `.upsert()` method on the `profi
               pid: result.content.pid,
               firstName: body.firstName ? body.firstName : result.content.firstName,
               lastName: body.lastName ? body.lastName : result.content.lastName,
-              email: body.email ? body.email : result.content.email,
-              pass: body.pass ? bcrypt.hashSync(body.pass, 10) : result.content.pass,
+              email: body.email ? body.email : result.content.email
             }
 
             /* Persist updates with new doc */
@@ -364,7 +364,7 @@ Update a Profile by Profile ID by using the SDK `.upsert()` method on the `profi
     }
 ```
 
-We don't need to specify the `pid` as it already exists, so when we create the profile document, we just need the profile information (`firstName`, `lastName`, `email`, and `password`). The user may only be changing one or many fields in the document so we first retrieve the existing document and check for differences and only update the fields needed to be changed.
+We don't need to specify the `pid` as it already exists, so when we create the profile document, we just need the profile information (`firstName`, `lastName`, and `email`). The user may only be changing one or many fields in the document so we first retrieve the existing document and check for differences and only update the fields needed to be changed.
 
 We first look up the existing document and make sure it exists, if it does not, return a 500 level error code and message: "Cannot update: document not found".
 
@@ -374,6 +374,9 @@ Next, we replace the existing fields if we have a value from the HTTP Request (`
 
 Finally, we create an async call to the `profileCollection` using the `upsert` method and then return the document saved and the result just as we did in the previous endpoint.
 
+### Edit Profile UI
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
+
 Let's add another front-end form to enable editing:
 
 ```html
@@ -382,7 +385,6 @@ Let's add another front-end form to enable editing:
     <input type="text" placeholder="New First Name" name="firstName"/>
     <input type="text" placeholder="New Last Name" name="lastName"/>
     <input type="email" placeholder="New Email" name="email"/>
-    <input type="password" placeholder="New Password" name="password"/>
     <button type="submit">Update Profile</button>
 </form>
 ```
@@ -396,8 +398,7 @@ const handleProfilePut = async (event) => {
     body: JSON.stringify({
       firstName: event.target.firstName.value,
       lastName: event.target.lastName.value,
-      email: event.target.email.value,
-      pass: event.target.password.value,
+      email: event.target.email.value
     })
   })
 }
@@ -476,11 +477,11 @@ try {
 
   const query = options.parameters.SEARCH == null ? `
       SELECT p.*
-      FROM ${process.env.COUCHBASE_BUCKET}._default.profile p
+      FROM ${process.env.CB_BUCKET}._default.profile p
       LIMIT $LIMIT OFFSET $SKIP;
       ` : `
       SELECT p.*
-      FROM ${process.env.COUCHBASE_BUCKET}._default.profile p
+      FROM ${process.env.CB_BUCKET}._default.profile p
       WHERE lower(p.firstName) LIKE $SEARCH OR lower(p.lastName) LIKE $SEARCH
       LIMIT $LIMIT OFFSET $SKIP;
     `
@@ -505,6 +506,9 @@ Then, we build our N1QL query using the parameters we just created.
 Finally, we pass that `query` and the `options` to the `cluster.query()` method and return the result.
 
 Take notice of the N1QL syntax format and how it targets `bucket`.`scope`.`collection`.
+
+### Search Profiles UI
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
 
 Let's add yet another form with a search field, and a flexbox to display results to enable easy search and retrieval of multiple profiles.
 
@@ -550,7 +554,7 @@ const [searchResults, setSearchResults] = useState([]);
 
 - We've included a `.env.default` file which is used for testing and gitpod instances of the project to ensure smooth setup in these environments.
 
-- In the completed quickstart code, fetch URLs use a dynamic `origin` variable instead of hard coding `http://localhost:3000` to ensure requests work when running in other environments. We use [next-absolute-url](https://www.npmjs.com/package/next-absolute-url) for this.
+- In the completed quickstart code, fetch URLs use a dynamic `origin` variable instead of hard coding `http://localhost:3000` to ensure requests work when running in other environments.
 
 ## Conclusion
 
