@@ -248,7 +248,7 @@ First, we check that an email was sent with the body and then create a `profile`
 After we check for required body parameters, we can asynchronously write to the `profileCollection` using the `insert` method and then return the document saved back to the user. We utilize the spread operator again to make this simple. `insert` is a basic key-value operation.
 
 ### Create Profile UI
-> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same. The original code can be found in the [v1 branch](https://github.com/couchbase-examples/nextjs-quickstart/tree/v1).
 
 Next, lets add a simple front-end form to create user profiles. On the `index.js` page, remove all markup between the &lt;main&gt; tags and add the following form:
 
@@ -310,7 +310,7 @@ You can now call this function from `getServerSideProps()` and simply inject the
 Note that we'll stringify then re-parse the data to avoid any issues with JSON serialization. This is just a quirk of Next.js that can sometimes cause a bug, so it's better to ensure proper serialization.
 
 ### Read Profile UI
-> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The demo app uses a `UserRow` component rather than a `UserCard`, but the functionality of each is roughly the same.
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The demo app uses a `UserRow` component rather than a `UserCard`, but the functionality of each is roughly the same. The original code can be found in the [v1 branch](https://github.com/couchbase-examples/nextjs-quickstart/tree/v1).
 
 To display the user we've fetched, we'll also add a custom React component. To accomplish this, create a new directory outside of `pages/` and call it `components`. Within `components/` add a `UserCard.js` file for the following component:
 
@@ -375,7 +375,7 @@ Next, we replace the existing fields if we have a value from the HTTP Request (`
 Finally, we create an async call to the `profileCollection` using the `upsert` method and then return the document saved and the result just as we did in the previous endpoint.
 
 ### Edit Profile UI
-> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same. The original code can be found in the [v1 branch](https://github.com/couchbase-examples/nextjs-quickstart/tree/v1).
 
 Let's add another front-end form to enable editing:
 
@@ -508,7 +508,7 @@ Finally, we pass that `query` and the `options` to the `cluster.query()` method 
 Take notice of the N1QL syntax format and how it targets `bucket`.`scope`.`collection`.
 
 ### Search Profiles UI
-> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same.
+> NOTE: The UI source code for this quickstart guide is quite a bit more complex (due to styling and layout) than the inline code blocks outlined in this tutorial. The functionality, however, is the same. The original code can be found in the [v1 branch](https://github.com/couchbase-examples/nextjs-quickstart/tree/v1).
 
 Let's add yet another form with a search field, and a flexbox to display results to enable easy search and retrieval of multiple profiles.
 
