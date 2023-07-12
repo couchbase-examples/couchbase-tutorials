@@ -20,7 +20,6 @@ sdk_language:
 length: 45 Mins
 ---
 
-<!-- TODO: update this to be sure its working -->
 [![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=nextjs-quickstart-repo&source=devPortal)](https://gitpod.io/#https://github.com/couchbase-examples/nextjs-quickstart)
 
 ## Prerequisites
