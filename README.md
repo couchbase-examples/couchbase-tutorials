@@ -1,11 +1,8 @@
-
 # Couchbase Tutorials
 
 This repository contains the content for the [Couchbase Developer Tutorials](https://developer.couchbase.com/tutorials/). Files will be pulled from the `main` branch and built on the Developer Portal site **on a weekly basis**. 
 
 This means that **ALL CHANGES TO TUTORIALS IN THE MAIN BRANCH WILL GO LIVE IN PRODUCTION AUTOMATICALY**. Please be sure all content has been reviewed by the appropriate stakeholders prior to merging.
-
-
 
 
 ## Contributing
@@ -56,7 +53,7 @@ If you've never written markdown before, we highly recommend following a [markdo
 We define certain metadata attributes using a section in our markdown called `frontmatter`. This section defines certain details including the URL path, title, description, and various filtering data for the given tutorial or learning path. The easiest approach is to copy the structure of another tutorial or learning path.
 
 #### Testing the Frontmatter
-To ensure frotnmatter schema is adhered to, we've written some simple tests to enforce the attributes included.
+To ensure frontmatter schema is adhered to, we've written some simple tests to enforce the attributes included.
 
 Run `npm run test:frontmatter` to check the frontmatter of **all** tutorials and learning paths.
 
