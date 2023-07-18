@@ -16,5 +16,5 @@ jobs:
             cache: 'npm'
         - name: Install Dependencies
           run: npm ci
-        - name: Test Markdown Content
-          run: npm run test:markdown
+        - name: Test Frontmatter Content
+          run: npm run test:frontmatter
