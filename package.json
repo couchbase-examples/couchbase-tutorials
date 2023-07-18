@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:markdown": "node ./test/test-markdown.js"
+    "test:frontmatter": "node ./test/test-markdown-frontmatter.js"
   },
   "repository": {
     "type": "git",
