@@ -93,7 +93,7 @@ Next open the <a target="_blank" rel="noopener noreferrer" href="https://github.
  
 * The first line starts couchbase server just like the standard docker file would.  We need to do this because docker compose has a limit of only allowing one command/entrypoint to run per container.  We need couchbase server to start before we can do our automated setup steps.
 
->**NOTE** Sleep statements make sure that things complete before moving on to the next step.  The 10 second delay is set after couchbase server is started to make sure the cluster is completely running before moving on to the next command.  The delay is conservative and could be shortened based on the speed of your computer.
+>**NOTE** Sleep statements make sure that things complete before moving on to the next step.  The 10-second delay is set after Couchbase Server is started to make sure the cluster is completely running before moving on to the next command.  The delay is conservative and could be shortened based on the speed of your computer.
 
 ```bash
 sleep 10s  
@@ -219,13 +219,12 @@ The Sync Gateway server uses a configuration file when it starts to load in all 
 ``` 
 
 1.  <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#Interface ">interface</a> and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#adminInterface ">adminInterface</a> are used to define which ports that Sync Gateway will run on.  Note if you change the default values, you will also need to update your mobile app's replication configuration.
-
 2. log and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#logging">logging</a> set up the logging configuration.
 3. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#disable_persistent_config">disable_persistent_config</a> is required to run in <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html">Legacy Pre-3.0 Configuration</a> mode  
 4. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#server_tls_skip_verify">server_tls_skip_verify</a> is set to true because the Couchbase Server container is not using TLS in it's configuration.  **NOTE**:  DO NOT run with TLS disabled in production!
 5. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#use_tls_server">use_tls_server</a> is set to false so that the mobile app can communicate with the Sync Gateway server over HTTP instead of HTTPS.  This is for the sake of simpliciy.  **NOTE**:  DO NOT run with TLS disabled in production!
 
-> **Note**:  To use TLS with something like self signed certificates would greatly increases the complexity and length of this tutorial.  For this reason the tutorial shows the configuration without certificates.
+> **Note**:  To use TLS with something like self-signed certificates would greatly increase the complexity and length of this tutorial.  For this reason the tutorial shows the configuration without certificates.
 
 ```json
 "databases": {
@@ -272,13 +271,13 @@ The Sync Gateway server uses a configuration file when it starts to load in all 
 		},
 
 ``` 
-1. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases">databases</a>  sets up the configuration for commuincation between Sync Gateway and Couchbase Server.
+1. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases">databases</a>  sets up the configuration for communication between Sync Gateway and Couchbase Server.
 2. projects is the configuration section for the projects bucket that Sync Gateway will be replicating.
 3.  <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases">import_docs</a> set to true allows Sync Gateway to import documents that exists on Couchbase Server. 
 4. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-bucket">bucket</a> is the name of the bucket that Sync Gateway will replicate with on Couchbase Server. 
 5. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-server">server</a> is the connection string to connect to the Couchbase Server.  The name of the server is defined in the Docker Compose file and dockers internal DNS will handle name resolution to this hostname. 
 6. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-enable_shared_bucket_access">enable_shared_bucket_access</a> enables Mobile-Server Data Sync (a.ka. mobile convergence), which will generate the mobile-specific metadata for all the preexisting documents in the Couchbase Server bucket.  You can learn more about this functionality in <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/sync-with-couchbase-server.html">Syncing Mobile and Server</a> documentation.
-7. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-delta_sync">delta_sync</a> is an Enteprise Edition feature which requires a license.  Delta Sync allows Sync Gateway to replicate only the parts of the Couchbase Mobile document that have changed.  
+7. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-delta_sync">delta_sync</a> is an Enterprise Edition feature which requires a license.  Delta Sync allows Sync Gateway to replicate only the parts of the Couchbase Mobile document that have changed.  
 8. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-num_index_replicas">num_index_replicas</a> determines the number of index replicas used when creating the core Sync Gateway indexes.  
 9. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-replications-this_rep-username">username</a> Sync Gateway uses to connect to the Couchbase Server.  This username was created in the automation shell script step.
 10. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-password">password</a> is the password that Sync Gateway will use to communicate with Couchbase Server.
@@ -440,7 +439,7 @@ The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchb
 4.  The hostname defines what name should be used for DNS resolution
 5.  The network is set to workshop which will define a bridge or shared network that can be used to allow the Couchbase Server to communicate with the Sync Gateway server
 
-Finally we define the network configuration and driver to use.
+Finally, we define the network configuration and driver to use.
 
 ```yaml
 networks:
@@ -465,7 +464,7 @@ docker-compose up -d
 
 * You can check the status of docker using either Docker Desktop or the terminal commands.  
 
-* Docker Desktop Users should see a container listing after launching the app.  The group name of the containers is the name of the directory of the code repo on your computer where you ran docker compose from. In the example it's named `android-kotlin-cbl-learning-path`.
+* Docker Desktop Users should see a container listing after launching the app.  The group name of the containers is the name of the directory of the code repo on your computer where you ran docker compose of. In the example it's named `android-kotlin-cbl-learning-path`.
 
 ![Docker Desktop](docker-desktop.png '#width=600px')
 

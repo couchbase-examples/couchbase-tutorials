@@ -25,7 +25,7 @@ length: 30 Mins
 
 ## Introduction
 
-Couchbase Sync Gateway is a key component of the Couchbase Mobile stack. It is an Internet-facing synchronization mechanism that securely syncs data across devices as well as between devices and the cloud. Couchbase Mobile 3.0 introduces centralized persistent module configuration of synchronization, which simplifies the administration of Sync Gateway clusters — see <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/configuration-overview.html">Sync Gateway Configuration</a>.
+Couchbase Sync Gateway is a key component of the Couchbase Mobile stack. It is an Internet-facing synchronization mechanism that securely syncs data across devices as well as between devices and the cloud. Couchbase Mobile uses a websocket based <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/couchbase-lite/current/swift/replication.html#replication-protocol">replication protocol</a>.
 
 The core functions of the Sync Gateway include
 
@@ -35,15 +35,21 @@ The core functions of the Sync Gateway include
 
 This tutorial will demonstrate how to -
 
-* Setup a basic Couchbase Sync Gateway configuration to sync content between multiple Couchbase Lite enabled clients.
-*  We will will cover the basics of the Sync Gateway Configuration.
-* Configure your Sync Gateway to enforce data routing, access control and authorization. We will cover the basics of <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/sync-function.html">Sync Function API</a>.
+* Installing Couchbase Server using Docker and Docker Compose
+* Automation of Couchbase Server cluster setup and importing of data
+* Installing Sync Gateway using Docker and Docker Compose
+* Setup of a Sync Gateway configuration file
 * Configure your Couchbase Lite clients for replication with the Sync Gateway
-* Use "Live Queries" or Query events within your Couchbase Lite clients to be asyncronously notified of changes
+* Use "Live Queries" or Query events within your Couchbase Lite clients to be asynchronously notified of changes
 
 We will be using a Swift App as an example of a Couchbase Lite enabled client.
 
-> You can learn more about the Sync Gateway here in the <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/index.html">Sync Gateway Documentation</a>.
+> You can learn more about the Sync 
+> Gateway here in the <a 
+> target="_blank" rel="noopener 
+> noreferrer" href="https://docs.
+> couchbase.com/sync-gateway/current
+> /index.html">Sync Gateway Documentation</a>.
 
 ## Prerequisites
 
@@ -53,7 +59,8 @@ This tutorial assumes familiarity with building swift apps with Xcode and with C
   * Fundamentals of using Couchbase Lite as a standalone database - see <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/tutorial-quickstart-ios-uikit-basic">Quickstart in Couchbase Lite with iOS, Swift, and UIKit</a>
   * Query Basics with a prebuilt version of Couchbase Lite database - see <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/tutorial-quickstart-ios-uikit-query">Quickstart in Couchbase Lite Query with iOS, Swift, and UIKit</a>
 
-* iOS (Xcode 12/13) - Download latest version from the <a target="_blank" rel="noopener noreferrer" href="https://itunes.apple.com/us/app/xcode/id497799835?mt=12">Mac App Store</a> or via <a target="_blank" rel="noopener noreferrer" href="https://github.com/RobotsAndPencils/XcodesApp">Xcodes</a>
+* iOS (Xcode 14/15) - Download 
+  latest version from the <a target="_blank" rel="noopener noreferrer" href="https://itunes.apple.com/us/app/xcode/id497799835?mt=12">Mac App Store</a> or via <a target="_blank" rel="noopener noreferrer" href="https://github.com/RobotsAndPencils/XcodesApp">Xcodes</a>
 > **Note**: If you are using an older version of Xcode, which you need to retain for other development needs, make a copy of your existing version of Xcode and install the latest Xcode version.  That way you can have multiple versions of Xcode on your Mac.  More information can be found in <a target="_blank" rel="noopener noreferrer" href="https://developer.apple.com/library/archive/technotes/tn2339/_index.html#//apple_ref/doc/uid/DTS40014588-CH1-I_HAVE_MULTIPLE_VERSIONS_OF_XCODE_INSTALLED_ON_MY_MACHINE__WHAT_VERSION_OF_XCODE_DO_THE_COMMAND_LINE_TOOLS_CURRENTLY_USE_">Apple's Developer Documentation</a>. The open source <a target="_blank" rel="noopener noreferrer" href="https://github.com/RobotsAndPencils/XcodesApp ">Xcodes</a> project makes managing multiple installations of Xcode easier.
 
 * curl HTTP client 
@@ -118,7 +125,8 @@ open UserProfileSyncDemo.xcodeproj
 
 ## Data Model
 
-If have followed along the tutorial <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/tutorial-quickstart-ios-uikit-query">Quickstart in Couchbase Lite Query with iOS, Swift, and UIKit</a>, you can skip this section and proceed to the [Backend Installation](#backend-installation) section as we have not made any changes to the Data model for this tutorial.
+If you have followed along the tutorial <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.
+com/tutorial-quickstart-ios-uikit-query">Quickstart in Couchbase Lite Query with iOS, Swift, and UIKit</a>, you can skip this section and proceed to the [Backend Installation](#backend-installation) section as we have not made any changes to the Data model for this tutorial.
 
 Couchbase Lite is a JSON Document Store. A Document is a logical collection of named fields and values.The values are any valid JSON types. In addition to the standard JSON types, Couchbase Lite supports some special types like `Date` and `Blob`.
 
@@ -200,251 +208,512 @@ struct UniversityRecord : CustomStringConvertible{
   }
 }
 ```
-## Backend Installation
 
-We will install [Couchbase Server](#couchbase-server) and [Sync Gateway](#sync-gateway) using Docker.
+## Backend Installation
 
 ### Prerequisites
 
-- You must have Docker installed on your laptop. For more on Docker — see: <a target="_blank" rel="noopener noreferrer" href="https://docs.docker.com/get-docker/">Get Docker</a>.
-- Ensure that you have sufficient memory and cores allocated to docker. At Least 3GB of RAM is recommended.
+In this step of the tutorial, we 
+will be using docker and docker compose and should have both of these installed  before continuing.  <a target="_blank" rel="noopener noreferrer" href=" https://www.docker.com/products/docker-desktop/">Docker Desktop</a> provides these tools and UI for Mac, Windows, and Linux.
 
-### Docker Network
+You might also want a text editor 
+outside XCode to review the docker 
+and docker compose config files.  Any text editor will work, but for many developers Visual Studio Code is a good solution as it provides extensions for Docker config file formatting and YAML support, which is a file format Docker Compose uses.  You can download Visual Studio code <a target="_blank" rel="noopener noreferrer" href="https://code.visualstudio.com/download">here</a>.  If you are using Visual Studio code make sure you install the <a target="_blank" rel="noopener noreferrer" href="https://code.visualstudio.com/docs/containers/overview">Docker extension</a>.  The <a target="_blank" rel="noopener noreferrer" href="https://github.com/redhat-developer/vscode-yaml">YAML Language Support</a> is another great extension that can be a major quality of life improvement if you use YAML files a lot.
 
-Couchbase Server and Sync Gateway Server need to communicate with each other over the network.  A network bridge in docker allows network traffic between servers.  Create a docker network bridge named **workshop**.
+> **NOTE**: This part of the
+> tutorial is longer than normal as there are several configuration files to review.  For developers looking to try 
+> out the containers without reviewing the configuration files, you can skip to the [Try It Out - Docker Compose]
+> (#try-docker-compose) section.
+>
 
-```bash
-docker network ls
+### Review Setup of Docker Containers
 
-docker network create -d bridge workshop
-```
+#### Couchbase Server - Dockerfile
 
-### Couchbase Server
+Docker and Docker Compose will be used to create a Couchbase Server container that has a one node cluster setup with a bucket, a user for sync gateway to perform replication between the sync gateway server and server, and indexes for the bucket.
 
-#### Install
+This is accomplished by creating a custom Dockerfile that defines the Couchbase Server base image along with a shell scripts to perform the automation of the Couchbase Server cluster setup and importing of sample data.
 
-We have a custom docker image priyacouch/couchbase-server-userprofile:7.0.0-dev of Couchbase Server, which creates an empty bucket named **userprofile** and an RBAC user **admin** with **sync gateway** role.
+* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/couchbase-server/Dockerfile">Dockerfile</a> found in the couchbase-server folder in the root of the repo in a text editor of your choice.
 
-Alternatively, you can follow the instructions in our documentation — see: <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/tutorial-quickstart-ios-uikit-query">Get Started - Prepare</a>, to install Couchbase Server and configure it with the relevant bucket.
+```docker
+FROM couchbase/server:latest AS stage_base
+COPY init-cbserver.sh /opt/couchbase/init/
+``` 
 
-* Optionally, remove any existing Docker container.
+1. The first line tells docker which docker container should be used as the `base` image for this container.  We are using the `couchbase:latest` image.  As of Couchbase Server 7.1 - ARM64 and X86 images are provided.
+2. Next it copies the init-cbserver.sh shell script into the containers /opt/couchbase/init folder
 
-```bash
-docker stop cb-server && docker rm cb-server
-```
+#### Automation using Shell Script
 
-* Start Couchbase Server in a Docker container
-
-```bash
-docker run -d --name cb-server \
---network workshop \
--p 8091-8094:8091-8094 -p 11210:11210 \
-priyacouch/couchbase-server-userprofile:7.0.0-dev
-```
-
-### Test Server Installation
-
-The server could take a few minutes to deploy and fully initialize; so be patient.
-
-1. Check the Docker logs using the command:
+Next open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/couchbase-server/init-cbserver.sh">init-cbserver.sh</a> file found in the same folder as the Dockerfile.  This shell script is well documented with comments before each line, however we will still go through the script from a high level.
 
 ```bash
-docker logs -f cb-server
-```
+#!/bin/bash
+# used to start couchbase server - can't get around this as docker compose
+# only allows you to start one command - so we have to start couchbase like the Dockerfile would 
+# https://github.com/couchbase/docker/blob/master/enterprise/couchbase-server/7.1.1/Dockerfile#L88
 
-When the setup is completed, you should see output similar to that shown in below.
+/entrypoint.sh couchbase-server & 
+``` 
 
-![Server set up output](./log-output.png '#width=300px')
-
-2. Now check the required data is in place: 
-  a. Open up http://localhost:8091 in a browser.
-  b. Sign in as **Administrator** and **password** in login page.
-  c. Go to **buckets** menu and confirm **userprofile** bucket is created
-
-![userprofile bucket](./confirm-bucket-created.png '#width=300px')
-
-  - Go to **security** menu and confirm **admin** user is created.
-
-![userprofile bucket](./confirm-admin-user-created.png '#width=300px')
-
-### Sync Gateway 
-
-Now we will install, configure, and run Sync Gateway.
-
-#### Configuration
-
-When using Sync Gateway, we can opt to provide a bootstrap configuration -- see: <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/configuration-overview.html">Sync Gateway Configuration</a>.  We would then provision database, sync and other configuration using the Admin REST endpoints Alternatively, we can continue to run in legacy-mode, using the Pre-3.0 configuration.
-
-In this tutorial - for the purposes of backward compatibility - we will run 3.x using its
-<a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/configuration-properties-legacy.html">legacy configuration option</a>.  That is, we will be running with the *`disable_persistent_config`* option in the configuration file set to *`true`*.  You can, if you wish, run a 2.8 version of Sync Gateway instead.
-
-The configuration files corresponding to this sample application are shown in Table 1.
-They are available in the github repo hosting the app, which you cloned - look in: 
-`/path/to/cloned/repo/ios-swift-cblite-userprofile-sync/src/` 
-
-**Table 1. Available configuration files**
-| Release | Filename |
-| ------- | -------- |
-| 3.x | <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/sync-gateway-config-userprofile-demo-3-x-legacy.json">sync-gateway-config-userprofile-demo-3-x-legacy.json</a>|
-| 2.x | <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/sync-gateway-config-userprofile-demo-2-x.json">sync-gateway-config-userprofile-demo-2-x.json</a>|
-
-### Deploy
-
-Let us configure and launch Sync Gateway in a Docker container.
-
-1. Switch to the the folder containing the cloned configuration files, using:
+* The first line starts couchbase server just like the standard docker file would.  We need to do this because docker compose has a limit of only allowing one command/entrypoint to run per container.  We need couchbase server to start before we can do our automated setup steps.
+ 
+>**NOTE** Sleep statements make sure that things complete before moving on to the next step.  The 10-second delay is set after Couchbase Server is started to make sure the cluster is completely running before moving on to the next command.  The delay is conservative and could be shortened based on the speed of your computer.
 
 ```bash
-cd /path/to/cloned/repo/ios-swift-cblite-userprofile-sync/src
-```
-
-2. Make sure no Sync Gateway container exists, using:
-
-```bash
-docker stop sync-gateway && docker rm sync-gateway
-```
-3.  Listing the json files in the directory you should see configuration files for the latest major version and the previous major version in this folder.  Choose an appropriate version.
-
-```bash
-ls -l *.json
-```
-4.  Launch Sync Gateway in a Docker container using directions below based on the version you are using.
-
-#### Sync Gateway 3.x 
-
-Configuring and running Sync Gateway 3.x in Docker using the configuration in `sync-gateway-config-userprofile-demo-3-x-legacy.json`.
-
-Note the use of `disable_persistent_config` in the configuration file to force legacy configuration mode. 
+sleep 10s  
+/opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1 \
+--cluster-username $COUCHBASE_ADMINISTRATOR_USERNAME \
+--cluster-password $COUCHBASE_ADMINISTRATOR_PASSWORD \
+--services data,index,query \
+--cluster-ramsize $COUCHBASE_RAM_SIZE \
+--cluster-index-ramsize $COUCHBASE_INDEX_RAM_SIZE \
+--index-storage-setting default
+``` 
+* The couchbase-cli tool is used to initialize the cluster and will set the administration username, password, and services along with the index configuration based on environment variables that are set in the docker compose file we will look at in a bit.
 
 ```bash
-docker run -p 4984-4986:4984-4986 \
---network workshop \
---name sync-gateway \
--d \
--v `pwd`/sync-gateway-config-userprofile-demo-3-x-legacy.json \
-/etc/sync_gateway/sync_gateway.json \
-couchbase/sync-gateway:3.0.0-enterprise \
-/etc/sync_gateway/sync_gateway.json
-```
+/opt/couchbase/bin/couchbase-cli bucket-create -c localhost:8091 \
+--username $COUCHBASE_ADMINISTRATOR_USERNAME \
+--password $COUCHBASE_ADMINISTRATOR_PASSWORD \
+--bucket $COUCHBASE_BUCKET \
+--bucket-ramsize $COUCHBASE_BUCKET_RAMSIZE \
+--bucket-type couchbase 
+``` 
 
-#### Sync Gateway 2.x 
-
-Configuring and running Sync Gateway 2.8.
+* The couchbase-cli tool is used again, but this time to create a bucket bsaed on the environment variables that are set in the docker compose file
 
 ```bash
-docker run -p 4984-4986:4984-4986 \
---network workshop \
---name sync-gateway \
--d \
--v `pwd`/sync-gateway-config-userprofile-demo-2-x.json:\
-/etc/sync_gateway/sync_gateway.json \
-couchbase/sync-gateway:2.8.4-enterprise \
-/etc/sync_gateway/sync_gateway.json
-```
-#### Test the Installation
+/opt/couchbase/bin/couchbase-cli user-manage \
+--cluster http://127.0.0.1 \
+--username $COUCHBASE_ADMINISTRATOR_USERNAME \
+--password $COUCHBASE_ADMINISTRATOR_PASSWORD \
+--set \
+--rbac-username $COUCHBASE_RBAC_USERNAME \
+--rbac-password $COUCHBASE_RBAC_PASSWORD \
+--roles mobile_sync_gateway[*] \
+--auth-domain local
+``` 
 
-Now we can confirm that the Sync Gateway is up and running.
-
-1. Check the log messages.
+* The couchbase-cli tool is used to create a new user that can be used for sync gateway to connect to the server and replicate documents.   The roles switch sets the role for sync gateway and the [*] defines that this user has access to all buckets for sync gateway.  Note this could be a security risk in non-development environments and is set like this for sake of simplicity.
 
 ```bash
-docker logs -f sync-gateway
-```
-  You will see a series of log messages.  Make sure there are no errors.
+  /opt/couchbase/bin/curl -v http://localhost:8093/query/service \
+  -u $COUCHBASE_ADMINISTRATOR_USERNAME:$COUCHBASE_ADMINISTRATOR_PASSWORD \
+  -d 'statement=CREATE INDEX idx_type on userprofile(type)'
+``` 
 
-2. Open up <a target="_blank" rel="noopener noreferrer" href="http://localhost:4984">http://localhost:4984</a> in your browser.  You should see equivalent of the following message:
+* The next command use the REST API to add an index in for queries 
+  that you could use in the web console Query in Couchbase Server.  These 
+  aren't required for the mobile app or sync, but are nice to have when validating data.
+
+
+### Sync Gateway -  Dockerfile
+
+Now that we have reviewed how the Couchbase Server will be created, let's review how the Sync Gateway server will be created.
+
+* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/sync-gateway/Dockerfilee">Dockerfile</a> found in the sync-gateway folder in the root of the repo in a text editor of your choice.
 
 ```bash
-{"couchdb":"Welcome","vendor": { "name":"Couchbase Sync Gateway", "version":"3.0" },
-"version":"Couchbase Sync Gateway/3.0.0(460;26daced) EE"}
+FROM couchbase/sync-gateway:latest AS stage_base
+COPY sync-gateway.json /etc/sync_gateway/config.json
+COPY init-syncgateway.sh /opt/couchbase-sync-gateway/init/init-syncgateway.sh
 ```
-Now that we have the server and the sync gateway installed, we can verify data sync between Couchbase Lite enabled apps.
+1. The first line tells docker which docker container should be used as the `base` image for this container.  We are using the `sync-gateway:latest` image.
+2. Next it copies the sync-gateway.json config file into the containers /etc/sync_gateway folder and renames it to config.json which Sync Gateway reads in by default when starting.
+3. Finally, we need a script that will initialize Sync Gateway when the container starts.
 
-## Sync Function
+#### Sync Gateway Config File Overview
 
-A key component of the sync process is the Sync Function and we will first look at how that can be set-up to control how data sync works.
+The Sync Gateway server uses a configuration file when it starts to load in all important settings.  In the demo app, this file is setup in <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html">Legacy Pre-3.0 Configuration</a> for sake of simplicity.  Let's review the configuration file by sections.
 
-The Sync Function is a Javascript function that is specified as part of the [Sync Gateway Configuration](#configuration). It handles [Authorization](#authorization), [Data Validation](#data-validation), [Data Routing](#data-routing), and [Access Countrol](#access-control).
+* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/src/sync-gateway/sync-gateway.json">sync-gateway.json</a> config file found in the same folder as the Dockerfile.
 
-1. Open the your configuration file using a text editor of your choice.  It will be located in the repo at `/path/to/cloned/repo/ios-swift-cblite-userprofile-sync/src`.
+```json
+{
+  "interface":":4984",
+  "adminInterface":":4985",
+   "log": ["*"],
+  "logging": {
+    "log_file_path": "/var/tmp/sglogs",
+    "console": {
+      "log_level": "debug",
+      "log_keys": ["*"]
+    },
+    "error": {
+      "enabled": true,
+      "rotation": {
+        "max_size": 20,
+        "max_age": 180
+      }
+    },
+    "warn": {
+      "enabled": true,
+      "rotation": {
+        "max_size": 20,
+        "max_age": 90
+      }
+    },
+    "info": {
+      "enabled": false
+    },
+    "debug": {
+      "enabled": true 
+    }
+  },
+  "disable_persistent_config":true,
+  "server_tls_skip_verify": true,
+  "use_tls_server": false,
+``` 
 
-2. Locate the `sync` setting in the file. 
+1.  <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#Interface ">interface</a> and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#adminInterface ">adminInterface</a> are used to define which ports that Sync Gateway will run on.  Note if you change the default values, you will also need to update your mobile app's replication configuration.
+2. log and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#logging">logging</a> set up the logging configuration.
+3. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#disable_persistent_config">disable_persistent_config</a> is required to run in <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html">Legacy Pre-3.0 Configuration</a> mode
+4. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#server_tls_skip_verify">server_tls_skip_verify</a> is set to true because the Couchbase Server container is not using TLS in it's configuration.  **NOTE**:  DO NOT run with TLS disabled in production!
+5. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#use_tls_server">use_tls_server</a> is set to false so that the mobile app can communicate with the Sync Gateway server over HTTP instead of HTTPS.  This is for the sake of simpliciy.  **NOTE**:  DO NOT run with TLS disabled in production!
 
-Now you can follow along with the rest of the sections below.
+> **Note**:  To use TLS with something like self-signed certificates would greatly increase the complexity and length of this tutorial.  For this reason the tutorial shows the configuration without certificates.
 
-### Authorization
+```json
+"databases": {
+    "userprofile": {
+      "import_docs": true,
+      "bucket":"userprofile",
+      "server": "couchbase://couchbase-server",
+      "enable_shared_bucket_access":true,
+      "delta_sync": {
+        "enabled":false
+      },
+       "num_index_replicas":0,
+      "username": "admin",
+      "password": "P@ssw0rd",
+     "users": { "demo@example.com": { "password": "password"},
+                "demo1@example.com": { "password": "password"},
+                "demo2@example.com":{"password":"password" },
+                "demo3@example.com":{"password":"password"},
+                "demo4@example.com":{"password":"password"}
+              },
+```
 
-We use *Basic Authentication* in our application.  The Id of the user making the request is specified in the `Authorization` header.
+1. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases">databases</a>  sets up the configuration for communication between Sync Gateway and Couchbase Server.
+2. userprofile is the configuration section for the userprofile bucket that Sync Gateway will be replicating.
+3.  <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases">import_docs</a> set to true allows Sync Gateway to import documents that exists on Couchbase Server.
+4. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-bucket">bucket</a> is the name of the bucket that Sync Gateway will replicate with on Couchbase Server.
+5. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-server">server</a> is the connection string to connect to the Couchbase Server.  The name of the server is defined in the Docker Compose file and dockers internal DNS will handle name resolution to this hostname.
+6. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-enable_shared_bucket_access">enable_shared_bucket_access</a> enables Mobile-Server Data Sync (a.ka. mobile convergence), which will generate the mobile-specific metadata for all the preexisting documents in the Couchbase Server bucket.  You can learn more about this functionality in <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/sync-with-couchbase-server.html">Syncing Mobile and Server</a> documentation.
+7. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-delta_sync">delta_sync</a> is an Enterprise Edition feature which requires a license.  Delta Sync allows Sync Gateway to replicate only the parts of the Couchbase Mobile document that have changed.
+8. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-num_index_replicas">num_index_replicas</a> determines the number of index replicas used when creating the core Sync Gateway indexes.
+9. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-replications-this_rep-username">username</a> Sync Gateway uses to connect to the Couchbase Server.  This username was created in the automation shell script step.
+10. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-password">password</a> is the password that Sync Gateway will use to communicate with Couchbase Server.
+11. <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/configuration-properties-legacy.html#databases-this_db-users">users</a> is a hard coded collection of username, passwords and the role that the user is assigned to.  Roles can be assigned to channels to which documents are assigned to in the sync process, restricting the documents that are replicated.  Note that these username and passwords are the same username and passwords that are hard coded into the in the mobile app.
+12. 
+#### Sync Function
 
-Locate the *`// Authorization`* section of the Sync Function.  You will see we are using the Sync functions <a target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/documentation/mobile/2.0/guides/sync-gateway/sync-function-api-guide/index.html#requireuserusername">`requireUser()`</a> API to verify that the `email` property specified in the Document matches the Id of the user making the request. 
+The sync section of the configuration is used to define custom business logic.  The sync is a string value of Javascript code that will run every time a new document, revision, or deletion is added to a database.  The sync function will examine the document and custom business logic can then calculate things like access control to limit which users can see which documents.  The demo app is a simple example of custom business logic.  See the <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/sync-function-api.html">Sync Function API</a> and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/current/access-control-how.html">Access Control How-To</a> guides for more detailed information and a listing of other API functions available.
 
-```js
+```javascript
 function sync(doc, oldDoc) {
-   ....
-   /* Authorization */
+    console.log("********Procesing Doc. Is oldDoc == null? " + (oldDoc == null));
 
-  // Verify the user making the request is the same as the one in doc's email
-  requireUser(doc.email);
-  .....
+    /* Data Validation */
+    // Validate the presence of email field.
+    // This is the "username" <.>
+    validateNotEmpty("email", doc.email);
+
+    // Validate that the document Id _id is prefixed by owner <.>
+    var expectedDocId = "user" + "::" + doc.email;
+    if (expectedDocId != doc._id) {
+      // reject document
+      throw({forbidden: "user doc Id must be of form user::email"});
+    }
+   try {
+
+       // Check if this is an import processing (done with admin credentials)
+       requireAdmin();
+       if (!isDelete()) {
+           /* Routing */
+
+           var username = getEmail();
+           var channelId = "channel."+ username;
+
+           channel(channelId);
+
+           // Give user access to document
+           access(username,channelId);
+        }
+    }catch (error) {
+       console.log("This is not a doc import " + error);
+
+       // If non admin client replication
+       if (!isDelete()) {
+
+         /* Authorization */
+         // Verify the user making the request is the same as the one in doc's email
+         requireUser(doc.email);
+
+         // Check if document is being created / added for first time
+         // We allow any user to create the document
+         if (isCreate()) {
+            /* Routing */
+            // Add doc to the user's channel.
+            var username = getEmail(); 
+            var channelId = "channel."+ username; 
+            channel(channelId); 
+
+            // Give user access to document 
+            access(username, channelId);
+
+          } else {
+              // This is an update
+              // Validate that the email hasn't changed.
+              validateReadOnly("email", doc.email, oldDoc.email);
+              // Add doc to the user's channel.
+              var username = getEmail();
+              var channelId = "channel."+ username;
+
+              channel(channelId);
+
+              // Give user access to document
+              access(username,channelId);
+          }
+       }
+    }
+  // get type property
+  function getType() {
+    return (isDelete() ? oldDoc.type : doc.type);
+  }
+
+  // get email Id property
+  function getEmail() {
+    return (isDelete() ? oldDoc.email : doc.email);
+  }
+
+  // Check if document is being created/added for first time
+  function isCreate() {
+    // Checking false for the Admin UI to work
+    return ((oldDoc == false) || (oldDoc == null || oldDoc._deleted) && !isDelete());
+  }
+
+  // Check if this is a document update
+  function isUpdate() {
+    return (!isCreate() && !isDelete());
+  }
+
+  // Check if this is a document delete
+  function isDelete() {
+    return (doc._deleted == true);
+  }
+
+  // Verify that specified property exists
+  function validateNotEmpty(key, value) {
+    if (!value) {
+      throw({forbidden: key + " is not provided."});
+    }
+  }
+
+  // Verify that specified property value has not changed during update
+  function validateReadOnly(name, value, oldValue) {
+    if (value != oldValue) {
+      throw({forbidden: name + " is read-only."});
+    }
+  }
 }
 ```
 
-### Data Validation
+1.  Locate the *`// Authorization`* section of the Sync Function.  You will see we are using the Sync functions <a 
+target="_blank" rel="noopener noreferrer" href="https://developer.couchbase.com/documentation/mobile/2.0/guides/sync-gateway/sync-function-api-guide/index.html#requireuserusername">`requireUser()`</a> API to verify that the `email` property specified in the Document matches the Id of the user making the request. 
+2.  Data validation is done via the validateNotEmpy function by inspecting some of the contents of the document. 
+3. Verify that the `email` property is not null. If it's null, we throw a JS exception (see `validateNotEmpty()` function)
+4. If this a new document, then verify that the `Id` of the Document is of the required format (i.e. **_"user::&lt;email&gt;"_**). We throw an exception if that's not the case.
+5. If this is a document update, then verify that the `email` property value has not changed. Again, we throw an exception if that's not the case.
 
-In this case, we are doing some basic validation of the contents of the Document:
+### Docker Compose YAML file
 
-```js
-/* Data Validation */
+The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/docker-compose.yml">docker-compose.yml</a> file is provide to configure and build the Couchbase Server and Sync Gateway containers that we have reviewed.
 
-// Validate the presence of email field.
-// This is the "username" 
-validateNotEmpty("email", doc.email);
+* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/ios-swift-cblite-userprofile-sync/blob/main/docker-compose.yml">docker-compose.yml</a> found in the root of the repo in a text editor of your choice.
 
-// Validate that the document Id _id is prefixed by owner 
-var expectedDocId = "user" + "::" + doc.email;
+```yaml
+couchbase-server-ios-userprofile:
+  build: ./src/couchbase-server
+  ports:
+    - 8091-8097:8091-8097
+    - 9123:9123
+    - 11207:11207
+    - 11210:11210
+    - 11280:11280
+    - 18091-18097:18091-18097
+  environment:
+    - CLUSTER_NAME=couchbase-demo
+    - COUCHBASE_ADMINISTRATOR_USERNAME=Administrator
+    - COUCHBASE_ADMINISTRATOR_PASSWORD=P@ssw0rd12
+    - COUCHBASE_BUCKET=userprofile
+    - COUCHBASE_BUCKET_RAMSIZE=512
+    - COUCHBASE_RBAC_USERNAME=admin
+    - COUCHBASE_RBAC_PASSWORD=P@ssw0rd
+    - COUCHBASE_RBAC_NAME=admin
+    - COUCHBASE_RAM_SIZE=2048
+    - COUCHBASE_INDEX_RAM_SIZE=512
+  hostname: couchbase-server
+  container_name: couchbase-server-ios-userprofile
+  working_dir: /opt/couchbase
+  stdin_open: true
+  tty: true
+  networks:
+    - workshop
+  entrypoint: [""]
+  command: sh -c "/opt/couchbase/init/init-cbserver.sh"
+```
+
+1. The couchbase-server-ios-userprofile section is used to define the couchbase server container.
+2. The build property defines what directory to look for the Dockerfile in
+3. The ports collection defines the ports that Couchbase Server requires to run
+4. The environment collection defines a set of environment variables that we use in our automation shell script to setup Couchbase Server
+5.  The hostname defines what name should be used for DNS resolution
+6.  The working directory will be used for all commands ran.  We default this to /opt/couchbase since our automation script and data import file are located in this directory
+7.  The network is set to workshop which will define a bridge or shared network that can be used to allow the Couchbase Server to communicate with the Sync Gateway server
+8.  The entrypoint property is set to blank and overridden with a command since we want to run our custom automation script when the container is built.
+
+```yaml
+sync-gateway-ios-userprofile:
+    build: ./src/sync-gateway
+    ports:
+      - 4984-4986:4984-4986
+    hostname: sync-gateway
+    container_name: sync-gateway-ios-userprofile
+    depends_on:
+      - couchbase-server-ios-userprofile 
+    working_dir: /docker-syncgateway
+    stdin_open: true
+    tty: true      
+    networks:
+      - workshop
+    entrypoint: [""]
+    command: sh -c "/opt/couchbase-sync-gateway/init/init-syncgateway.sh"
+```
+
+1. The sync-gateway-ios-userprofile section is used to define the sync gateway server container.
+2. The build property defines what directory to look for the Dockerfile in
+3. The ports collection defines the ports that Sync Gateway requires to run
+4.  The hostname defines what name should be used for DNS resolution
+5.  The network is set to workshop which will define a bridge or shared network that can be used to allow the Couchbase Server to communicate with the Sync Gateway server
+
+Finally, we define the network configuration and driver to use.
+
+```yaml
+networks:
+  workshop:
+    driver: bridge
+```
+
+### Try Docker Compose
+
+Now that we have reviewed all the files that are used to create the containers, open a terminal window. 
+
+* Make sure you are in the root directory of the repo
+* Run the docker-compose command
+```bash
+docker-compose up -d
+```
+
+* The docker containers should start downloading, then build, and finally start up
+
+* You can check the status of docker using either Docker Desktop or the terminal commands.
+
+* Docker Desktop Users should see a container listing after launching the app.  The group name of the containers is 
+  the name of the directory of the code repo on your computer where you ran docker compose of. In the example it's named `ios-swift-cblite-userprofile-sync`.
+
+![Docker Desktop](docker-desktop.png '#width=600px')
+
+* Terminal users can use the docker-compose command to see the containers status
+
+```bash
+docker-compose ls
+```
+
+![Docker Compose Terminal ](docker-compose-ls.png '#width=800px')
+
+* To see individual containers you can use the docker command
+
+```bash
+docker container ls
+```
+
+![Docker Terminal ](docker-ls.png '#width=800px')
 
 
-if (expectedDocId != doc._id) {
-  // reject document
-  throw({forbidden: "user doc Id must be of form user::email"});
+#### Validation of Containers
+
+* Docker Desktop Users can select each container in Docker Desktop to get detained information and logs about the container running to validate the containers were built properly or use the terminal to gather information.
+
+* Docker Desktop Users - select the couchbase-server-ios-userprofile container.  You should see logging information.
+
+![Docker Desktop](docker-couchbase-server-logs.png '#width=800px')
+
+* Terminal users can enter the following command
+
+```bash
+docker container logs couchbase-server-ios-userprofile
+```
+
+* The logs should show the status of cluster initialization, bucket creation, and User admin.  This will be followed 
+  by the results of the curl commands that create the index.  When the setup is complete, you should see output similar to that shown below:
+
+```logs
+Administrator : P@ssw0rd12
+Starting Couchbase Server -- Web UI available at http://<ip>:8091
+and logs available in /opt/couchbase/var/lib/couchbase/logs
+SUCCESS: Cluster initialized
+SUCCESS: Bucket created
+SUCCESS: User admin set
+*   Trying 127.0.0.1:8093...
+* Connected to localhost (127.0.0.1) port 8093 (#0)
+* Server auth using Basic with user 'Administrator'
+> POST /query/service HTTP/1.1
+> Host: localhost:8093
+> Authorization: Basic QWRtaW5pc3RyYXRvcjpQQHNzdzByZDEy
+> User-Agent: curl/7.84.0-DEV
+> Accept: */*
+> Content-Length: 52
+> Content-Type: application/x-www-form-urlencoded
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Content-Length: 238
+< Content-Type: application/json; version=7.2.0-N1QL
+< Date: Mon, 21 Aug 2023 11:23:19 GMT
+<
+{
+"requestID": "bc6471ad-edbe-4ee2-a030-dd260ecef3cb",
+"signature": null,
+"results": [
+],
+"status": "success",
+"metrics": {"elapsedTime": "1.650022084s","executionTime": "1.649861501s","resultCount": 0,"resultSize": 0,"serviceLoad": 5}
 }
+* Connection #0 to host localhost left intact
 ```
 
-1. Verify that the `email` property is not null. If it's null, we throw a JS exception (see `validateNotEmpty()` function)
-2. If this a new document, then verify that the `Id` of the Document is of the required format (i.e. **_"user::&lt;email&gt;"_**). We throw an exception if that's not the case.
-3. If this is a document update, then verify that the `email` property value has not changed. Again, we throw an exception if that's not the case.
+* Docker Desktop Users - click the back button and now select the sync-gateway container.  You should see logging information.
 
-> **NOTE**:  You can learn more about the Sync Function in the documentation here: <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/sync-function.html">Sync Function API</a>.
+![Docker Desktop](docker-sync-gateway-logs.png '#width=800px')
 
-### Data Routing
+* Terminal users can enter the following command
 
-<a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/channels.html">`channels`</a> are a mechanism to "tag" documents.  They are typically used to route/seggregate documents based on the contents of those document. 
-
-Combined with <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/sync-function-api-access-cmd.html">access()</a> and <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/sync-function-api-require-access-cmd.html">`requireAccess() `</a> API, the <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/channels.html">channel()</a> API can be used to enforce [Access Control](#access-control). 
-
-As we shall see in a later section, clients can use channels to pull only a subset of documents.
-
-```js
-  /* Routing */
-  // Add doc to the user's channel.
-  var email = getEmail();
-
-  var channelId = "channel."+ username; 
-  channel(channelId); 
+```bash
+docker container logs sync-gateway-ios-userprofile
 ```
 
-1. Retrieve the the email property specified in the document. We will uses this as our user and channel name.
-2. Next, we generate the channel name from the email property.
-3. Finally we route the document to the channel. The channel comes into existence the first time a document is added to it.
+#### Validate Sync Gateway Server
 
+To validate the Sync Gateway server we will use the REST API interface.
 
-### Access Control
+* Open up http://localhost:4984 in your web browser.  You should see equivalent of the following message (your 
+  version of Sync Gateway might be newer than the text below):
 
-We can enforce access control to channels using the <a target="_blank" rel="noopener noreferrer" href="https://docs.couchbase.com/sync-gateway/3.0/sync-function-api-access-cmd.html">access () API</a>. This approach ensures that only users with access to a specific channel will be able to retrieve documents in the channel.
-
-```js
- // Give user read access to channel
- access(username, channelId);
+```json
+{"couchdb":"Welcome","vendor":{"name":"Couchbase Sync Gateway","version":"3.0"},"version":"Couchbase Sync Gateway/3.0.0(541;46803d1) EE"}
 ```
 
 ## Starting Replication
@@ -487,7 +756,7 @@ Now we initialize the `Replicator` with the `ReplicatorConfiguration`.
 ```swift
 _pushPullRepl = Replicator.init(config: config)
 ```
-In order to follow the replicator's progress, we can attach a callback listener to it.
+In order to follow the replicators progress, we can attach a callback listener to it.
 
 Attaching a callback listener to the `Replicator` means we will be asynchronously notified of state changes.
 This could be useful for instance, to inform the user of the progress of the replication.  It is an optional step shown below.
