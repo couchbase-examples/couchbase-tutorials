@@ -464,7 +464,7 @@ docker-compose up -d
 
 * You can check the status of docker using either Docker Desktop or the terminal commands.  
 
-* Docker Desktop Users should see a container listing after launching the app.  The group name of the containers is the name of the directory of the code repo on your computer where you ran docker compose of. In the example it's named `android-kotlin-cbl-learning-path`.
+* Docker Desktop Users should see a container listing after launching the app.  The group name of the containers is the name of the directory of the code repo on your computer where you ran docker compose. In the example it's named `android-kotlin-cbl-learning-path`.
 
 ![Docker Desktop](docker-desktop.png '#width=600px')
 
