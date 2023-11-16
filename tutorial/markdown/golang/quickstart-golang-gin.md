@@ -5,13 +5,12 @@ title: Quickstart in Couchbase with Golang and Gin Gonic
 short_title: Golang and Gin Gonic
 description:
   - Learn to build a REST API in Golang using Gin Gonic and Couchbase
-  - See how you can persist and fetch data from Couchbase using primary indices
+  - See how you can fetch data from Couchbase using SQL++ queries 
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
 technology: 
   - kv
-  - index
   - query
 tags:
   - Gin Gonic
@@ -21,23 +20,29 @@ sdk_language:
 length: 30 Mins
 ---
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=golang-quickstart-repo&source=devPortal)](https://gitpod.io/#https://github.com/couchbase-examples/golang-quickstart)
 
 <!-- [abstract] -->
 
-In this article, you will learn how to connect to a Couchbase cluster to create, read, update, and delete documents and how to write simple parametrized N1QL queries.
+In this article, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++  queries.
 
 ## Prerequisites
 
-To run this prebuilt project, you will need to have Couchbase Server locally installed OR have a Couchbase Capella account :
+To run this prebuilt project, you will need:
 
-- Follow [Get Started with Couchbase Capella](https://docs.couchbase.com/cloud/get-started/get-started.html) for more information about Couchbase Capella.
-- Follow [Couchbase Installation Options](https://developer.couchbase.com/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance
+- Couchbase Cluster (7 or higher) with [travel-sample](https://docs.couchbase.com/go-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - [Couchbase Capella](https://www.couchbase.com/products/capella/) is the easiest way to get started.
+  - This tutorial is aimed at helping you get started with Couchbase Capella. If you are running self managed Couchbase server, please refer to [Appendix](#appendix-2-running-self-managed-couchbase-cluster) for relevant instructions.
 - Basic knowledge of [Golang](https://go.dev/tour/welcome/1) and [Gin Gonic](https://gin-gonic.com/docs/)
-- [Golang v1.19.x](https://go.dev/dl/) installed
-- Code Editor installed
+- [Golang v1.21.x](https://go.dev/dl/) installed
 - Note that this tutorial is designed to work with the latest Golang SDK (2.x) for Couchbase. It will not work with the older Golang SDK for Couchbase without adapting the code.
 
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
+
+- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 ## Source Code
 
 ```shell
@@ -49,224 +54,486 @@ git clone https://github.com/couchbase-examples/golang-quickstart
 Any dependencies will be installed by running the go run command, which installs any dependencies required from the go.mod file.
 
 
-## Database Server Configuration
+### Database Server Configuration
 
-All configuration for communication with the database is stored in the `.env` file. This includes the Connection string, username, password, bucket name, collection name and scope name. The default username is assumed to be `Administrator` and the default password is assumed to be `Password1$`. If these are different in your environment you will need to change them before running the application.
+All configuration for communication with the database is read from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `.env` in the source folder.
 
-### Running Couchbase Capella
+Create a copy of .env.example & rename it to .env & add the values for the Couchbase connection.
 
-When running Couchbase using Capella, the application requires the bucket and the database user to be setup from Capella Console. The directions for creating a bucket can be found on the [documentation website](https://docs.couchbase.com/cloud/clusters/data-service/manage-buckets.html#add-bucket). When following the directions, name the bucket "user_profile". Next, follow the directions for [Configure Database Credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) and name the username `Administrator` and password `Password1$`.
 
-Next, open the `.env` file. Locate CONNECTION_STRING and update it to match your Wide Area Network name found in the [Capella Portal UI Connect Tab](https://docs.couchbase.com/cloud/get-started/connect-to-cluster.html#connect-to-your-cluster-using-the-built-in-sdk-examples). Note that Capella uses TLS so the Connection string must start with couchbases://. Note that this configuration is designed for development environments only.
-
-```
-CONNECTION_STRING=couchbases://yourhostname.cloud.couchbase.com
-BUCKET=user_profile
-COLLECTION=default
-SCOPE=default
-USERNAME=Administrator
-PASSWORD=Password1$
+```sh
+CONNECTION_STRING=<connection_string>
+USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
+PASSWORD=<password_for_user>
 ```
 
-### Running Couchbase Locally
+> Note: The connection string expects the `couchbases://` or `couchbase://` part.
 
-For local installation and Docker users, follow the directions found on the [documentation website](https://docs.couchbase.com/server/current/manage/manage-buckets/create-bucket.html) for creating a bucket called `user_profile`. Next, follow the directions for [Creating a user](); name the username `Administrator` and password `Password1$`. For this tutorial, make sure it has `Full Admin` rights so that the application can create collections and indexes.
+### Running the Application
 
-Next, open the `.env` file and validate that the configuration information matches your setup.
+#### Directly on Local Machine
 
-> **NOTE:** For docker and local Couchbase installations, Couchbase must be installed and running on localhost (<http://127.0.0.1:8091>) prior to running the the Golang application.
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
+The application will run on port 8080 of your local machine (http://localhost:8080). You will find the Swagger documentation of the API which you can use to try the API endpoints.
 
-### Running The Application
-
-At this point the application is ready. Make sure you are in the src directory. You can run it with the following command from the terminal/command prompt:
-
-```shell
+```sh
+# Execute this command in the project's root directory
 go run .
 ```
 
-Once the site is up and running, you can launch your browser and go to the [Swagger start page](http://127.0.0.1:8080/docs/index.html) to test the APIs.
+#### Running via Docker
+
+If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
+
+- Build the Docker image
+
+```sh
+# Execute this command in the project's root directory
+docker build -t couchbase-gin-gonic-quickstart .
+```
+
+- Run the Docker image
+
+```sh
+# Execute this command in the project's root directory
+docker run -it --env-file .env -p 8080:8080 couchbase-gin-gonic-quickstart
+```
+
+> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container. The application is now running and you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
 
 ## What We'll Cover
 
-A simple REST API using Golang, Gin Gonic, and the Couchbase SDK version 2.x with the following endpoints:
+A simple REST API using Golang, Gin Gonic, and the Couchbase SDK version 2.x with the CRUD operations on the airline, airport and route entities.
 
-- [POST a Profile](#post-a-profile) – Create a new user profile
-- [GET a Profile by Key](#get-a-profile-by-key) – Get a specific profile
-- [PUT Profile](#put-profile) – Update a profile
-- [DELETE Profile](#delete-profile) – Delete a profile
-- [GET Profiles by Searching](#get-profiles-by-searching) – Get all profiles matching First or Last Name
+## Data Model
 
-## Document Structure
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+![img](travel_sample_data_model.png)
 
-We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo, we will store all profile information in just one document in a collection named `profile`:
+
+## Let Us Review the Code
+
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
+
+### Code Layout
+
+```
+├── controllers
+│   ├── airline_controller.go
+│   ├── airport_controller.go
+│   └── route_controller.go
+├── db
+│   ├── db.go
+├── errors
+│   ├── errors.go
+├── models
+│   ├── collection_models.go
+├── routes
+│   ├── route.go
+├── service
+│   ├── airline.go
+│   ├── airport.go
+│   └── route.go
+├── go.mod
+├── main.go
+├── Dockerfile
+└── test
+    ├── airline_test.go
+    ├── airport_test.go
+    ├── main_test.go
+    └── route_test.go
+
+
+```
+
+We have separated out the  code into separate files by the entity (collection) in the `controllers` and `service` folder. The tests are similarly separated out by entity in the `tests` folder.
+
+In `main.go` a couchbase cluster is initialized using the `InitializeCluster` function from the `db` package.
+
+```go
+# main.go
+
+// Initialize the cluster
+cluster := db.InitializeCluster()
+```
+
+The Couchbase connection is established in the `InitializeCluster` function defined in `db.go`. There, we call the `Connect` method defined in the SDK to create the Database connection. In our application, we have the same bucket(travel-sample) and scope that is used by all the APIs. We initialise this scope and return it in the `GetScope` function. The collection will change depending on the API route.
+
+```go
+# db.go
+
+// Configure cluster options
+clusterOpts := gocb.ClusterOptions{
+  Authenticator: gocb.PasswordAuthenticator{
+    Username: username,
+    Password: password,
+  },
+}
+
+// Sets a pre-configured profile called "wan-development" to help avoid latency issues
+if err := clusterOpts.ApplyProfile(gocb.ClusterConfigProfileWanDevelopment); err != nil {
+  panic(err)
+}
+
+// Connect to the Couchbase cluster
+cluster, err := gocb.Connect(connectionString, clusterOpts)
+if err != nil {
+  panic(err)
+}
+
+```
+
+ In `main.go` we then fetch the scope from the  `GetScope` function defined in the `db.go` by passing the cluster initialised.
+ 
+ We then initialise the service and controller for all the collections.
+
+ The instances of the collections are then passed to the `SetupCollectionRoutes` function from the `routes` package. This function sets up the HTTP routes and their corresponding handlers.
+
+ ```go
+// Initialize the scope
+scope := db.GetScope(cluster)
+
+// Create service instances
+airlineService := services.NewAirlineService(scope)
+airportService := services.NewAirportService(scope)
+routeService := services.NewRouteService(scope)
+
+// Create controller instances
+airlineController := controllers.NewAirlineController(airlineService)
+airportController := controllers.NewAirportController(airportService)
+routeController := controllers.NewRouteController(routeService)
+
+// Pass to  Controllers struct to hold controller instances
+controllers := routes.Controllers{
+  AirlineController: airlineController,
+  AirportController: airportController,
+  RouteController:   routeController,
+}
+
+// Setup routes and pass the Controllers struct
+routes.SetupCollectionRoutes(router, controllers)
+ ```
+
+### Airport Entity
+
+For this tutorial, we will focus on the airport entity. The other entities are similar.
+
+We will be setting up a REST API to manage airport documents.
+
+- [POST Airport](#post-airport) – Create a new airport
+- [GET Airport](#get-airport) – Read specified airport
+- [PUT Airport](#put-airport) – Update specified airport
+- [DELETE Airport](#delete-airport) – Delete airport
+- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/go-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+### Airport Document Structure
+
+Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
 
 ```json
 {
-  "Pid": "b181551f-071a-4539-96a5-8a3fe8717faf",
-  "FirstName": "John",
-  "LastName": "Doe",
-  "Email": "john.doe@couchbase.com",
-  "Password": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC"
+  "airportname": "Sample Airport",
+  "city": "Sample City",
+  "country": "United Kingdom",
+  "faa": "SAA",
+  "icao": "SAAA",
+  "tz": "Europe/Paris",
+  "geo": {
+    "lat": 48.864716,
+    "lon": 2.349014,
+    "alt": 92
+  }
 }
 ```
+### POST Airport
 
-As we can see, we want our user's password to be encrypted in the database too, we can achieve this simply with `bcrypt`, an implementation of the [crypto library](https://pkg.go.dev/golang.org/x/crypto) we have installed.
+To insert a new airport document, locate the InsertDocumentForAirport method within the `airport_controller` file found in the `controllers` package. This expects a POST request with the airport ID (id) specified in the URL path and the airport data provided in the request body.
+We extract this airport ID from the URL, parse the request data, and call the `CreateAirport` method from the `AirportService`.
 
-## Let's Review the Code
+```go
+// InsertDocumentForAirport method in controllers/airline_controller.go
+docKey := context.Param("id")
+data := models.Airport{}
+if err := context.ShouldBindJSON(&data); err != nil {
+  context.JSON(http.StatusBadRequest, cError.Errors{
+    Error: "Error, Invalid request data: " + err.Error(),
+  })
+  return
+}
 
-To begin, open the code in the IDE of your choice to learn how to create, read, update, and delete documents.
-
-## POST a Profile
-
-For CRUD operations, we will use the [Key Value operations](https://docs.couchbase.com/go-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database.
-
-Open the `profile_controller` file found in the `controllers` folder and navigate to the Insertprofile method. Let's break this code down. This brings in the information passed to the controller in the body of the request. Rather than saving the password received as plain text, we hash it with Bcrypt `GenerateFromPassword` function. Note that the `GenerateFromPassword` function requires a byte array. The function returns a byte array which must be converted to a string while inserting the document.
-
-```golang
-key := uuid.New().String()
-hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+err := ac.AirportService.CreateAirport(docKey, &data)
+context.JSON(http.StatusCreated, data)
 ```
-<!-- [abstract] -->
 
-from post method of controllers/profile_controller.go
+The CreateAirport method calls the `Insert` method for the collection defined in the Couchbase SDK. The insert method takes the key (id) by which the document is referenced and the content to be inserted into the collection.
 
-Next, we create a new_profile document with the data received from the request.
-```golang
-new_profile := models.RequestBody{
-	Pid:       key,
-	FirstName: data.FirstName,
-	LastName:  data.LastName,
-	Email:     data.Email,
-	Password:  string(hashedPassword),
+```go
+// CreateAirport in service/airport.go
+func (s *AirportService) CreateAirport(docKey string, data *models.Airport) error {
+	_, err := s.scope.Collection(s.collectionName).Insert(docKey, data, nil)
+	if err != nil {
+		return err
 	}
-```
-
-<!-- [abstract] -->
-
-from post method of controllers/profile_controller.go
-
-Our new_profile document is ready to be persisted to the database. We call the collection using the variable `col` and then call the insert method by passing the profile_key which is the generated UUID, as the key. Once the document is inserted we then return the document saved and the result all as part of the same object back to the user.
-
-```golang
-result, err := col.Insert(profile_key, new_profile, nil)
-getResult, err := col.Get(profile_key, nil)
-err = getResult.Content(&getDoc)
-context.JSON(http.StatusOK, responses.ProfileResponse{Status: http.StatusOK, Message: "Document successfully inserted", Profile: getDoc})
-```
-
-<!-- [abstract] -->
-
-from insert method of controllers/profile_controller.go
-
-## GET a Profile by Key
-
-Navigate to the `GetProfile` method of the `profile_controller` file in the `controllers` folder. We only need the profile ID (`Pid`) or our `Key` from the user to retrieve a particular profile document using a basic key-value operation which is passed in the method signature as a string.
-
-```golang
-getResult, err := col.Get(Pid, nil)
-context.JSON(http.StatusOK, responses.ProfileResponse{Status: http.StatusOK, Message: "Successfully fetched Document", Profile: getDoc})
-
-```
-
-<!-- [abstract] -->
-
-from GetProfile method of controllers/profile_controller.go
-
-If the document wasn't found in the database, we return the `NotFound` method.
-
-## PUT Profile
-
-Update a Profile by Profile ID (pid)
-Let's navigate to the `UpdateProfile` function of the `profile_controller` file. The entire document gets replaced except for the document key which is the pid field. 
-
-Rather than saving the password as plain text, we hash it with [Bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt) `GenerateFromPassword` function.
-
-```golang
-profile_id := context.Param("id")
-data.Pid = profile_id
-hashedPassword, err_password := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-```
-
-<!-- [abstract] -->
-
-from UpdateProfile method of controllers/profile_controller.go
-
-We create a call to the collection using the upsert method and then return the document saved and the result just as we did in the previous endpoint.
-
-```golang
-_, err := col.Upsert(profile_id, data, nil)
-if errors.Is(err, gocb.ErrDocumentNotFound) {
-	context.JSON(http.StatusNotFound, responses.ProfileResponse{Status: http.StatusNotFound, Message: "Error, Document with the key does not exist", Profile: err.Error()})
-		return
-
+	return nil
 }
-getResult, err := col.Get(profile_id, nil)
-err = getResult.Content(&getDoc)
-context.JSON(http.StatusOK, responses.ProfileResponse{Status: http.StatusOK, Message: "Successfully Updated the document", Profile: getDoc})
+```
+If the document id already exists in the database, we get an error, `ErrDocumentExists` from the SDK and return the status as 409.
+
+### GET Airport
+
+To fetch a airport document, locate the GetDocumentForAirport method within the `airport_controller` file found in the `controllers` package. This expects a GET request with the airport document ID (id) specified in the URL path.
+We extract this airport document ID from the URL and call the `GetAirport` method from the `AirportService`.
+
+```go
+// GetDocumentForAirport in controllers/airport_controller.go
+docKey := context.Param("id")
+airportData, err := ac.AirportService.GetAirport(docKey)
 ```
 
-<!-- [abstract] -->
+The `GetAirport` method calls the `Get` method defined for collections in the Couchbase SDK. We fetch the document based on the key by which it is stored. If the document retrieval was successful, it decodes the content of the document into a `models.Airport` struct using the Content method.
 
-from UpdateProfile method of controllers/profile_controller.go
+```go
+// GetAirport in service/airport.go
+func (s *AirportService) GetAirport(docKey string) (*models.Airport, error) {
+	getResult, err := s.scope.Collection(s.collectionName).Get(docKey, nil)
+	if err != nil {
+		return nil, err
+	}
 
-## DELETE Profile
+	var airportData models.Airport
 
-Navigate to the `DeleteProfile` method in the `profile_controller` class. We only need the Key or id from the user to remove a document using a basic key-value operation.
+	if err := getResult.Content(&airportData); err != nil {
+		return nil, err
+	}
 
-```golang
-result, err := col.Remove(profile_id, nil)
+	return &airportData, nil
+}
 ```
 
-<!-- [abstract] -->
+If the document is not found in the database, we get an error, `ErrDocumentNotFound` from the SDK and return the status as 404.
 
-from DeleteProfile method of controllers/profile_controller.go
+### PUT Airport
 
-## GET Profiles by Searching
+To update a airport document, locate the UpdateDocumentForAirport method within the `airport_controller` file found in the `controllers` package.
+This expects a PUT request with the airport ID (id) specified in the URL path and the airport data to be updated provided in the request body.
+We extract this airport ID(id) from the URL, parse the request data, and call the `UpdateAirport` method from the `AirportService`.
 
-[N1QL](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use an N1QL query to search for profiles with Skip, Limit, and Search options.
+```go
+// UpdateDocumentForAirport in controllers/airport_controller.go
+docKey := context.Param("id")
+data := models.Airport{}
+if err := context.ShouldBindJSON(&data); err != nil {
+  context.JSON(http.StatusBadRequest, cError.Errors{
+    Error: "Error while getting the request: " + err.Error(),
+  })
+  return
+}
+err := ac.AirportService.UpdateAirport(docKey, &data)
+```
 
-Navigate to the `SearchProfile` method in the `profile_controller` file. This endpoint is different from all of the others because it makes the N1QL query rather than a key-value operation. This usually means more overhead because the query engine is involved. We did create an [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query, so it should be performant.
+The `UpdateAirport` method calls the `Upsert` method for the collection defined in the Couchbase SDK. The upsert method takes the key (id) by which the document is referenced and the content to be updated into the collection.
 
-First, the query string is used to get the individual skip, limit, and search values using the context. Then, we build our N1QL query using the parameters that were passed in.
-Take notice of the N1QL syntax and how it targets the `bucket`.`scope`.`collection`.
+```go
+// UpdateAirport in service/airport.go
+func (s *AirportService) UpdateAirport(docKey string, data *models.Airport) error {
+	_, err := s.scope.Collection(s.collectionName).Upsert(docKey, data, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+```
+### DELETE Airport
 
-Finally, we pass that query to the cluster.query method and return the result. We create an interface{} type to iterate over the results and save the results in profiles which will be returned to the user.
+To delete a airport document, locate the DeleteDocumentForAirport method within the `airport_controller` file found in the `controllers` package.
+This expects a DELETE request with the airport document ID (id) specified in the URL path.
+We extract this airport document ID from the URL and call the `DeleteAirport` method from the `AirportService`.
 
-```golang
-#get search word,limit and skip
-search := context.Query("search")
-limit := context.Query("limit")
-skip := context.Query("skip")
+```go
+// DeleteDocumentForAirport in controllers/airport_controller.go
+docKey := context.Param("id")
+err := ac.AirportService.DeleteAirport(docKey)
+```
 
-#create query
-query:= fmt.Sprintf("SELECT p.* FROM %s.%s.%s p WHERE lower(p.FirstName) LIKE '%s' OR lower(p.LastName) LIKE '%s' LIMIT %s OFFSET %s%s",bucket_name,scope_name,collection_name,search_query,search_query,limit,skip,";")
-results, _ := cluster.Query(query, nil)
+The `DeleteAirport` method calls the `Remove` method defined for collections in the Couchbase SDK. We delete the document based on the key by which it is stored.
 
-#loop through results
-for results.Next() {
-	err := results.Row(&s)
-		if err != nil {
-			panic(err)
+```go
+// DeleteAirport in service/airport.go
+func (s *AirportService) DeleteAirport(docKey string) error {
+	_, err := s.scope.Collection(s.collectionName).Remove(docKey, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+```
+
+If the document is not found in the database, we get an error, `ErrDocumentNotFound` from the SDK and return the status as 404.
+
+### List Airport
+
+This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
+
+[SQL++](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
+
+Navigate to the `GetAirports` method in the `airport_controller` file found in the `controllers` package. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
+
+First, we need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `context.DefaultQuery` method for country and limit,offset respectively.
+
+This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
+
+We build our SQL++ query using the [named parameters](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. A named or positional parameter is a placeholder for a value in the WHERE, LIMIT or OFFSET clause of a query. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
+
+```go
+// GetAirports in controllers/airport_controller.go
+country := context.DefaultQuery("country", "")
+limit, err := strconv.Atoi(context.DefaultQuery("limit", "10"))
+if err != nil {
+  limit = 10
+}
+offset, err := strconv.Atoi(context.DefaultQuery("offset", "0"))
+if err != nil {
+  offset = 0
+}
+
+// Construct the query with named params
+		if country != "" {
+			query = `
+				SELECT airport.airportname,
+					airport.city,
+					airport.country,
+					airport.faa,
+					airport.geo,
+					airport.icao,
+					airport.tz
+				FROM airport AS airport
+				WHERE airport.country=$country
+				ORDER BY airport.airportname
+				LIMIT $limit
+				OFFSET $offset;
+			`
+			params = map[string]interface{}{
+				"country": country,
+				"limit":   limit,
+				"offset":  offset,
+			}
+		} else {
+			query = `
+				SELECT airport.airportname,
+					airport.city,
+					airport.country,
+					airport.faa,
+					airport.geo,
+					airport.icao,
+					airport.tz
+				FROM airport AS airport
+				ORDER BY airport.airportname
+				LIMIT $limit
+				OFFSET $offset;
+			`
+			params = map[string]interface{}{
+				"limit":  limit,
+				"offset": offset,
+			}
 		}
-		profiles = append(profiles, s)
+// Use the method to execute the query and return the results
+queryResult, err := ac.AirportService.QueryAirport(query, params)
 
-	}
 ```
 
-<!-- [abstract] -->
+The `QueryAirport` method calls the `Query` method defined in the [Scope](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK. If the query is executed successfully, it iterates over the result set using `queryResult.Next()` and deserializes the data. The method returns a slice of `models.Airport` containing the result documents obtained from the query.
 
-from SearchProfile method of controllers/profile_controller.go
+```go
+// QueryAirport in service/airport.go
+func (s *AirportService) QueryAirport(query string, params map[string]interface{}) ([]models.Airport, error) {
+	queryResult, err := s.scope.Query(query, &gocb.QueryOptions{NamedParameters: params})
+	if err != nil {
+		return nil, err
+	}
+	var document models.Airport
+	var documents []models.Airport
 
-### Running The Tests
+	if queryResult == nil {
+		return nil, err
+	}
 
-To run the standard integration tests, use the following commands from the src directory:
+	for queryResult.Next() {
+		err := queryResult.Row(&document)
+		if err != nil {
+			return nil, err
+		}
+		documents = append(documents, document)
+	}
+	return documents, nil
+}
+```
 
-```bash
+### Direct Connections
+
+This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results simlar to the List Airport endpoint. The method returns a slice of `models.Destination` containing the result documents obtained from the query.
+
+Let us look at the query used here:
+
+```go
+query := `
+SELECT DISTINCT route.destinationairport
+FROM airport AS airport
+JOIN route AS route ON route.sourceairport = airport.faa
+WHERE airport.faa = $airport AND route.stops = 0
+ORDER BY route.destinationairport
+LIMIT $limit
+OFFSET $offset
+`
+
+params := map[string]interface{}{
+  "airport": airport,
+  "limit":   limit,
+  "offset":  offset,
+}
+
+// Use the method to execute the query and return the results
+queryResult, err := ac.AirportService.QueryDirectConnectionAirport(query, params)
+```
+
+The `QueryDirectConnectionAirport` method returns a slice of `models.Destination` containing the result documents obtained from the query.
+
+We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
+## Running The Tests
+
+We have defined unit tests using the standard go [testing package](https://pkg.go.dev/testing) for all the API end points. The unit tests use the same database configuration as the application. For the unit tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint.
+
+```sh
+# Run standard unit tests for the project
 cd test
 go test -v
 ```
 
-## Conclusion
+### Appendix 1: Extending API by Adding New Entity
 
-Setting up a basic REST API in Golang and Gin Gonic with Couchbase is fairly simple,this project when run will showcase basic CRUD operations along with creating an index for our parameterized  [N1QL query](https://docs.couchbase.com/go-sdk/current/howtos/n1ql-queries-with-sdk.html) which is used in most applications.
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- **Create the New Entity in Couchbase Bucket:**
+  - Utilize the [SDK](https://pkg.go.dev/github.com/couchbase/go-couchbase#Bucket.CreateCollection) or the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html) to establish the new collection within the Couchbase bucket.
+
+- **Define the New Route:**
+  - Navigate to the `route/routes.go` folder and create the new route.
+
+- **Controller Configuration:**
+  - Develop a new file in the `controllers` folder, mirroring the existing structures (e.g., `airport_controller.go`). Craft the corresponding method within this file to manage the new entity.
+
+- **Service Layer Implementation:**
+  - Generate a new file in the `service` folder, modeling it after the existing service files (e.g., `airline.go`). Construct the service logic pertinent to the operations involving the new entity.
+
+Following these steps ensures a systematic and organized approach to expanding the API functionality with a new entity.
+### Appendix 2: Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the lastest Couchbase Database Server Instance.
+
+You need to update the connection string and the credentials in the `.env` file in the source folder.
+
+> Note: Couchbase Server must be installed and running prior to running the app.
