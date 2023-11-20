@@ -71,10 +71,6 @@ DB_PASSWORD=<password_for_user>
 
 > Note: The connection string expects the `couchbases://` or `couchbase://` part.
 
-<!-- #### Running Couchbase Locally
-
-The default username is assumed to be `Administrator` and the default password is assumed to be `password`. If these are different in your environment, you will need to change them before running the application. -->
-
 ### Running the Application
 
 #### Directly on Local Machine
@@ -107,15 +103,25 @@ docker run -it --env-file .env -p 8080:8080 couchbase-flask-quickstart
 
 > Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
 
-<!-- [abstract] -->
-
-<!-- \*Couchbase 7 must be installed and running on localhost (<http://127.0.0.1:8091>) prior to running the Flask Python app if Couchbase is running locally (server installation or using Docker). -->
-
 Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
 
-## What We Will Cover
+### Using the Swagger Documentation
 
-A simple REST API using Python, Flask, and the Couchbase SDK version 4.x with the CRUD operations on the airline, airport and route entities.
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
 
 ## Data Model
 
@@ -167,7 +173,7 @@ couchbase_db.init_app(conn_str, username, password, app)
 couchbase_db.connect()
 ```
 
-The Couchbase connection is established in the `connect` method defined in `db.py`. There, we call the `Cluster` method defined in the SDK to create the Database connection. If the connection is already established, we do not do anything. In our application, we have the same bucket and scope that is used by all the APIs. The collection will change depending on the API route.
+The Couchbase connection is established in the `connect` method defined in `db.py`. There, we call the [`Cluster`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.cluster.Cluster) method defined in the SDK to create the Database connection. If the connection is already established, we do not do anything. In our application, we have the same bucket and scope that is used by all the APIs. The collection will change depending on the API route.
 
 ```python
 # db.py
@@ -237,7 +243,7 @@ couchbase_db.insert_document(AIRPORT_COLLECTION, key=id, doc=data)
 return data, 201
 ```
 
-We call the `insert_document` method in CouchbaseClient class, which calls the `insert` method for the collection defined in the Couchbase SDK. The insert method takes the key (ID) by which the document is referenced and the content to be inserted into the collection.
+We call the `insert_document` method in CouchbaseClient class, which calls the [`insert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.insert) method for the collection defined in the Couchbase SDK. The insert method takes the key (ID) by which the document is referenced and the content to be inserted into the collection.
 
 ```python
 # CouchbaseClient class in db.py
@@ -256,7 +262,7 @@ result = couchbase_db.get_document(AIRPORT_COLLECTION, key=id)
 return result.content_as[dict]
 ```
 
-The CouchbaseClient client `get_document` method calls the `get` method defined for collections in the Couchbase SDK. We fetch the documents based on the key by which it is stored.
+The CouchbaseClient client `get_document` method calls the [`get`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.get) method defined for collections in the Couchbase SDK. We fetch the documents based on the key by which it is stored.
 
 ```python
 # CouchbaseClient class in db.py
@@ -280,7 +286,7 @@ couchbase_db.upsert_document(AIRPORT_COLLECTION, key=id, doc=updated_doc)
 return updated_doc
 ```
 
-The CouchbaseClient class `upsert_document` method calls the `upsert` method defined for collection in the Couchbase SDK with the key and json data to update the document in the database.
+The CouchbaseClient class `upsert_document` method calls the [`upsert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.upsert) method defined for collection in the Couchbase SDK with the key and json data to update the document in the database.
 
 ```python
 # CouchbaseClient class in db.py
@@ -299,7 +305,7 @@ couchbase_db.delete_document(AIRPORT_COLLECTION, key=id)
 return "Deleted", 204
 ```
 
-The `delete_document` method in CouchbaseClient class calls the `remove` method defined for collection in the Couchbase SDK sending the key of the document to remove from the database.
+The `delete_document` method in CouchbaseClient class calls the [`remove`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.remove) method defined for collection in the Couchbase SDK sending the key of the document to remove from the database.
 
 ```python
 # CouchbaseClient class in db.py
@@ -370,7 +376,7 @@ airports = [r for r in results]
 return airports
 ```
 
-The `query` method in the CouchbaseClient class executes the SQL++ query using the `query` method defined in the [Scope](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
+The `query` method in the CouchbaseClient class executes the SQL++ query using the [`query`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.scope.Scope.query) method defined in the [Scope](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
 
 ```python
 # CouchbaseClient class in db.py
@@ -401,20 +407,16 @@ We are fetching the direct connections by joining the airport collection with th
 
 ### Running The Tests
 
-We have defined unit tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The unit tests use the same database configuration as the application. For the unit tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
+We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
 
 The tests including the fixtures and helpers for the tests are configured in the `conftest.py` file in the tests folder.
 
-To run the standard unit tests, use the following commands:
+To run the tests, use the following commands:
 
 ```bash
 cd src
 python -m pytest
 ```
-
-## Conclusion
-
-In this tutorial, we saw how to build a basic REST API with Couchbase in Python using Flask. We used the key-value operations in Couchbase for Create, Read, Update and Delete (CRUD) operations and used SQL++ queries to fetch documents based on user input.
 
 ### Appendix 1: Extending API by Adding New Entity
 
@@ -423,6 +425,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_management.html#couchbase.management.collections.CollectionManager.create_collection) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
 - Define the routes in a new file in the `api` folder similar to the existing routes like `airport.py`.
 - Add the new routes to the application in `app.py`.
+- Add the tests for the new routes in a new file in the `tests` folder similar to `test_airport.py`.
 
 ### Appendix 2: Running Self Managed Couchbase Cluster
 
