@@ -497,7 +497,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Define the routes in `program.cs` file similar to the existing routes.
 - Add the tests for the new routes in a new file in the `Couchbase.TravelSample.Tests` folder similar to `AirportTests.cs`.
 
-## Appendix 2: Running Self Managed Couchbase Cluster
+### Appendix 2: Running Self Managed Couchbase Cluster
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
