@@ -496,3 +496,11 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK]() or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
 - Define the routes in `program.cs` file similar to the existing routes.
 - Add the tests for the new routes in a new file in the `Couchbase.TravelSample.Tests` folder similar to `AirportTests.cs`.
+
+## Appendix 2: Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+You need to update the connection string and the credentials in the [appsettings.Development.json](https://github.com/couchbase-examples/aspnet-minapi-quickstart-travelsample/blob/main/src/Couchbase.TravelSample/appsettings.Development.json) file in the source folder.
+
+> **NOTE:** Couchbase must be installed and running prior to running the the ASP.NET app.
