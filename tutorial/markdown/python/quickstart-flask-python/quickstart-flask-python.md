@@ -53,7 +53,7 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/), the follow
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/python-quickstart
+git clone https://github.com/couchbase-examples/python-quickstart.git
 ```
 
 ### Install Dependencies
@@ -134,6 +134,12 @@ Once the application starts, you can see the details of the application on the l
 The application will run on port 8080 of your local machine (http://localhost:8080). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
 ![Swagger Documentation](swagger_documentation.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![img](travel_sample_data_model.png)
 
 ## Let Us Review the Code
 
@@ -412,7 +418,7 @@ OFFSET $offset
 
 We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 
-## Running The Tests
+## Running Tests
 
 We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
 
