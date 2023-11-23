@@ -29,27 +29,26 @@ In this tutorial, you will learn how to connect to a Couchbase Capella cluster t
 
 To run this prebuilt project, you will need:
 
-- Couchbase Cluster running 7 or higher with travel-sample bucket loaded
-  - [Couchbase Capella](https://www.couchbase.com/products/capella/) is the easiest way to get started.
-  - This tutorial is aimed at helping you get started with Couchbase Capella. If you are running self managed Couchbase server, please refer to the [Appendix](appendix-2-running-self-managed-couchbase-cluster) for relevant instructions.
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - [Python](https://www.python.org/downloads/) 3.9 or higher installed
-- Note that this tutorial is designed to work with the latest Python SDK (4.x) for Couchbase. It will not work with the older Python SDK for Couchbase without adapting the code.
+  - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
+- Loading Travel Sample Bucket
+  If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
 
-### Couchbase Capella Configuration
+  - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
+> Note that this tutorial is designed to work with the latest Python SDK (4.x) for Couchbase. It will not work with the older Python SDK for Couchbase without adapting the code.
 
-- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
-- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
-- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+## App Setup
 
-## Source Code
+### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/python-quickstart-fastapi
+git clone https://github.com/couchbase-examples/python-quickstart-fastapi.git
 ```
 
-## Install Dependencies
+### Install Dependencies
 
 Any dependencies should be installed through `pip`, the default package manager for Python.
 
@@ -57,7 +56,14 @@ Any dependencies should be installed through `pip`, the default package manager 
 python -m pip install -r requirements.txt
 ```
 
-### Database Server Configuration
+### Setup Database Configuration
+
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
+
+Specifically, you need to do the following:
+
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
 All configuration for communication with the database is fetched from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `.env` in the source folder.
 
@@ -71,9 +77,9 @@ DB_PASSWORD=<password_for_user>
 
 > Note: The connection string expects the `couchbases://` or `couchbase://` part.
 
-### Running the Application
+## Running the Application
 
-#### Directly on Local Machine
+### Directly on Local Machine
 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
@@ -83,7 +89,7 @@ The application will run on port 8080 of your local machine (http://localhost:80
 uvicorn app.main:app --reload
 ```
 
-#### Running via Docker
+#### Using Docker
 
 If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
 
@@ -102,23 +108,15 @@ docker run -it --env-file app/.env -p 8000:8000 couchbase-fastapi-quickstart
 
 > Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
 
-### Using the Swagger Documentation
+### Verifying the Application
 
-Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+Once the application starts, you can see the details of the application on the logs.
 
-Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+![Application Startup](app_startup.png)
 
-#### Trying Out the API
+The application will run on port 8000 of your local machine (http://localhost:8000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
-You can try out an API by clicking on the "Try it out" button next to the endpoints.
-
-- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
-
-- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
-
-#### Models
-
-Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
+![Swagger Documentation](swagger_documentation.png)
 
 ## Data Model
 
@@ -185,13 +183,10 @@ def get_db()
     password = os.getenv("DB_PASSWORD")
     if conn_str is None:
         print("WARNING: DB_CONN_STR environment variable not set")
-        exit()
     if username is None:
         print("WARNING: DB_USERNAME environment variable not set")
-        exit()
     if password is None:
         print("WARNING: DB_PASSWORD environment variable not set")
-        exit()
     return CouchbaseClient(conn_str, username, password)
 ```
 
@@ -423,7 +418,7 @@ OFFSET $offset
 
 We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 
-### Running The Tests
+### Running Tests
 
 We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
 
@@ -435,7 +430,9 @@ To run the tests, use the following command:
 python -m pytest
 ```
 
-### Appendix 1: Extending API by Adding New Entity
+## Appendix
+
+### Extending API by Adding New Entity
 
 If you would like to add another entity to the APIs, these are the steps to follow:
 
@@ -444,7 +441,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Add the new routes to the application in `app.py`.
 - Add the tests for the new routes in a new file in the `tests` folder similar to `test_airport.py`.
 
-### Appendix 2: Running Self Managed Couchbase Cluster
+### Running Self Managed Couchbase Cluster
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
@@ -453,3 +450,21 @@ If you are running this quickstart with a self managed Couchbase cluster, you ne
 You need to update the connection string and the credentials in the `.env` file in the source folder.
 
 > Note: Couchbase Server must be installed and running prior to running the FastAPI Python app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
