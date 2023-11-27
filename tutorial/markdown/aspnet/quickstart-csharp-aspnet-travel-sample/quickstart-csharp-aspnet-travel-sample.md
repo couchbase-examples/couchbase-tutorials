@@ -1,11 +1,11 @@
 ---
 # frontmatter
 path: "/tutorial-quickstart-csharp-aspnet-minapi-travel-sample"
-title: Quickstart in Couchbase with C# and ASP.NET Minimum API 
-short_title: ASP.NET Minimum API and C# 
+title: Quickstart in Couchbase with C# and ASP.NET Minimal API 
+short_title: ASP.NET Minimal API and C# 
 description: 
-  - Build a REST API with Couchbase's C# SDK 3.4 and ASP.NET Minimum API
-  - See how you can persist and fetch data from Couchbase using primary indices
+  - Learn to build a REST API with Couchbase's C# SDK 3.4 and ASP.NET Minimal API
+  - See how you can fetch data from Couchbase using SQL++ queries
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
@@ -26,13 +26,16 @@ length: 30 Mins
 In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
 
 ## Prerequisites
-
 To run this prebuilt project, you will need:
 
-- Couchbase Server (7 or higher) with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html#the-travel-application-data-model) bucket loaded.
-    - [Couchbase Capella](https://www.couchbase.com/products/capella/) is the easiest way to get started.
-- [.NET SDK v8+](https://dotnet.microsoft.com/download/dotnet/8.0) installed
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- [.NET SDK v8+](https://dotnet.microsoft.com/download/dotnet/8.0) installed.
+  - Ensure that the .Net version is [compatible](https://docs.couchbase.com/dotnet-sdk/current/project-docs/compatibility.html#dotnet-version-compat) with the Couchbase SDK.
 - Code Editor installed (Visual Studio Professional, Visual Studio Code, or JetBrains Rider)
+- Loading Travel Sample Bucket
+  - If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
+    - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
 ### Couchbase Capella Configuration
 
@@ -42,31 +45,37 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/), the follow
 - Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
-## Source Code
+## App Setup
+
+We will walk through the different steps required to get the application running.
+
+### Cloning Repo
 
 ```shell
 git clone https://github.com/couchbase-examples/aspnet-minapi-quickstart-travelsample.git
 ```
 
-## Install Dependencies
+### Install Dependencies
 
-```shell
+```sh
 cd src/Couchbase.TravelSample
 dotnet restore
 ```
 
-### DependencyInjection Nuget package
+#### Dependency Injection Nuget package
 
 The Couchbase SDK for .NET includes a nuget package called `Couchbase.Extensions.DependencyInjection` which is designed for environments like ASP.NET that takes in a configuration to connect to Couchbase and automatically registers interfaces that you can use in your code to perform full `CRUD (create, read, update, delete)` operations and queries against the database.
 
-### Database Server Configuration
+### Setup Database Configuration
 
-All configuration for communication with the database is stored in the appsettings.Development.json file.  This includes the connection string, username, password, bucket name and scope name.  The default username is assumed to be `Administrator` and the default password is assumed to be `P@$$w0rd12`.  If these are different in your environment you will need to change them before running the application.
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
 
 Specifically, you need to do the following:
 
 - Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+All configuration for communication with the database is stored in the `appsettings.Development.json` file.  This includes the connection string, username, password, bucket name and scope name.  The default username is assumed to be `Administrator` and the default password is assumed to be `P@$$w0rd12`.  If these are different in your environment you will need to change them before running the application.
 
 ```json
   "Couchbase": {
@@ -84,18 +93,18 @@ Specifically, you need to do the following:
 
 > Note: The connection string expects the `couchbases://` or `couchbase://` part.
 
-
 ## Running The Application
 
-### Running directly on machine
+### Directly on Machine
 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
+
 ```shell 
 cd src/Couchbase.TravelSample
 dotnet run
 ```
 
-### Running using docker
+### Using Docker
 
 - Build the Docker image
 ```shell 
@@ -109,27 +118,20 @@ cd aspnet-minapi-quickstart-travelsample
 docker run -p 8080:8080 couchbase-aspnet-minapi-quickstart
 ```
 
-You can access the backend API on http://localhost:8080/swagger/index.html
+You can access the Application on http://localhost:8080/swagger/index.html
 
->**Note:** Make the configuration changes inside appsettings.json file while running using docker.
+>**Note:** Make the configuration changes inside `appsettings.json` file while running using docker.
 
-### Using the Swagger Documentation
+### Verifying the Application
 
-Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+Once the application starts, you can see the details of the application on the logs.
 
-Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+![Application Startup](app_startup.png)
 
-#### Trying Out the API
+The application will run on port 8080 of your local machine (http://localhost:8080/swagger/index.html). You will find the Swagger documentation of the API if you go to the URL in your browser.
+Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
-You can try out an API by clicking on the "Try it out" button next to the endpoints.
-
-- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
-
-- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
-
-#### Models
-
-Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
+![Swagger Documentation](swagger_documentation.png)
 
 ## Data Model
 
@@ -494,6 +496,8 @@ We are fetching the direct connections by joining the airport collection with th
 
 ## Running The Tests
 
+We have defined unit tests using the [xunit](https://xunit.net/) nuget package for all the API end points. The unit tests use the same database configuration as the application. For the unit tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint
+
 To run the standard integration tests, use the following commands:
 
 ```sh
@@ -503,7 +507,9 @@ dotnet build
 dotnet test
 ```
 
-### Appendix 1: Extending API by Adding New Entity
+## Appendix
+
+### Extending API by Adding New Entity
 
 If you would like to add another entity to the APIs, these are the steps to follow:
 
@@ -511,10 +517,29 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Define the routes in `program.cs` file similar to the existing routes.
 - Add the tests for the new routes in a new file in the `Couchbase.TravelSample.Tests` folder similar to `AirportTests.cs`.
 
-### Appendix 2: Running Self Managed Couchbase Cluster
+### Running Self Managed Couchbase Cluster
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
 You need to update the connection string and the credentials in the [appsettings.Development.json](https://github.com/couchbase-examples/aspnet-minapi-quickstart-travelsample/blob/main/src/Couchbase.TravelSample/appsettings.Development.json) file in the source folder.
 
 > **NOTE:** Couchbase must be installed and running prior to running the the ASP.NET app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
+
