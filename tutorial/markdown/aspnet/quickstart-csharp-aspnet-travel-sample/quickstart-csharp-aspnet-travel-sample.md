@@ -142,13 +142,47 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
 
+### Code Layout
+
+```
+├── src
+│   ├── Couchbase.TravelSample
+│   │   ├── Models
+│   │   │   ├── Airline.cs
+│   │   │   ├── Airport.cs
+│   │   │   └── Route.cs
+│   │   ├── Properties
+│   │   │   └── launchSettings.json
+│   │   ├── Couchbase.TravelSample.csproj
+│   │   ├── Program.cs
+│   │   ├── appsettings.Development.json
+│   │   └── appsettings.json  
+│   └── Couchbase.TravelSample.Tests
+│       ├── AirlineTests.cs
+│       ├── AirportTests.cs
+│       ├── RouteTests.cs
+│       ├── GlobalUsings.cs
+│       └── Couchbase.TravelSample.Tests.csproj
+├── Couchbase.TravelSample.sln
+└── Dockerfile
+```
+
+We register the validators for the `AirportCreateRequestCommand`, `AirlineCreateRequestCommand`, and `RouteCreateRequestCommand` classes.
+
+```csharp
+builder.Services.AddValidatorsFromAssemblyContaining(typeof(AirportCreateRequestCommandValidator));
+builder.Services.AddValidatorsFromAssemblyContaining(typeof(AirlineCreateRequestCommandValidator));
+builder.Services.AddValidatorsFromAssemblyContaining(typeof(RouteCreateRequestCommandValidator));
+```
+
 In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.json` file.
 
 ```csharp
+var config = builder.Configuration.GetSection("Couchbase");
+
 //register the configuration for Couchbase and Dependency Injection Framework
 if (builder.Environment.EnvironmentName == "Testing")
 {
-    var config = builder.Configuration.GetSection("Couchbase");
     var connectionString = Environment.GetEnvironmentVariable("DB_CONN_STR");
     var username = Environment.GetEnvironmentVariable("DB_USERNAME");
     var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
@@ -162,36 +196,36 @@ if (builder.Environment.EnvironmentName == "Testing")
 
 else
 {
-    builder.Services.Configure<CouchbaseConfig>(builder.Configuration.GetSection("Couchbase"));
-    builder.Services.AddCouchbase(builder.Configuration.GetSection("Couchbase"));
+    builder.Services.Configure<CouchbaseConfig>(config);
+    builder.Services.AddCouchbase(config);
 }
 ```
 
-ASP.NET has an interface called `IHostApplicationLifetime` that you can add to your Configure method to help with registration of lifetime events. 
 We initialise the bucket and scope during the application startup.
-We check if the `inventory` scope exists in the provided `travel-sample` bucket when the application starts and print a warning if it doesn't exist.
+
+We check if the `inventory` scope exists in the provided `travel-sample` bucket when the application starts and throw and exception if the `inventory` scope does not exist inside the `travel-sample` bucket.
 
 ```csharp
-app.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted.Register(async () =>
-{
-    var configuration = builder.Configuration;
+var configuration = builder.Configuration;
 
-    // Retrieve configuration values from appsettings.json
-    var bucketName = configuration["Couchbase:BucketName"];
-    if (bucketName == null) return;
-    bucket = await app.Services.GetRequiredService<IBucketProvider>().GetBucketAsync(bucketName);
+// Retrieve configuration values from appsettings.json
+var bucketName = configuration["Couchbase:BucketName"];
+if (bucketName != null)
+{
+    var bucket = app.Services.GetRequiredService<IBucketProvider>().GetBucketAsync(bucketName).GetAwaiter().GetResult();
 
     const string scopeName = "inventory";
     
     // get inventory scope
     try
     {
-        inventoryScope = await bucket.ScopeAsync(scopeName);
+        inventoryScope = bucket.ScopeAsync(scopeName).GetAwaiter().GetResult();
     }
-    catch (Exception){
-        Console.WriteLine("Warning: The 'inventory' scope does not exist in 'travel-sample' bucket.");
+    catch (Exception)
+    {
+        throw new InvalidOperationException("The 'inventory' scope does not exist in 'travel-sample' bucket.");
     }
-});
+}
 ```
 
 The Couchbase SDK provides the `ICouchbaseLifetimeService` interface for handling closing the database connections when the application closes. It's best practice to register for the ASP.NET `ApplicationStop` lifetime event and call the `ICouchbaseLifetimeService` Close method so that the database connection and resources are closed and removed gracefully.
@@ -249,28 +283,46 @@ For CRUD operations we will use the [Key Value operations](https://docs.couchbas
 Open the `program.cs` file and navigate to the `post` method for `airport` collection.
 
 It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope. 
-Upon receiving a request containing airport details, it saves the airport document into the collection identified by the provided key(`id`). 
-If the inventory scope is unavailable, it responds with an error message. 
-This endpoint expects valid airport details in the request body for successful airport document creation.
+Upon receiving a request containing `airport` details, it saves the `airport` document into the collection identified by the provided key(`id`). 
+If the `inventory` scope is unavailable, it responds with an error message. 
+This endpoint expects valid `airport` details in the request body for successful `airport` document creation.
 
 ```csharp
-app.MapPost("/api/v1/airport/{id}", async (string id, AirportCreateRequestCommand request) =>
+app.MapPost("/api/v1/airport/{id}", async (string id, AirportCreateRequestCommand request, IValidator<AirportCreateRequestCommand> validator) =>
     {
-        if (inventoryScope is not null)
+        var validation = await validator.ValidateAsync(request);
+        if (!validation.IsValid)
         {
-            //get the collection
-            var collection = inventoryScope.Collection(airportCollection);
-
-            //get airport from request
-            var airport = request.GetAirport();
-
-            //save document
-            await collection.InsertAsync(id, airport);
-            return Results.Created($"/api/v1/airport/{id}", airport);
+            return Results.ValidationProblem(validation.ToDictionary());
         }
-        else
+        
+        try
         {
-            return Results.Problem("Scope not found");
+            if (inventoryScope is not null)
+            {
+                //get the collection
+                var collection = inventoryScope.Collection(airportCollection);
+
+                //get airport from request
+                var airport = request.GetAirport();
+
+                // Attempt to insert the document
+                await collection.InsertAsync(id, airport);
+                return Results.Created($"/api/v1/airport/{id}", airport);
+            }
+            else
+            {
+                return Results.Problem("Scope not found");
+            }
+        }
+        catch (DocumentExistsException)
+        {
+            // If a document with the same ID already exists, an exception will be thrown
+            return Results.Conflict($"A document with the ID '{id}' already exists.");
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
         }
     });
 ```
@@ -281,38 +333,38 @@ Open the `program.cs` file and navigate to the `get` method for `airport` collec
 
 It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope.
 Using the given `id`, it retrieves the corresponding document from the collection. 
-If the document exists, it responds with the details of the airport. 
-However, if the inventory scope isn't available, it returns an error message. 
+If the document exists, it responds with the details of the `airport`. 
+However, if the `inventory` scope isn't available, it returns an error message. 
 In case the document with the specified id isn't found, it returns a `Not Found` response. 
 Any unexpected errors during this process result in a `Problem` response displaying the error message encountered. 
-This endpoint expects a valid id parameter to retrieve airport information.
+This endpoint expects a valid `id` parameter to retrieve `airport` information.
 
 ```csharp
-app.MapGet("/api/v1/airport/{id}", async (string id) =>
+app.MapGet("/api/v1/airline/{id}", async (string id) =>
     {
         try
         {
             if (inventoryScope is not null)
             {
                 //get the collection
-                var collection = inventoryScope.Collection(airportCollection);
+                var collection = inventoryScope.Collection(airlineCollection);
 
                 //get the document from the bucket using the id
                 var result = await collection.GetAsync(id);
 
                 //validate we have a document
-                var resultAirports = result.ContentAs<Airport>();
-                if (resultAirports != null)
+                var resultAirlines = result.ContentAs<Airline>();
+                if (resultAirlines != null)
                 {
-                    return Results.Ok(resultAirports);
+                    return Results.Ok(resultAirlines);
                 }
             }
             else
             {
-                return Results.Problem("Scope not found");
+                return Results.Problem("Scope Not Found");
             }
         }
-        catch (Couchbase.Core.Exceptions.KeyValue.DocumentNotFoundException)
+        catch (DocumentNotFoundException)
         {
             Results.NotFound();
         }
@@ -330,37 +382,57 @@ app.MapGet("/api/v1/airport/{id}", async (string id) =>
 Open the `program.cs` file and navigate to the `put` method for `airport` collection.
 
 It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope.
-Upon receiving a request with updated airport details, it attempts to find the existing airport document using the provided `id`. 
-If the document exists, it updates it with the new details and responds with an `OK` status along with the updated airport information. 
+Upon receiving a request with updated `airport` details, it attempts to find the existing `airport` document using the provided `id`. 
+If the document exists, it updates it with the new details and responds with an `OK` status along with the updated `airport` information. 
 However, if the `inventory` scope isn't available, it returns an error message stating. 
 If the document with the specified `id` isn't found, it responds with a `Not Found` status. 
-This endpoint expects a valid `id` parameter and updated airport details in the request body for successful airport information updates.
+This endpoint expects a valid `id` parameter and updated `airport` details in the request body for successful `airport` information updates.
 
 ```csharp
-app.MapPut("/api/v1/airport/{id}", async (string id, AirportCreateRequestCommand request) =>
+app.MapPut("/api/v1/airline/{id}", async (string id, AirlineCreateRequestCommand request, IValidator<AirlineCreateRequestCommand> validator) =>
     {
-        if (inventoryScope is not null)
+        var validation = await validator.ValidateAsync(request);
+        if (!validation.IsValid)
         {
-            //get the collection
-            var collection = inventoryScope.Collection(airportCollection);
-
-            //get current airport from the database and update it
-            if (await collection.GetAsync(id) is { } result)
+            return Results.ValidationProblem(validation.ToDictionary());
+        }
+        
+        try
+        {
+            if (inventoryScope is not null)
             {
-                result.ContentAs<Airport>();
-                await collection.ReplaceAsync(id, request.GetAirport());
-                return Results.Ok(request);
+                //get the collection
+                var collection = inventoryScope.Collection(airlineCollection);
+
+                //get current airline from the database and update it
+                if (await collection.GetAsync(id) is { } result)
+                {
+                    result.ContentAs<Airline>();
+                    await collection.ReplaceAsync(id, request.GetAirline());
+                    return Results.Ok(request);
+                }
+                else
+                {
+                    return Results.NotFound();
+                }
             }
             else
             {
-                return Results.NotFound();
+                return Results.Problem("Scope Not Found");
             }
         }
-        else
+        catch (DocumentNotFoundException)
         {
-            return Results.Problem("Scope not found");
+            Results.NotFound();
         }
-    })
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
+
+        return Results.NotFound();
+        
+    });
 ```
 
 ## DELETE Airport
@@ -375,32 +447,45 @@ If the document with the specified `id` isn't found, it responds with a `Not Fou
 This endpoint requires a valid `id` parameter to successfully remove an airport record.
 
 ```csharp
- app.MapDelete("/api/v1/airport/{id}", async(string id) => 
+app.MapDelete("/api/v1/airline/{id}", async(string id) => 
     {
-        if (inventoryScope is not null)
+        try
         {
-            //get the collection
-            var collection = inventoryScope.Collection(airportCollection);
-
-            //get the document from the bucket using the id
-            var result = await collection.GetAsync(id);
-
-            //validate we have a document
-            var resultAirport = result.ContentAs<Airport>();
-            if (resultAirport != null)
+            if (inventoryScope is not null)
             {
-                await collection.RemoveAsync(id);
-                return Results.Ok(id);
+                //get the collection
+                var collection = inventoryScope.Collection(airlineCollection);
+
+                //get the document from the bucket using the id
+                var result = await collection.GetAsync(id);
+
+                //validate we have a document
+                var resultAirline = result.ContentAs<Airline>();
+                if ( resultAirline != null)
+                {
+                    await collection.RemoveAsync(id);
+                    return Results.Ok(id);
+                }
+                else
+                {
+                    return Results.NotFound();
+                }
             }
             else
             {
-                return Results.NotFound();
+                return Results.Problem("Scope Not Found");
             }
         }
-        else
+        catch (DocumentNotFoundException)
         {
-            return Results.Problem("Scope not found");
+            Results.NotFound();
         }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
+
+        return Results.NotFound();
     });
 ```
 ### List Airport
@@ -473,7 +558,7 @@ app.MapGet("/api/v1/airline/list", async (string? country, int? limit, int? offs
         {
             return Results.Problem(ex.Message);
         }
-    })
+    });
 ```
 
 ### Direct Connections
