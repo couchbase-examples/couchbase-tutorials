@@ -258,7 +258,7 @@ For CRUD operations, we will use the [Key-Value operations](https://docs.couchba
 
 ### Airport Document Structure
 
-Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
+Our airport document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
 
 ```json
 {
@@ -278,14 +278,12 @@ Our profile document will have an airportname, city, country, faa code, icao cod
 
 ## POST Airport
 
-For CRUD operations we will use the [Key Value operations](https://docs.couchbase.com/dotnet-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document.  Every document will need a ID (simlar to a primary key in other databases) in order to save it to the database.
+Open the `program.cs` file and navigate to the `app.MapPost` method for `airport` collection.
 
-Open the `program.cs` file and navigate to the `post` method for `airport` collection.
-
-It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope. 
-Upon receiving a request containing `airport` details, it saves the `airport` document into the collection identified by the provided key(`id`). 
-If the `inventory` scope is unavailable, it responds with an error message. 
-This endpoint expects valid `airport` details in the request body for successful `airport` document creation.
+It first validates the incoming request and if it's not valid, it returns a validation problem. 
+If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored, creates a new `Airport` object from the request, and attempts to insert the airport document into the database asynchronously using the provided `id`. 
+If the insertion is successful, it returns a link to the GET API for the newly created document. If a document with the same `id` already exists, it returns a conflict result. For any other exceptions, it returns a problem with the exception message. 
+If the `inventoryScope` is null, it returns a problem stating "Scope not found".
 
 ```csharp
 app.MapPost("/api/v1/airport/{id}", async (string id, AirportCreateRequestCommand request, IValidator<AirportCreateRequestCommand> validator) =>
@@ -329,39 +327,36 @@ app.MapPost("/api/v1/airport/{id}", async (string id, AirportCreateRequestComman
 
 ## GET Airport
 
-Open the `program.cs` file and navigate to the `get` method for `airport` collection.
+Open the `program.cs` file and navigate to the `app.MapGet` method for `airport` collection.
 
-It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope.
-Using the given `id`, it retrieves the corresponding document from the collection. 
-If the document exists, it responds with the details of the `airport`. 
-However, if the `inventory` scope isn't available, it returns an error message. 
-In case the document with the specified id isn't found, it returns a `Not Found` response. 
-Any unexpected errors during this process result in a `Problem` response displaying the error message encountered. 
-This endpoint expects a valid `id` parameter to retrieve `airport` information.
+The function checks if the `inventoryScope` is not null, and if it is, it returns a problem stating "Scope Not Found". 
+If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored and retrieves the document from the database using the provided `id`. 
+It then checks if a document was returned from the database. If a document was returned, it returns the document. If a document with the provided `id` does not exist in the database, it returns a `NotFound` result. 
+If any other exception occurs during the process, it returns a problem with the exception message.
 
 ```csharp
-app.MapGet("/api/v1/airline/{id}", async (string id) =>
+app.MapGet("/api/v1/airport/{id}", async (string id) =>
     {
         try
         {
             if (inventoryScope is not null)
             {
                 //get the collection
-                var collection = inventoryScope.Collection(airlineCollection);
+                var collection = inventoryScope.Collection(airportCollection);
 
                 //get the document from the bucket using the id
                 var result = await collection.GetAsync(id);
 
                 //validate we have a document
-                var resultAirlines = result.ContentAs<Airline>();
-                if (resultAirlines != null)
+                var resultAirports = result.ContentAs<Airport>();
+                if (resultAirports != null)
                 {
-                    return Results.Ok(resultAirlines);
+                    return Results.Ok(resultAirports);
                 }
             }
             else
             {
-                return Results.Problem("Scope Not Found");
+                return Results.Problem("Scope not found");
             }
         }
         catch (DocumentNotFoundException)
@@ -379,17 +374,18 @@ app.MapGet("/api/v1/airline/{id}", async (string id) =>
 
 ## PUT Airport
 
-Open the `program.cs` file and navigate to the `put` method for `airport` collection.
+Open the `program.cs` file and navigate to the `app.MapPut` method for `airport` collection.
 
-It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope.
-Upon receiving a request with updated `airport` details, it attempts to find the existing `airport` document using the provided `id`. 
-If the document exists, it updates it with the new details and responds with an `OK` status along with the updated `airport` information. 
-However, if the `inventory` scope isn't available, it returns an error message stating. 
-If the document with the specified `id` isn't found, it responds with a `Not Found` status. 
-This endpoint expects a valid `id` parameter and updated `airport` details in the request body for successful `airport` information updates.
+The method in the provided code is designed to update an airport record. The process begins with the validation of the incoming request using a provided validator.
+If the request fails validation, a validation problem is returned with the associated errors. 
+If the request passes validation, the method checks for the existence of `inventoryScope`. If `inventoryScope` is null, it signifies that the scope was not found and a problem is returned. If `inventoryScope` exists, the airport collection is retrieved.
+The method then attempts to fetch the current airport record from the database using the provided id. 
+If the airport record is found, it is updated with the new data from the request and the updated record is returned. 
+If the airport record is not found, a 404 Not Found error is returned.
+The method is also designed to handle exceptions. If any exceptions occur during the process, such as a `DocumentNotFoundException`, the exception is caught and a problem with the exception message is returned.
 
 ```csharp
-app.MapPut("/api/v1/airline/{id}", async (string id, AirlineCreateRequestCommand request, IValidator<AirlineCreateRequestCommand> validator) =>
+app.MapPut("/api/v1/airport/{id}", async (string id, AirportCreateRequestCommand request, IValidator<AirportCreateRequestCommand> validator) =>
     {
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
@@ -402,13 +398,13 @@ app.MapPut("/api/v1/airline/{id}", async (string id, AirlineCreateRequestCommand
             if (inventoryScope is not null)
             {
                 //get the collection
-                var collection = inventoryScope.Collection(airlineCollection);
+                var collection = inventoryScope.Collection(airportCollection);
 
-                //get current airline from the database and update it
+                //get current airport from the database and update it
                 if (await collection.GetAsync(id) is { } result)
                 {
-                    result.ContentAs<Airline>();
-                    await collection.ReplaceAsync(id, request.GetAirline());
+                    result.ContentAs<Airport>();
+                    await collection.ReplaceAsync(id, request.GetAirport());
                     return Results.Ok(request);
                 }
                 else
@@ -418,7 +414,7 @@ app.MapPut("/api/v1/airline/{id}", async (string id, AirlineCreateRequestCommand
             }
             else
             {
-                return Results.Problem("Scope Not Found");
+                return Results.Problem("Scope not found");
             }
         }
         catch (DocumentNotFoundException)
@@ -431,37 +427,34 @@ app.MapPut("/api/v1/airline/{id}", async (string id, AirlineCreateRequestCommand
         }
 
         return Results.NotFound();
-        
     });
 ```
 
 ## DELETE Airport
 
-Open the `program.cs` file and navigate to the `delete` method for `airport` collection.
+Open the `program.cs` file and navigate to the `app.MapDelete` method for `airport` collection.
 
-It first checks for the availability of the `inventory` scope, then retrieves the collection `airport` within the scope.
-Using the provided `id`, it attempts to fetch the corresponding `airport` document. 
-If the document exists, it deletes it from the collection and responds with an `OK` status along with the deleted `id`. 
-However, if the `inventory` scope isn't available, it returns an error message.
-If the document with the specified `id` isn't found, it responds with a `Not Found` status. 
-This endpoint requires a valid `id` parameter to successfully remove an airport record.
+The method in the provided code is designed to delete an airport record. The process begins by checking for the existence of `inventoryScope`. 
+If `inventoryScope` is null, it signifies that the scope was not found and a problem is returned. If `inventoryScope` exists, the airport collection is retrieved.
+The method then attempts to fetch the current airport record from the database using the provided id. If the airport record is found, it is deleted from the collection using the `collection.RemoveAsync(id)` method and the id of the deleted record is returned. 
+If the airport record is not found, a 404 Not Found error is returned. The method is also designed to handle exceptions. If any exceptions occur during the process, such as a `DocumentNotFoundException`, the exception is caught and a problem with the exception message is returned.
 
 ```csharp
-app.MapDelete("/api/v1/airline/{id}", async(string id) => 
+app.MapDelete("/api/v1/airport/{id}", async(string id) => 
     {
         try
         {
             if (inventoryScope is not null)
             {
                 //get the collection
-                var collection = inventoryScope.Collection(airlineCollection);
+                var collection = inventoryScope.Collection(airportCollection);
 
                 //get the document from the bucket using the id
                 var result = await collection.GetAsync(id);
 
                 //validate we have a document
-                var resultAirline = result.ContentAs<Airline>();
-                if ( resultAirline != null)
+                var resultAirport = result.ContentAs<Airport>();
+                if (resultAirport != null)
                 {
                     await collection.RemoveAsync(id);
                     return Results.Ok(id);
@@ -473,7 +466,7 @@ app.MapDelete("/api/v1/airline/{id}", async(string id) =>
             }
             else
             {
-                return Results.Problem("Scope Not Found");
+                return Results.Problem("Scope not found");
             }
         }
         catch (DocumentNotFoundException)
@@ -486,7 +479,7 @@ app.MapDelete("/api/v1/airline/{id}", async(string id) =>
         }
 
         return Results.NotFound();
-    });
+    })
 ```
 ### List Airport
 
@@ -494,49 +487,51 @@ This endpoint retrieves the list of airports in the database. The API has option
 
 [SQL++](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
 
-Open the `program.cs` file and navigate to the `delete` method for `airport` collection. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
+Open the `program.cs` file and navigate to the `app.MapGet` method for `airport` collection. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
-We need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `queryParameters.Parameter` parameter.
+We need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `queryParameters.Parameter`.
 
 This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
 
 We build our SQL++ query using the [parameters](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html#parameterized-queries) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
 
-Next, we pass that `query` to the Couchbase SDK method `QueryAsync` method. We save the results in a list, `items`.
+Next, we pass that `query` to the `QueryAsync` method. We save the results in a list, `items`.
 
-The `QueryAsync` method in the CouchbaseClient class executes the SQL++ query using the [`QueryAsync`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.scope.Scope.query) method defined in the [Scope](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
+This endpoint calls the `QueryAsync` method defined in the [Scope](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
 
 ```csharp
-app.MapGet("/api/v1/airline/list", async (string? country, int? limit, int? offset) =>
+app.MapGet("/api/v1/airport/list", async (string? country, int? limit, int? offset) =>
     {
         try
         {
-            if (inventoryScope is not null)
-            {
+            if (inventoryScope is not null){
+
                 // Set default values for limit and offset if not provided by the user
-                limit ??= 10;
+                limit ??= 10; 
                 offset ??= 0;
 
-                var query = string.IsNullOrEmpty(country)
-                    ? $@"SELECT airline.callsign,
-                            airline.country,
-                            airline.iata,
-                            airline.icao,
-                            airline.name
-                            FROM airline AS airline
-                            ORDER BY airline.name
-                            LIMIT $limit
-                            OFFSET $offset"
-                    : $@"SELECT airline.callsign,
-                            airline.country,
-                            airline.iata,
-                            airline.icao,
-                            airline.name
-                            FROM airline AS airline
-                            WHERE lower(airline.country) = $country
-                            ORDER BY airline.name
-                            LIMIT $limit
-                            OFFSET $offset";
+                var query = string.IsNullOrEmpty(country) ? $@"SELECT airport.airportname,
+                              airport.city,
+                              airport.country,
+                              airport.faa,
+                              airport.geo,
+                              airport.icao,
+                              airport.tz
+                 FROM airport AS airport
+                 ORDER BY airport.airportname
+                 LIMIT $limit
+                 OFFSET $offset" : $@"SELECT airport.airportname,
+                          airport.city,
+                          airport.country,
+                          airport.faa,
+                          airport.geo,
+                          airport.icao,
+                          airport.tz
+             FROM airport AS airport
+             WHERE lower(airport.country) = $country
+             ORDER BY airport.airportname
+             LIMIT $limit
+             OFFSET $offset";
 
                 //setup parameters
                 var queryParameters = new Couchbase.Query.QueryOptions();
@@ -544,7 +539,7 @@ app.MapGet("/api/v1/airline/list", async (string? country, int? limit, int? offs
                 queryParameters.Parameter("limit", limit);
                 queryParameters.Parameter("offset", offset);
 
-                var results = await inventoryScope.QueryAsync<Airline>(query, queryParameters);
+                var results = await inventoryScope.QueryAsync<Airport>(query, queryParameters);
                 var items = await results.Rows.ToListAsync();
 
                 return items.Count == 0 ? Results.NotFound() : Results.Ok(items);
