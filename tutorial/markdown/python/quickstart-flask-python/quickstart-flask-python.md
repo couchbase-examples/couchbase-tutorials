@@ -1,6 +1,6 @@
 ---
 # frontmatter
-path: '/tutorial-quickstart-flask-python'
+path: "/tutorial-quickstart-flask-python"
 title: Quickstart in Couchbase with Python and Flask
 short_title: Python and Flask
 description:
@@ -9,7 +9,7 @@ description:
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
-technology: 
+technology:
   - kv
   - index
   - query
@@ -31,7 +31,7 @@ In this article, you will learn how to connect to a Couchbase cluster to create,
 
 To run this prebuilt project, you will need:
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the lastest Couchbase Database Server Instance
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance
 - [Python v3.x](https://www.python.org/downloads/) installed
 - Code Editor installed
 - Note that this tutorial is designed to work with the latest Python SDK (4.x) for Couchbase. It will not work with the older Python SDK for Couchbase without adapting the code.
