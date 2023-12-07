@@ -5,7 +5,7 @@ title: Quickstart in Couchbase with Python and Flask
 short_title: Python and Flask
 description:
   - Learn to build a REST API in Python using Flask and Couchbase
-  - See how you can persist and fetch data from Couchbase using primary indices
+  - See how you can fetch data from Couchbase using SQL++ queries
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
@@ -21,263 +21,451 @@ sdk_language:
 length: 30 Mins
 ---
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=python-flask-quickstart-repo&source=devPortal)](https://gitpod.io/#https://github.com/couchbase-examples/python-quickstart)
-
 <!-- [abstract] -->
 
-In this article, you will learn how to connect to a Couchbase cluster to create, read, update, and delete documents and how to write simple parametrized N1QL queries.
+In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
 
 ## Prerequisites
 
 To run this prebuilt project, you will need:
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance
-- [Python v3.x](https://www.python.org/downloads/) installed
-- Code Editor installed
-- Note that this tutorial is designed to work with the latest Python SDK (4.x) for Couchbase. It will not work with the older Python SDK for Couchbase without adapting the code.
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- [Python](https://www.python.org/downloads/) 3.9 or higher installed
+  - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
+- Loading Travel Sample Bucket
+  If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
 
-## Source Code
+  - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
+
+> Note that this tutorial is designed to work with the latest Python SDK (4.x) for Couchbase. It will not work with the older Python SDK for Couchbase without adapting the code.
+
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
+
+- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+## App Setup
+
+### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/python-quickstart
+git clone https://github.com/couchbase-examples/python-quickstart.git
 ```
 
-## Install Dependencies
+### Install Dependencies
 
-Any dependencies should be installed through PIP, the default package manager for Python.
+The dependencies for the application are specified in the `requirements.txt` file in the source folder. Dependencies can be installed through `pip` the default package manager for Python.
 
 ```shell
 python -m pip install -r src/requirements.txt
 ```
 
-### Database Server Configuration
+> Note: Python SDKs older than version 4.1.9 require OpenSSL v1.1. This might not be the default in some newer platforms. In such scenarios, please install the SDK without using the prebuilt wheels
 
-All configuration for communication with the database is stored in the `app.py` file. The dictionary is named `db_info`. This dictionary includes the connection string, username, password, bucket name, collection name and scope name.
+> `python -m pip install couchbase --no-binary couchbase`
 
-#### Running Couchbase Locally
+> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-python-client#alternative-installation-methods) for more info.
 
-The default username is assumed to be `Administrator` and the default password is assumed to be `password`. If these are different in your environment, you will need to change them before running the application.
+### Setup Database Configuration
 
-#### Running Couchbase Capella
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
 
-When running Couchbase using [Capella](https://cloud.couchbase.com/), the application requires the bucket, scope, collection and the database user to be setup from Capella Console.
+Specifically, you need to do the following:
 
-Steps
-
-- Create the bucket in Capella UI. For more details, you can refer to the [documentation](https://docs.couchbase.com/cloud/get-started/cluster-and-data.html).
-- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the bucket (Read and Write) used in the application.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
-- Enable the commented out `connect()` in the application (`app.py`) that is used to connect to Capella. Also, enable the commented out 'initialize_db()` in the database initialization script (`db_init.py`). Note that we are not using certificates for authentication for simplicity. This is not the recommended approach for production use.
 
-### Running The Application
+All configuration for communication with the database is fetched from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `.env` in the source folder.
 
-At this point the application is ready. You can run it with the following commands from the terminal/command prompt:
+Create a copy of `.env.example` file & rename it to `.env` & add the values for the Couchbase cluster.
 
-The bucket along with the scope and collection will be created on the cluster. For Capella, you need to ensure that the bucket is created before running the application.
+```sh
+DB_CONN_STR=<connection_string>
+DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
+DB_PASSWORD=<password_for_user>
+```
+
+> Note: The connection string expects the `couchbases://` or `couchbase://` part.
+
+## Running the Application
+
+### Directly on Local Machine
+
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
+
+The application will run on port 8080 of your local machine (http://localhost:8080). You will find the Swagger documentation of the API which you can use to try the API endpoints.
 
 ```shell
-export FLASK_APP=src/app && \
-export FLASK_ENV=development
-python db_init.py && flask run
+cd src
+python app.py
 ```
 
-<!-- [abstract] -->
+### Using Docker
 
-\*Couchbase 7 must be installed and running on localhost (<http://127.0.0.1:8091>) prior to running the Flask Python app if Couchbase is running locally (server installation or using Docker).
+If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
 
-Once the site is up and running, you can launch your browser and go to the [Swagger start page](https://localhost:5001/swagger/index.html) to test the APIs.
+- Build the Docker image
 
-## What We'll Cover
-
-A simple REST API using Python, Flask, and the Couchbase SDK version 3.x with the following endpoints:
-
-- [POST a Profile](#post-a-profile) – Create a new user profile
-- [GET a Profile by Key](#get-a-profile-by-key) – Get a specific profile
-- [PUT Profile](#put-profile) – Update a profile
-- [DELETE Profile](#delete-profile) – Delete a profile
-- [GET Profiles by Searching](#get-profiles-by-searching) – Get all profiles matching First or Last Name
-
-## Document Structure
-
-We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo, we will store all profile information in just one document in a collection named `profile`:
-
-```json
-{
-  "pid": "b181551f-071a-4539-96a5-8a3fe8717faf",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@couchbase.com",
-  "password": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC"
-}
+```sh
+cd src
+docker build -t couchbase-flask-quickstart .
 ```
 
-As we can see, we want our user's password to be encrypted in the database too, we can achieve this simply with `bcrypt`, a dependency we have installed.
+- Run the Docker image
 
-## Let's Review the Code
+```sh
+docker run -it --env-file .env -p 8080:8080 couchbase-flask-quickstart
+```
+
+> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
+
+Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
+
+### Verifying the Application
+
+Once the application starts, you can see the details of the application on the logs.
+
+![Application Startup](app_startup.png)
+
+The application will run on port 8080 of your local machine (http://localhost:8080). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+
+![Swagger Documentation](swagger_documentation.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![img](travel_sample_data_model.png)
+
+## Let Us Review the Code
 
 To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
 
-## POST a Profile
+### Code Layout
 
-For CRUD operations, we will use the [Key Value operations](https://docs.couchbase.com/python-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database.
+```
+├── src
+│   ├── Dockerfile
+│   ├── api
+│   │   ├── airline.py
+│   │   ├── airport.py
+│   │   └── route.py
+│   ├── app.py
+│   ├── db.py
+│   ├── extensions.py
+│   ├── requirements.txt
+│   └── tests
+│       ├── conftest.py
+│       ├── test_airline.py
+│       ├── test_airport.py
+│       └── test_route.py
+```
 
-Open the `app.py` file and navigate to the `post` method in the `Profile` class. Let’s break this code down. First, we make a reference of the json data to a variable `data` that we can use to modify the posted information before inserting it into the database.
+We have separated out the API code into separate files by the entity (collection) in the `api` folder. The tests are similarly separated out by entity in the `tests` folder.
 
-Next, we create a `UUID` object using the `uuid4` method and convert it to a string. The `pid` that we` re saving into the dictionary is a unique key. This value will be used for the``Key ` to the document.
+In `app.py`, we initialize the application including connecting to the database and add all the routes from individual API files.
 
-Rather than saving the password in the account object as plain text, we hash it with [Bcrypt](https://pypi.org/project/bcrypt/) `hashpw` function. Note that the `hashpw` function requires a UTF-8 coded String. The function returns a binary String which must be decoded to a regular string using the `decode` function before saving it to the dictionary.
+We have the Couchbase SDK operations defined in the `CouchbaseClient` class inside the `db.py` file.
+
+We recommend creating a single Couchbase connection when your application starts up, and sharing this instance throughout your application. If you know at startup time which buckets, scopes, and collections your application will use, we recommend obtaining them from the Cluster at startup time and sharing those instances throughout your application as well.
+
+In this application, we have created the connection object in `extensions.py` and we use this object in all of our APIs. The object is initialized in `app.py`. We have also stored the reference to our bucket, `travel-sample` and the scope, `inventory` in the connection object.
 
 ```python
+# app.py
+from extensions import couchbase_db
+
+...
+
+# Create the database connection
+couchbase_db.init_app(conn_str, username, password, app)
+couchbase_db.connect()
+```
+
+The Couchbase connection is established in the `connect` method defined in `db.py`. There, we call the [`Cluster`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.cluster.Cluster) method defined in the SDK to create the Database connection. If the connection is already established, we do not do anything. In our application, we have the same bucket and scope that is used by all the APIs. The collection will change depending on the API route.
+
+```python
+# db.py
+# authentication for Couchbase cluster
+auth = PasswordAuthenticator(self.username, self.password)
+
+cluster_opts = ClusterOptions(auth)
+# wan_development is used to avoid latency issues while connecting to Couchbase over the internet
+cluster_opts.apply_profile("wan_development")
+
+# connect to the cluster
+self.cluster = Cluster(self.conn_str, cluster_opts)
+
+# wait until the cluster is ready for use
+self.cluster.wait_until_ready(timedelta(seconds=5))
+
+# get a reference to our bucket
+self.bucket = self.cluster.bucket(self.bucket_name)
+
+# get a reference to our scope
+self.scope = self.bucket.scope(self.scope_name)
+```
+
+### Airport Entity
+
+For this tutorial, we will focus on the airline entity. The other entities are similar.
+
+We will be setting up a REST API to manage airport documents.
+
+- [POST Airport](#post-airport) – Create a new airport
+- [GET Airport](#get-airport) – Read specified airport
+- [PUT Airport](#put-airport) – Update specified airport
+- [DELETE Airport](#delete-airport) – Delete airport
+- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/python-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+
+### Airport Document Structure
+
+Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
+
+```json
+{
+  "airportname": "Sample Airport",
+  "city": "Sample City",
+  "country": "United Kingdom",
+  "faa": "SAA",
+  "icao": "SAAA",
+  "tz": "Europe/Paris",
+  "geo": {
+    "lat": 48.864716,
+    "lon": 2.349014,
+    "alt": 92
+  }
+}
+```
+
+### POST Airport
+
+Open the `airport.py` file and navigate to the `post` method in the `AirportId` class. We make a reference of the json data to a variable `data` that we insert into the database using the datbase client, `couchbase_db`.
+
+```python
+# post method in class AirportId of airport.py
 data = request.json
-#create new random key
-key = uuid.uuid4().__str__()
-data["pid"] = key
-#encrypt password
-hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode()
-data["password"] = hashed
-cb.insert(key, data)
+couchbase_db.insert_document(AIRPORT_COLLECTION, key=id, doc=data)
 return data, 201
 ```
 
-<!-- [abstract] -->
-
-from post method of Profile class in app.py
-
-Our `profile` document is ready to be persisted to the database. We call the CouchbaseClient class `insert` method, which calls the `_collection insert` method sending the key and document for insertion into the database.
+We call the `insert_document` method in CouchbaseClient class, which calls the [`insert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.insert) method for the collection defined in the Couchbase SDK. The insert method takes the key (ID) by which the document is referenced and the content to be inserted into the collection.
 
 ```python
-def insert(self, key, doc):
-  return self._collection.insert(key, doc)
+# CouchbaseClient class in db.py
+def insert_document(self, collection_name: str, key: str, doc: dict):
+  """Insert document using KV operation"""
+  return self.scope.collection(collection_name).insert(key, doc)
 ```
 
-<!-- [abstract] -->
+### GET Airport
 
-from insert method of CouchbaseClient class in app.py
-
-## GET a Profile by Key
-
-Navigate to the `get` method of the `ProfileId` class in the `app.py` file. We only need the profile ID (`pid`) or our `Key` from the user to retrieve a particular profile document using a basic key-value operation which is passed in the method signature as a string.
+Navigate to the `get` method of the `AirportId` class in the `airport.py` file. We only need the airport document ID or our key from the user to retrieve a particular airport document using a key-value operation which is passed in the get_document method. The result is converted into a python dictionary using the `.content_as[dict]` operation defined for the result returned by the SDK.
 
 ```python
-res = cb.get(id)
-return jsonify(res.content_as[dict])
+# get method in class AirportId of airport.py
+result = couchbase_db.get_document(AIRPORT_COLLECTION, key=id)
+return result.content_as[dict]
 ```
 
-<!-- [abstract] -->
-
-from get function ProfileId class in app.py
-
-The CouchbaseClient class `get` method calls the \_collection variable `get` method. Since we created the document with a unique key we can use that to find the document in the scope and collection it is stored.
+The CouchbaseClient client `get_document` method calls the [`get`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.get) method defined for collections in the Couchbase SDK. We fetch the documents based on the key by which it is stored.
 
 ```python
-def get(self, key):
-  return self._collection.get(key)
+# CouchbaseClient class in db.py
+def get_document(self, collection_name: str, key: str):
+  """Get document by key using KV operation"""
+  return self.scope.collection(collection_name).get(key)
 ```
 
-<!-- [abstract] -->
+If the document is not found in the database, we get an exception, `DocumentNotFoundException` from the SDK and return the status as 404.
 
-from get method of CouchbaseClient class in app.py
+### PUT Airport
 
-If the document wasn't found in the database, we return the `NotFound` method.
+Update an Airport by Document ID
 
-## PUT Profile
-
-Update a Profile by Profile ID (pid)
-
-We use the key-value passed in via the URL query string to call the CouchbaseClient class `insert` method passing it the key and the form body data using request.json.
+We use the ID value passed in via the URL to call the `upsert_document` method in CouchbaseClient passing it the key and the data provided in the request body using request.json.
 
 ```python
-data = request.json
-#create new random key
-data["pid"] = id
-#encrypt password
-hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode()
-data["password"] = hashed
-cb.upsert(pid, request.json)
-return data;
+# put method in class AirportId of airport.py
+updated_doc = request.json
+couchbase_db.upsert_document(AIRPORT_COLLECTION, key=id, doc=updated_doc)
+return updated_doc
 ```
 
-<!-- [abstract] -->
-
-from put of ProfileId class in app.py
-
-The CouchbaseClient class `upsert` method calls the collection's `upsert` method sending the key and json data to update the database.
+The CouchbaseClient class `upsert_document` method calls the [`upsert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.upsert) method defined for collection in the Couchbase SDK with the key and json data to update the document in the database.
 
 ```python
-def upsert(self, key, doc):
-  return self._collection.upsert(key, doc)
+# CouchbaseClient class in db.py
+def upsert_document(self, collection_name: str, key: str, doc: dict):
+  """Upsert document using KV operation"""
+  return self.scope.collection(collection_name).upsert(key, doc)
 ```
 
-<!-- [abstract] -->
+### DELETE Airport
 
-from upsert method of the CouchbaseClient class in app.py
-
-## DELETE Profile
-
-Navigate to the `delete` function in `app.py`. We only need the `key` or id from the user to delete a document using the basic key-value operation.
+Navigate to the `delete` function in `airport.py`. We only need the key or document ID from the user to delete a document using the key-value operation.
 
 ```python
-cb.remove(id)
+# delete method in class AirportId of airport.py
+couchbase_db.delete_document(AIRPORT_COLLECTION, key=id)
+return "Deleted", 204
 ```
 
-<!-- [abstract] -->
-
-from delete function of app.py
-
-The CouchbaseClient class `remove` method calls the \_collection `remove` method sending the key of the document to remove from the database.
+The `delete_document` method in CouchbaseClient class calls the [`remove`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.remove) method defined for collection in the Couchbase SDK sending the key of the document to remove from the database.
 
 ```python
-def remove(self, key):
-  return self._collection.remove(key)
+# CouchbaseClient class in db.py
+def delete_document(self, collection_name: str, key: str):
+    """Delete document using KV operation"""
+    return self.scope.collection(collection_name).remove(key)
 ```
 
-<!-- [abstract] -->
+### List Airport
 
-from remove method of CouchbaseClient class in app.py
+This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
 
-## GET Profiles by Searching
+[SQL++](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
 
-[N1QL](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use an N1QL query to search for profiles with Skip, Limit, and Search options.
+Navigate to the `get` method in the `AirportList` class of `airport.py` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
-Navigate to the `get` method in the `Profiles` class of the `app.py` file. This endpoint is different from all of the others because it makes the N1QL query rather than a key-value operation. This usually means more overhead because the query engine is involved. We did create an [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query, so it should be performant.
+First, we need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `request.args.get` method.
 
-First, we need to get the values from the query string for search, limit, and skip that we will use in our query. These are pulled from the `request.args.get` method.
+This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
 
-Then, we build our N1QL query using the parameters. Take notice of the N1QL syntax and how it targets the `bucket`.`scope`.`collection`.
+We build our SQL++ query using the [parameters](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
 
-Next, we pass that `query` to the CouchbaseClient class `query` method. We create a dictionary called `profiles` we can save the results in it that will be returned to the user. By default, the Python SDK will [stream result set from the server](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#streaming-large-result-sets). To resolve this, we must enumerate over the results and store them in the profiles dictionary before converting them to JSON to send back to the user.
+Next, we pass that `query` to the CouchbaseClient class `query` method. We save the results in a list, `airports`. By default, the Python SDK will [stream result set from the server](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#streaming-large-result-sets). To gather all the results, we need to iterate over the results.
 
 ```python
-#get vars from GET request
-search = request.args.get("search")
-limit = request.args.get("limit")
-skip = request.args.get("skip")
+# get method in AirportList class in airport.py
+country = request.args.get("country", "")
+limit = int(request.args.get("limit", 10))
+offset = int(request.args.get("offset", 0))
 
-#create query
-query = f"SELECT p.* FROM  {db_info['bucket']}.{db_info['scope']}.{db_info['collection']} p WHERE lower(p.firstName) LIKE '%{search.lower()}%' OR lower(p.lastName) LIKE '%{search.lower()}%' LIMIT {limit} OFFSET {skip}"
-res = cb.query(query)
+# create query
+if country:
+    query = """
+        SELECT airport.airportname,
+            airport.city,
+            airport.country,
+            airport.faa,
+            airport.geo,
+            airport.icao,
+            airport.tz
+        FROM airport AS airport
+        WHERE airport.country = $country
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset;
+    """
+else:
+    query = """
+        SELECT airport.airportname,
+            airport.city,
+            airport.country,
+            airport.faa,
+            airport.geo,
+            airport.icao,
+            airport.tz
+        FROM airport AS airport
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset;
+    """
 
-#must loop through results
-#https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#streaming-large-result-sets
-profiles = []
-for x in res:
-    profiles.append(x)
-return jsonify(profiles)
+# run query
+results = couchbase_db.query(
+            query, country=country, limit=limit, offset=offset
+          )
+# gather all documents
+airports = [r for r in results]
+return airports
 ```
 
-<!-- [abstract] -->
+The `query` method in the CouchbaseClient class executes the SQL++ query using the [`query`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.scope.Scope.query) method defined in the [Scope](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
 
-from getProfiles method of the Profiles class in app.py
+```python
+# CouchbaseClient class in db.py
+def query(self, sql_query, *options, **kwargs):
+  """Query Couchbase using SQL++"""
+  # options are used for positional parameters
+  # kwargs are used for named parameters
+  return self.scope.query(sql_query, *options, **kwargs)
+```
 
-### Running The Tests
+### Direct Connections
 
-To run the standard integration tests, use the following commands:
+This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results simlar to the List Airport endpoint.
+
+Let us look at the query used here:
+
+```sql
+SELECT distinct (route.destinationairport)
+FROM airport as airport
+JOIN route as route on route.sourceairport = airport.faa
+WHERE airport.faa = $airport and route.stops = 0
+ORDER BY route.destinationairport
+LIMIT $limit
+OFFSET $offset
+```
+
+We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
+
+## Running Tests
+
+We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
+
+The tests including the fixtures and helpers for the tests are configured in the `conftest.py` file in the tests folder.
+
+To run the tests, use the following commands:
 
 ```bash
 cd src
-python test.py
+python -m pytest
 ```
 
-## Conclusion
+## Appendix
 
-Setting up a basic REST API in Flask and Python with Couchbase is fairly simple. In this project when ran with Couchbase Server 7 installed, it will create a bucket in Couchbase, an index for our parameterized [N1QL query](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+### Extending API by Adding New Entity
+
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_management.html#couchbase.management.collections.CollectionManager.create_collection) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Define the routes in a new file in the `api` folder similar to the existing routes like `airport.py`.
+- Add the new routes to the application in `app.py`.
+- Add the tests for the new routes in a new file in the `tests` folder similar to `test_airport.py`.
+
+### Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the lastest Couchbase Database Server Instance.
+
+You need to update the connection string and the credentials in the `.env` file in the source folder.
+
+> Note: Couchbase Server must be installed and running prior to running the Flask Python app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
