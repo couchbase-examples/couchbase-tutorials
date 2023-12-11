@@ -524,7 +524,7 @@ The `QueryDirectConnectionAirport` method returns a slice of `models.Destination
 We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 ## Running Tests
 
-We have defined integration tests using the standard go [testing package](https://pkg.go.dev/testing) for all the API end points. The integration tests use the same database configuration as the application. For the unit tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint.
+We have defined integration tests using the standard go [testing package](https://pkg.go.dev/testing) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint.
 
 ```sh
 # Run standard tests for the project
@@ -547,7 +547,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
   - Develop a new file in the `controllers` folder, mirroring the existing structures (e.g., `airport_controller.go`). Craft the corresponding method within this file to manage the new entity.
 
 - **Service Layer Implementation:**
-  - Generate a new file in the `service` folder, modeling it after the existing service files (e.g., `airline.go`). Construct the service logic pertinent to the operations involving the new entity.
+  - Generate a new file in the `service` folder, modeling it after the existing service files (e.g., `airport.go`). Construct the service logic pertinent to the operations involving the new entity.
 
 - **Add Tests:**
   - Add the tests for the new routes in a new file in the `test` folder similar to `airport_test.go`.
@@ -557,7 +557,7 @@ Following these steps ensures a systematic and organized approach to expanding t
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the lastest Couchbase Database Server Instance.
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
 
 You need to update the connection string and the credentials in the `.env` file in the source folder.
 
