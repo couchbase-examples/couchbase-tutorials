@@ -6,13 +6,12 @@ title: Using Node.js, Couchbase, and Express
 short_title: Node.js and Express
 description:
   - Build a basic REST API using Express and the Couchbase Node.js SDK
-  - Set up your own cluster and build primary indices to support a basic search query
-  - Watch CRUD operations in action with Couchbase
+  - See how you can fetch data from Couchbase using SQL++ queries
+  - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
 technology:
   - kv
-  - index
   - query
 tags:
   - Express
@@ -22,343 +21,335 @@ sdk_language:
 length: 30 Mins
 ---
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=nodejs-quickstart-repo&source=devPortal)](https://gitpod.io/#https://github.com/couchbase-examples/nodejs-quickstart)
+In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
 
-In this article, you will learn how to connect to a Couchbase cluster to create, read, update, and delete documents, and write simple parametrized N1QL queries using the Couchbase Node JS SDK.
-
-We will be using the latest version of Couchbase (version 7) that enables scopes and collections. For the easiest setup experience, we recommend trying Couchbase Capella, our fully-managed DBaaS offering. [Claim your free trial!](https://cloud.couchbase.com/sign-up)
-
-Alternatively, you can [install Couchbase with docker](https://docs.couchbase.com/server/current/getting-started/do-a-quick-install.html) or [directly on your local device](https://docs.couchbase.com/server/current/install/install-intro.html).
 
 ## Prerequisites
 
 To run this prebuilt project, you will need:
 
-- A Couchbase Capella cluster or Couchbase 7 installed locally
-- NodeJS & NPM (v12+)
-- Code Editor
-- See the [Couchbase Installation Options](/tutorial-couchbase-installation-options) for more details on setting up a cluster
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/nodejs-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- NodeJS & NPM 
+- Loading Travel Sample Bucket
+  If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
 
-## Source Code
+  - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
+
+> Note that this tutorial is designed to work with the latest Node SDK version (4.x) for Couchbase. It will not work with the older Node js versions  for Couchbase without adapting the code.
+
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
+
+- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+## App Setup
+### Cloning Repo
 
 ```shell
 git clone https://github.com/couchbase-examples/nodejs-quickstart
 ```
 
-### Configure environment variables appropriately
+### Install Dependencies
 
-We've included a `dev.env` file with some basic default values, but you may need to update these according to your configuration.
-- `CB_URL` - The Couchbase endpoint to connect to. Use `localhost` for a local/Docker cluster, or the Wide Area Network address for a Capella instance (formatted like `cb.<xxxxxx>.cloud.couchbase.com`)
-- `CB_USER` - The username of an authorized user on your cluster. Follow [these instructions](https://docs.couchbase.com/cloud/clusters/manage-database-users.html#create-database-credentials) to create database credentials on Capella
-- `CB_PASS` - The password that corresponds to the user specified above
-- `CB_BUCKET` - The bucket to connect to. We'll use `user_profile` for this
-- `IS_CAPELLA` - `true` if you are using Capella, `false` otherwise. This flag determines if the connection should use TLS or not, as TLS is required for Capella.
-
-**NOTE on TLS:** The connection logic in this sample app ignores mismatched certificates with the parameter `tls_verify=none`. While this is super helpful in streamlining the connection process for development purposes, it's not very secure and should **not** be used in production. To learn how to secure your connection with proper certificates, see [the Node.js TLS connection tutorial](/tutorial-nodejs-tls-connection).
-
-### Setup and Run The Application
-
-Install our NPM dependencies:
+Any dependencies will be installed by running the npm install command from the root directory of the project.
 
 ```shell
 npm install
 ```
+### Setup Database Configuration
 
-If you are using Capella, you'll have to manually create a bucket named `user_profile` and a collection named `profile`. See the documentation on [managing buckets](https://docs.couchbase.com/cloud/clusters/data-service/manage-buckets.html) and [creating a collection](https://docs.couchbase.com/cloud/clusters/data-service/scopes-collections.html#create-a-collection) for more information. Note that this collection should be created on the `_default` scope.
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
+
+Specifically, you need to do the following:
+
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+All configuration for communication with the database is read from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `dev.env` in the `config` folder.
+
+Add the values for the Couchbase connection in the config/dev.env file.
 
 
-If you have Couchbase running locally, we can the bucket and collection by running the following command:
-
-```shell
-npm run init-db
+```sh
+CONNECTION_STRING=<connection_string>
+USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
+PASSWORD=<password_for_user>
 ```
+> Note: The connection string expects the `couchbases://` or `couchbase://` part.
+## Running the Application
 
-Now we are ready to run our application:
+### Directly on Local Machine
 
-```shell
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
+
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the Swagger documentation of the API which you can use to try the API endpoints.
+
+```sh
+# Execute this command in the project's root directory
 npm start
 ```
+### Docker
 
-If your database is set up correctly, we will now have an API running on port 3000 as specified in the `dev.env` file. Let's go over what we have done to create this API demo application.
+If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
 
-## What We'll Cover
+- Build the Docker image
 
-A simple REST API using Express and the [Couchbase NodeJS SDK](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html), with the following endpoints:
+```sh
+cd src
+docker build -t couchbase-nodejs-quickstart .
+```
 
-- [POST Profile](#post-profile) – Create a new user profile
-- [GET Profile by Key](#get-profile-by-key) – Get a specific profile
-- [PUT Profile](#put-profile) – Update a profile
-- [DELETE Profile](#delete-profile) – Delete a profile
-- [GET Profiles](#get-profiles) – Get all profiles matching First or Last Name
+- Run the Docker image
+
+```sh
+docker run -it --env-file config/dev.env -p 3000:3000 couchbase-nodejs-quickstart
+```
+
+> Note: The `config/dev.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
+
+Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:3000/) to test the APIs.
+
+### Verifying the Application
+
+Once the application starts, you can see the details of the application on the logs.
+
+![Application Startup](nodejs_app_startup.png)
+
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+
+![Swagger Documentation](nodejs_swagger_documentation.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+![img](travel_sample_data_model.png)
+
+## Let Us Review the Code
+
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
+
+### Code Layout
+
+```
+├── src/controllers
+│   ├── airlineController.js
+│   ├── airportController.js
+│   └── routeController.js
+├── db
+│   ├── connection.js
+├── errors
+│   ├── errors.go
+├── src/routes
+│   ├── airline.js
+│   ├── airport.js
+│   ├── route.js
+├── src/shared
+│   ├── makeResponse.js
+│   ├── validateRequiredField.js
+├── src/app.js
+├── src/server.js
+├── Dockerfile
+└── __test__
+
+
+```
+
+We have separated out the  code into separate files by the entity (collection) in the `controllers` folder. The tests for the  project are present in the `__test__` folder.
+
+### Airport Entity
+
+For this tutorial, we will focus on the airport entity. The other entities are similar.
+
+We will be setting up a REST API to manage airport documents.
+
+- [POST Airport](#post-airport) – Create a new airport
+- [GET Airport](#get-airport) – Read specified airport
+- [PUT Airport](#put-airport) – Update specified airport
+- [DELETE Airport](#delete-airport) – Delete airport
+- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+
+For CRUD operations, we will use the [Node JS SDK](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html) to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database.
 
 ## Document Structure
 
-We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
+Our airport document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
 
 ```json
 {
-  "email": "johnwick@couchbase.com",
-  "password": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC",
-  "firstName": "John",
-  "lastName": "Wick",
-  "pid": "b181551f-071a-4539-96a5-8a3fe8717faf"
+  "airportname": "Sample Airport",
+  "city": "Sample City",
+  "country": "United Kingdom",
+  "faa": "SAA",
+  "icao": "SAAA",
+  "tz": "Europe/Paris",
+  "geo": {
+    "lat": 48.864716,
+    "lon": 2.349014,
+    "alt": 92
+  }
 }
 ```
-
-## Let's Review the Code
-
-We will be going over the `App.js` file located in the `/src` directory. Let's clone the repo onto our machine, get it up and running, and open the `App.js` to learn about how to create, read, update and delete documents in our Couchbase Server.
-
-**`src/server.js`:**
-
-The `server.js` file bootstraps our application by importing our `app.js` file and runs the `ensureProfileIndex()` before starting up the application, as we need those indexes for any use of N1QL queries in our application:
-
+Navigate to the `connection.js` in the `db` folder. We perform some basic required checks for the environment variable not being set in the dev.env, and then proceed to connect to the couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html#connect) method.
 ```js
-import { app, ensureProfileIndex } from './app.js'
-
-const startApiServer = async() => {
-  await ensureProfileIndex()
-    .then(() => {
-      app.listen(process.env.APP_PORT,
-        () => console.info(`Running on port ${process.env.APP_PORT}...`)
-      )
+  if (IS_CAPELLA === 'true') {
+    // Use wan profile to avoid latency issues
+    cached.conn = await couchbase.connect(DB_CONN_STR, {
+      username: DB_USERNAME,
+      password: DB_PASSWORD,
+      configProfile: 'wanDevelopment',
     })
-}
+  } else {
+    cached.conn = await couchbase.connect(DB_CONN_STR, {
+      username: DB_USERNAME,
+      password: DB_PASSWORD,
+    })
+  }
 
-startApiServer()
+  const airlineCollection = bucket.scope('inventory').collection('airline');
+  const airportCollection = bucket.scope('inventory').collection('airport');
+  const routeCollection = bucket.scope('inventory').collection('route');
 ```
 
-**`src/app.js`:**
 
-We import our dependencies and database connection:
+## Shared Directory
 
-```js
-import express from 'express'
-import bcrypt from 'bcryptjs'
-import { v4 } from 'uuid'
-import cors from 'cors'
+Open the `src/shared` folder and navigate to the `makeResponse.js` which contains a asynchronous function `makeResponse` for handling Express responses, executing provided actions, and managing errors. It specifically logs errors, sets appropriate HTTP status codes, and responds with a JSON object containing the error message. The status code is determined based on whether the error is a ValidationError or contains the string "not found."
 
-import { couchbase, cluster, profileCollection } from '../db/connection'
-```
-
-The import of the database connection uses [`/db/connection.js`](https://github.com/couchbase-examples/nodejs-quickstart/blob/master/db/connection.js):
 
 ```js
-import * as couchbase from 'couchbase'
-
-const options = { username: process.env.CB_USER, password: process.env.CB_PASS }
-const cluster = new couchbase.Cluster(process.env.CB_URL, options)
-const bucket = cluster.bucket(process.env.CB_BUCKET)
-const defaultScope = bucket.scope('_default')
-const profileCollection = defaultScope.collection('profile')
-
-module.exports = { couchbase, cluster, profileCollection }
-```
-
-In the [`connection.js`](https://github.com/couchbase-examples/nodejs-quickstart/blob/db/connection.js) file, we import the NodeJS SDK for Couchbase, create a connection to the database. The environment variables for `CB_URL`, `CB_USER`, `CB_PASS`, `CB_BUCKET`, which can be set for your development and testing environment respectively in the [`/config/` directory](https://github.com/couchbase-examples/nodejs-quickstart/blob/master/config). I have added both in the repo (`dev.env` and `test.env`), for the tutorial we will only focus on the dev environment. Feel free to explore the repo's [readme.md](https://github.com/couchbase-examples/nodejs-quickstart) file for additional instructions if you are interested in testing.
-
-After we have our configuration for database connection in place, we can create our express app:
-
-```js
-const app = express()
-
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-```
-
-We also wanted to show the easiest way of integrating Swagger into our project, as seen below, the Swagger client is located at `/api-docs` when the project is running.
-
-```js
-import swaggerUi from 'swagger-ui-express'
-import YAML from 'yamljs'
-const swaggerDocument = YAML.load('./swagger.yaml')
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
-app.get('/', function (req, res) {
-  res.send('<a href="/api-docs">Profile Store Docs</a>')
-})
-```
-
-## Ensure Primary Index Exists
-
-The first time the app is run, we create two primary indexes, one for our user_profile bucket and another for our `profile` collection. The collection index is used by the `"/profiles"` endpoint that utilizes a N1QL query to search the database for profile documents where `firstName` or `lastName` match the search value. The bucket index can be used in the case that any documents are added to the bucket's default collection or manually from the Couchbase Web UI.
-
-This function on app startup will only add the index if it does not exist already:
-
-```js
-const ensureIndexes = async() => {
+async function makeResponse(res, action) {
   try {
-    const bucketIndex = `CREATE PRIMARY INDEX ON ${process.env.CB_BUCKET}`
-    const collectionIndex = `CREATE PRIMARY INDEX ON default:${process.env.CB_BUCKET}._default.profile;`
-    await cluster.query(bucketIndex)
-    await cluster.query(collectionIndex)
-    console.log(`Index Creation: SUCCESS`)
-  } catch (err) {
-    if (err instanceof couchbase.IndexExistsError) {
-      console.info('Index Creation: Indexes Already Exists')
+    const result = await action();
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    let status;
+
+    if (e instanceof CouchbaseError && e.message.indexOf('not found') !== -1) {
+      status = 404;
     } else {
-      console.error(err)
+      status = e instanceof CouchbaseError ? 400 : 500;
     }
+
+    res.status(status);
+    res.json({ message: e.message });
   }
 }
 ```
+Now open the `validateRequiredField.js` and the function `validateRequiredFields` checks if certain fields specified in requiredFields are missing from the request body. If any fields are missing, it sends a 400 status response with an error message detailing the missing fields; otherwise, it returns true, indicating that all required fields are present.
 
-Now we can move on to reviewing each of the individual endpoints:
+### POST Airport
 
-## POST Profile
-
-We create a profile document using the SDK `.insert()` method using the `profileCollection`.
-
-```js
-app.post("/profile", async (req, res) => {
-  if (!req.body.email || !req.body.pass) {
-    return res.status(400).send({ "message": `${!req.body.email ? 'email ' : ''}${
-      (!req.body.email && !req.body.pass)
-        ? 'and pass are required' : (req.body.email && !req.body.pass)
-          ? 'pass is required' : 'is required'
-    }`})
-  }
-
-  const id = v4()
-  const profile = { pid: id, ...req.body, pass: bcrypt.hashSync(req.body.pass, 10) }
-  await profileCollection.insert(id, profile)
-    .then((result) => res.send({ ...profile, ...result }))
-    .catch((e) => res.status(500).send({
-      "message": `Profile Insert Failed: ${e.message}`
-    }))
-})
-```
-
-Let’s break this code down.
-
-First, we check that both an email and password exist and then create a `profile` object based on the data that was sent in the request. The `pid` that we’re saving into the account object is a unique key.
-
-After we check for required body parameters, we create an async call to the `profileCollection` using the `insert` method and then return the document saved and the result all as part of the same object back to the user. We utilize the spread operator again to make this simple. `insert` is a basic key-value operation.
-
-## GET Profile by Key
-
-Retrieve a Profile by Profile ID using the SDK `.get()` method` using the `profileCollection`.
+To insert a new airport document, locate the createAirline method within the `airportController` file found in the `controllers` package. This expects a POST request with the airport data provided in the request body.
+We extract this airport ID from the airport data, and create a airport document using [`.insert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#insert method. If the document is not found it is caught by the makeResponse method.
 
 ```js
-app.get("/profile/:pid", async (req, res) => {
-  try {
-    await profileCollection.get(req.params.pid)
-      .then((result) => res.send(result.value))
-      .catch((error) => res.status(500).send({
-        "message": `KV Operation Failed: ${error.message}`
-      }))
-  } catch (error) {
-    console.error(error)
-  }
-})
+    await makeResponse(res, async () => {
+        await airportCollection.insert(req.params.id, req.body)
+        res.status(201);
+        return req.body;
+    });
 ```
 
-We only need the profile ID from the user to retrieve a particular profile document using a basic key-value operation. We can catch the error if the key-value operation fails and return an error message.
 
-## PUT Profile
+## GET Airport
 
-Update a Profile by Profile ID by using the SDK `.upsert()` method on the `profileCollection`.
+To fetch a airport document, locate the getAirport method within the `airportController.js` file found in the `controllers` package. This expects a GET request with the airport document ID (id) specified in the URL path.
+We extract this airport document ID from the URL and retrieve a Airport document using [`.get()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#get) method.
 
 ```js
-app.put("/profile/:pid", async (req, res) => {
-  try {
-    await profileCollection.get(req.params.pid)
-      .then(async (result) => {
-        /* Create a New Document with new values,
-          if they are not passed from request, use existing values */
-        const newDoc = {
-          pid: result.value.pid,
-          firstName: req.body.firstName ? req.body.firstName : result.value.firstName,
-          lastName: req.body.lastName ? req.body.lastName : result.value.lastName,
-          email: req.body.email ? req.body.email : result.value.email,
-          pass: req.body.pass ? bcrypt.hashSync(req.body.pass, 10) : result.value.pass,
-        }
-        /* Persist updates with new doc */
-        await profileCollection.upsert(req.params.pid, newDoc)
-          .then((result) => res.send({ ...newDoc, ...result }))
-          .catch((e) => res.status(500).send(e))
-      })
-      .catch((e) => res.status(500).send({
-        "message": `Profile Not Found, cannot update: ${e.message}`
-      }))
-  } catch (e) {
-    console.error(e)
-  }
-})
+    await makeResponse(res, async () => {
+        let getResult = await airportCollection.get(req.params.id)
+        return getResult["content"];
+    });
 ```
 
-We don't need to specify the `pid` as it already exists, so when we create the profile document, we just need the profile information (`firstName`, `lastName`, `email`, and `password`). The user may only be changing one or many fields in the document so we first retrieve the existing document and check for differences and only update the fields needed to be changed.
+We only need the airport ID from the user to retrieve a particular airport document using a basic key-value operation. We catch the error if the key-value operation fails and return an error message.
 
-We first look up the existing document and make sure it exists, if it does not, return a 500 level error code and message: "Cannot update: document not found".
+## PUT Airport
 
-Then, all changed fields in the document get replaced except for the document key and the `pid` field.
-
-Next, we replace the existing fields if we have a value from the HTTP Request (`req.body.whatever`). If we do not have a value in the request for a specific field, we simply reuse the existing document's `result.value.whatever.
-
-Finally, we create an async call to the `profileCollection` using the `upsert` method and then return the document saved and the result just as we did in the previous endpoint.
-
-## DELETE Profile
-
-Delete Profile by Profile ID by using the SDK `.delete()` method on the `profileCollection`.
+To update a airport document, locate the updateAirline method within the `airportController.js` file found in the `controllers` package.
+This expects a PUT request with the airport ID (id) specified in the URL path and the airport data to be updated provided in the request body.
 
 ```js
-app.delete("/profile/:pid", async (req, res) => {
-  try {
-    await profileCollection.remove(req.params.pid)
-      .then((result) => res.send(result.value))
-      .catch((error) => res.status(500).send({
-        "message": `Profile Not Found, cannot delete: ${error.message}`
-      }))
-  } catch (e) {
-    console.error(e)
-  }
-})
+    await makeResponse(res, async () => {
+        await airportCollection.upsert(req.params.id, req.body)
+        return req.body;
+    });
 ```
 
-We only need the profile ID from the user to delete using a basic key-value operation.
 
-## GET Profiles
+The `updateAirport` method calls the [`.upsert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#upsert) method.
 
-Get user profiles  using the `cluster.query()` method in the SDK and results are returned based on firstName or lastName with support to paginate results.
+## DELETE Airport
+
+To delete a airport document, locate the DeleteDocumentForAirport method within the `airportController.js` file found in the `controllers` package.
+This expects a DELETE request with the airport document ID (id) specified in the URL path.
+ We just need to supply the `id` of the document we want to remove.
 
 ```js
-app.get("/profiles", async (req, res) => {
-  try {
-    const options = {
-      parameters: {
-        SKIP: Number(req.query.skip || 0),
-        LIMIT: Number(req.query.limit || 5),
-        SEARCH: `%${req.query.search.toLowerCase()}%`
-      }
-    }
-    const query = `
-      SELECT p.*
-      FROM ${process.env.CB_BUCKET}._default.profile p
-      WHERE lower(p.firstName) LIKE $SEARCH OR lower(p.lastName) LIKE $SEARCH
-      LIMIT $LIMIT OFFSET $SKIP;
-    `
-    await cluster.query(query, options)
-      .then((result) => res.send(result.rows))
-      .catch((error) => res.status(500).send({
-        "message": `Query failed: ${error.message}`
-      }))
-  } catch (e) {
-    console.error(e)
-  }
-})
+    await makeResponse(res, async () => {
+        await airportCollection.remove(req.params.id)
+        res.status(204);
+        return req.body;
+    });
 ```
 
-This endpoint is different from the others as it makes a N1QL query rather than a key-value operation. This involves additional overhead because the query engine is involved. Remember that the `profileCollection` index (primary) was set up specifically to enable this endpoint.
+Delete Airport by Airport ID by using [`.remove()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#remove) method and returns a 404 if the document is not found.
 
-Our `req.body` has three query params: `skip`, `limit`, and `search`.
+## List Airport
 
-We also have default values set up in case they are not provided, `0` for skip or `5` for limit.
+This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
 
-Then, we build our N1QL query using the parameters we just created.
+[SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
 
-Finally, we pass that `query` and the `options` to the `cluster.query()` method and return the result.
+Navigate to the `listAirport` method in the `airportController.js` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
-Take notice of the N1QL syntax format and how it targets `bucket`.`scope`.`collection`.
+First, we need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `request.query` method.
+
+This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
+
+We build our SQL++ query using the [named parameters](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
+
+Next, we pass that `query` and the `parameters` to the  [scope.query()](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Scope.html#query) method and return the results.
+
+```js
+  const country = req.query.country || "";
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const offset = parseInt(req.query.offset, 10) || 0;
+  let filter = {};
+  if (country) {
+    filter.country = country;
+  }
+
+  const options = { limit: limit, offset: offset };
+  await makeResponse(res, async () => {
+    const airports = await AirportModel.find(filter, options);
+    return airports.rows;
+  });
+```
+
+### Direct Connections
+
+This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results simlar to the List Airport endpoint.
+
+Let us look at the query used here:
+
+```sql
+	SELECT DISTINCT route.destinationairport
+	FROM airport AS airport
+	JOIN route AS route ON route.sourceairport = airport.faa
+	WHERE airport.faa = $AIRPORT AND route.stops = 0
+	ORDER BY route.destinationairport
+	LIMIT $LIMIT
+	OFFSET $OFFSET
+```
+
+We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 
 ### Project Setup Notes
 
@@ -380,21 +371,75 @@ We have created a start script in our `package.json` that executes babel-node an
 },
 ```
 
-There are other scripts that we have added for our maintenance and testing of the project on GitHub using GitHub actions, a lot of this is above and beyond the scope of this quickstart, and can be done in many different ways, but we wanted to include as much as we can to help you on your journey as far as configuring a project for use with JavaScript and in our case ES6 using Babel and basic testing and CI setup.
+There are other scripts that we have added for our maintenance and testing of the project on GitHub using GitHub actions.
 
 ```json
   "scripts": {
-    "init-test-db": "env-cmd ./config/test.env npx babel-node ./src/initializeCbServer.js",
-    "init-test-index": "env-cmd ./config/test.env npx babel-node ./src/createIndex.js",
-    "test": "env-cmd ./config/test.env jest --verbose",
-    "test:ci": "npm run init-test-db && npm run init-test-index && env-cmd ./config/test.env jest --verbose",
-    "init-db": "env-cmd ./config/dev.env npx babel-node ./src/initializeCbServer.js",
-    "start": "env-cmd ./config/dev.env nodemon --exec babel-node src/server",
+    "start": "env-cmd -f ./config/dev.env nodemon --exec babel-node src/server",
+    "test": "env-cmd -f ./config/test.env jest --verbose --forceExit --detectOpenHandles",
+    "testGA": "jest --verbose --runInBand",
     "clean": "rm -rf dist",
     "build": "npm run clean && babel ./src --out-dir dist --copy-files"
   },
 ```
 
-## Conclusion
+## Running Tests
 
-Setting up a basic REST API in NodeJS and Express with Couchbase is fairly simple, this project when run with Couchbase Server 7 installed creates a bucket and collection in Couchbase for us to store our documents, two primary indexes used for documents in our collection of documents created manually under the `_default` scope and collection, when the program is running, we can do basic CRUD operations.
+We have defined integration tests using [jest](https://jestjs.io/) for all the API end points. The integration tests use the same database configuration as the application. After the tests, the documents are cleaned up.
+
+The tests are configured in the `__test__` folder.
+
+To run the tests, run the below command after copying the content of the `dev.env` file to the `test.env` to ensure it uses the same database configuration:
+
+```bash
+# Execute this command in the project's root directory
+npm run test
+```
+
+## Appendix
+
+### Extending API by Adding New Entity
+
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- **Create the New Entity in Couchbase Bucket:**
+  - Utilize the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html) to establish the new collection within the Couchbase bucket.
+
+- **Define the New Route:**
+  - Navigate to the `src/routes` folder and create the new route.
+
+- **Controller Configuration:**
+  - Develop a new file in the `controllers` folder, mirroring the existing structures (e.g., `airportController.js`). Craft the corresponding method within this file to manage the new entity.
+
+
+- **Add Tests:**
+  - Add the tests for the new routes in a new file in the `__test__` folder similar to other collection tests.
+
+Following these steps ensures a systematic and organized approach to expanding the API functionality with a new entity.
+### Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
+
+You need to update the connection string and the credentials in the `.env` file in the source folder.
+
+> Note: Couchbase Server must be installed and running prior to running the app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
