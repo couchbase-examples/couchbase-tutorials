@@ -136,6 +136,7 @@ Swagger documentation is used in this demo to showcase the different API end poi
 ## Data Model
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
 ![img](travel_sample_data_model.png)
 
 ## Let Us Review the Code
@@ -597,7 +598,7 @@ We are fetching the direct connections by joining the airport collection with th
 
 ## Running The Tests
 
-We have defined unit tests using the [xunit](https://xunit.net/) nuget package for all the API end points. The unit tests use the same database configuration as the application. For the unit tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint
+We have defined integration tests using the [xunit](https://xunit.net/) nuget package for all the API end points. The integration tests use the same database configuration as the application. For the integration tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint
 
 To run the standard integration tests, use the following commands:
 
