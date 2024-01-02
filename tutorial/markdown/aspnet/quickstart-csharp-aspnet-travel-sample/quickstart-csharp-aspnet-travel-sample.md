@@ -30,7 +30,7 @@ To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
   - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
-- [.NET SDK v8+](https://dotnet.microsoft.com/download/dotnet/8.0) installed.
+- [.NET SDK v6+](https://dotnet.microsoft.com/en-us/download/dotnet) installed.
   - Ensure that the .Net version is [compatible](https://docs.couchbase.com/dotnet-sdk/current/project-docs/compatibility.html#dotnet-compatibility) with the Couchbase SDK.
 - Code Editor installed (Visual Studio Professional, Visual Studio Code, or JetBrains Rider)
 - Loading Travel Sample Bucket
@@ -171,8 +171,6 @@ We register the validators for the `AirportCreateRequestCommand`, `AirlineCreate
 
 ```csharp
 builder.Services.AddValidatorsFromAssemblyContaining(typeof(AirportCreateRequestCommandValidator));
-builder.Services.AddValidatorsFromAssemblyContaining(typeof(AirlineCreateRequestCommandValidator));
-builder.Services.AddValidatorsFromAssemblyContaining(typeof(RouteCreateRequestCommandValidator));
 ```
 
 In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.json` file.
@@ -203,29 +201,52 @@ else
 
 We initialise the bucket and scope during the application startup.
 
-We check if the `inventory` scope exists in the provided `travel-sample` bucket when the application starts and throw and exception if the `inventory` scope does not exist inside the `travel-sample` bucket.
+We check if the `inventory` scope exists in the provided `travel-sample` bucket when the application starts and throw and exception if the `inventory` scope does not exist inside the `travel-sample` bucket. We also log the Swagger URL here.
 
 ```csharp
-var configuration = builder.Configuration;
+ // Get the logger
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// Retrieve configuration values from appsettings.json
-var bucketName = configuration["Couchbase:BucketName"];
-if (bucketName != null)
-{
-    var bucket = app.Services.GetRequiredService<IBucketProvider>().GetBucketAsync(bucketName).GetAwaiter().GetResult();
+    // Get the address
+    var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.FirstOrDefault();
 
-    const string scopeName = "inventory";
+    // Log the Swagger URL
+    logger.LogInformation("Swagger UI is available at: {Address}/swagger/index.html", address);
     
-    // get inventory scope
+    var configuration = builder.Configuration;
+
+    // Retrieve configuration values from appsettings.json
+    var bucketName = configuration["Couchbase:BucketName"];
+    var scopeName = configuration["Couchbase:ScopeName"];
+    
+    if (string.IsNullOrEmpty(bucketName))
+    {
+        throw new InvalidOperationException("Bucket name is not provided in the configuration.");
+    }
+
+    if (string.IsNullOrEmpty(scopeName))
+    {
+        throw new InvalidOperationException("Scope name is not provided in the configuration.");
+    }
+
+    IBucket bucket;
     try
     {
-        inventoryScope = bucket.ScopeAsync(scopeName).GetAwaiter().GetResult();
+        bucket = app.Services.GetRequiredService<IBucketProvider>().GetBucketAsync(bucketName).GetAwaiter().GetResult();
     }
     catch (Exception)
     {
-        throw new InvalidOperationException("The 'inventory' scope does not exist in 'travel-sample' bucket.");
+        throw new InvalidOperationException("Ensure that you have the travel-sample bucket loaded in the cluster.");
     }
-}
+
+    var scopes = bucket.Collections.GetAllScopesAsync().GetAwaiter().GetResult();
+    
+    if (!(scopes.Any(s => s.Name == scopeName)))
+    {
+        throw new InvalidOperationException("Inventory scope does not exist in the bucket. Ensure that you have the inventory scope in your travel-sample bucket.");
+    }
+    
+    inventoryScope = bucket.ScopeAsync(scopeName).GetAwaiter().GetResult();
 ```
 
 The Couchbase SDK provides the `ICouchbaseLifetimeService` interface for handling closing the database connections when the application closes. It's best practice to register for the ASP.NET `ApplicationStop` lifetime event and call the `ICouchbaseLifetimeService` Close method so that the database connection and resources are closed and removed gracefully.
@@ -281,7 +302,7 @@ Our airport document will have an airportname, city, country, faa code, icao cod
 Open the `program.cs` file and navigate to the `app.MapPost` method for `airport` collection.
 
 It first validates the incoming request and if it's not valid, it returns a validation problem. 
-If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored, creates a new `Airport` object from the request, and attempts to insert the airport document into the database asynchronously using the provided `id`. 
+If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored, creates a new `Airport` object from the request, and attempts to insert the airport document into the database asynchronously using the `InsertAsync` method of the SDK. 
 If the insertion is successful, it returns a link to the GET API for the newly created document. If a document with the same `id` already exists, it returns a conflict result. For any other exceptions, it returns a problem with the exception message. 
 If the `inventoryScope` is null, it returns a problem stating "Scope not found".
 
@@ -330,7 +351,7 @@ app.MapPost("/api/v1/airport/{id}", async (string id, AirportCreateRequestComman
 Open the `program.cs` file and navigate to the `app.MapGet` method for `airport` collection.
 
 The function checks if the `inventoryScope` is not null, and if it is, it returns a problem stating "Scope Not Found". 
-If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored and retrieves the document from the database using the provided `id`. 
+If the `inventoryScope` is not null, it gets a reference to the collection where documents are stored and retrieves the document from the database using `GetAsync` method of the SDK. 
 It then checks if a document was returned from the database. If a document was returned, it returns the document. If a document with the provided `id` does not exist in the database, it returns a `NotFound` result. 
 If any other exception occurs during the process, it returns a problem with the exception message.
 
@@ -379,8 +400,8 @@ Open the `program.cs` file and navigate to the `app.MapPut` method for `airport`
 The method in the provided code is designed to update an airport record. The process begins with the validation of the incoming request using a provided validator.
 If the request fails validation, a validation problem is returned with the associated errors. 
 If the request passes validation, the method checks for the existence of `inventoryScope`. If `inventoryScope` is null, it signifies that the scope was not found and a problem is returned. If `inventoryScope` exists, the airport collection is retrieved.
-The method then attempts to fetch the current airport record from the database using the provided id. 
-If the airport record is found, it is updated with the new data from the request and the updated record is returned. 
+The method then attempts to fetch the current airport record from the database using the provided `id`. 
+If the airport record is found, it is updated with the new data using the `ReplaceAsync` method of the SDK and then updated record is returned. 
 If the airport record is not found, a 404 Not Found error is returned.
 The method is also designed to handle exceptions. If any exceptions occur during the process, such as a `DocumentNotFoundException`, the exception is caught and a problem with the exception message is returned.
 
@@ -436,7 +457,7 @@ Open the `program.cs` file and navigate to the `app.MapDelete` method for `airpo
 
 The method in the provided code is designed to delete an airport record. The process begins by checking for the existence of `inventoryScope`. 
 If `inventoryScope` is null, it signifies that the scope was not found and a problem is returned. If `inventoryScope` exists, the airport collection is retrieved.
-The method then attempts to fetch the current airport record from the database using the provided id. If the airport record is found, it is deleted from the collection using the `collection.RemoveAsync(id)` method and the id of the deleted record is returned. 
+The method then attempts to fetch the current airport record from the database using the provided `id`. If the airport record is found, it is deleted from the collection using the `RemoveAsync` method of the SDK and the `id` of the deleted record is returned. 
 If the airport record is not found, a 404 Not Found error is returned. The method is also designed to handle exceptions. If any exceptions occur during the process, such as a `DocumentNotFoundException`, the exception is caught and a problem with the exception message is returned.
 
 ```csharp
@@ -479,7 +500,7 @@ app.MapDelete("/api/v1/airport/{id}", async(string id) =>
         }
 
         return Results.NotFound();
-    })
+    });
 ```
 ### List Airport
 
@@ -500,60 +521,60 @@ Next, we pass that `query` to the `QueryAsync` method. We save the results in a 
 This endpoint calls the `QueryAsync` method defined in the [Scope](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
 
 ```csharp
-app.MapGet("/api/v1/airport/list", async (string? country, int? limit, int? offset) =>
+app.MapGet("/api/v1/airline/list", async (string? country, int? limit, int? offset) =>
+{
+    try
     {
-        try
+        if (inventoryScope is not null)
         {
-            if (inventoryScope is not null){
+            // setup parameters
+            var queryParameters = new Couchbase.Query.QueryOptions();
+            queryParameters.Parameter("limit", limit ?? 10);
+            queryParameters.Parameter("offset", offset ?? 0);
 
-                // Set default values for limit and offset if not provided by the user
-                limit ??= 10; 
-                offset ??= 0;
-
-                var query = string.IsNullOrEmpty(country) ? $@"SELECT airport.airportname,
-                              airport.city,
-                              airport.country,
-                              airport.faa,
-                              airport.geo,
-                              airport.icao,
-                              airport.tz
-                 FROM airport AS airport
-                 ORDER BY airport.airportname
-                 LIMIT $limit
-                 OFFSET $offset" : $@"SELECT airport.airportname,
-                          airport.city,
-                          airport.country,
-                          airport.faa,
-                          airport.geo,
-                          airport.icao,
-                          airport.tz
-             FROM airport AS airport
-             WHERE lower(airport.country) = $country
-             ORDER BY airport.airportname
-             LIMIT $limit
-             OFFSET $offset";
-
-                //setup parameters
-                var queryParameters = new Couchbase.Query.QueryOptions();
-                queryParameters.Parameter("country", string.IsNullOrEmpty(country) ? "" : country.ToLower());
-                queryParameters.Parameter("limit", limit);
-                queryParameters.Parameter("offset", offset);
-
-                var results = await inventoryScope.QueryAsync<Airport>(query, queryParameters);
-                var items = await results.Rows.ToListAsync();
-
-                return items.Count == 0 ? Results.NotFound() : Results.Ok(items);
+            string query;
+            if (!string.IsNullOrEmpty(country))
+            {
+                query = $@"SELECT airline.callsign,
+                            airline.country,
+                            airline.iata,
+                            airline.icao,
+                            airline.name
+                            FROM airline AS airline
+                            WHERE lower(airline.country) = $country
+                            ORDER BY airline.name
+                            LIMIT $limit
+                            OFFSET $offset";
+                queryParameters.Parameter("country", country.ToLower());
             }
             else
             {
-                return Results.Problem("Scope not found");
+                query = $@"SELECT airline.callsign,
+                            airline.country,
+                            airline.iata,
+                            airline.icao,
+                            airline.name
+                            FROM airline AS airline
+                            ORDER BY airline.name
+                            LIMIT $limit
+                            OFFSET $offset";
             }
+
+            var results = await inventoryScope.QueryAsync<Airline>(query, queryParameters);
+            var items = await results.Rows.ToListAsync();
+
+            return items.Count == 0 ? Results.NotFound() : Results.Ok(items);
         }
-        catch (Exception ex)
+        else
         {
-            return Results.Problem(ex.Message);
+            return Results.Problem("Scope not found");
         }
-    });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+})
 ```
 
 ### Direct Connections
