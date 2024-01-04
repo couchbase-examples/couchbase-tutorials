@@ -52,7 +52,7 @@ We will walk through the different steps required to get the application running
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/aspnet-minapi-quickstart-travelsample.git
+git clone https://github.com/couchbase-examples/aspnet-quickstart-minapi.git
 ```
 
 ### Install Dependencies
