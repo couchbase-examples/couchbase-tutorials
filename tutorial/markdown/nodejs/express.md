@@ -30,7 +30,7 @@ To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/nodejs-sdk/current/ref/travel-app-data-model.html) bucket loaded.
   - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
-- NodeJS & NPM 
+- [LTS Node.js Version](https://nodejs.org/en/download)
 - Loading Travel Sample Bucket
   If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
 
@@ -49,7 +49,7 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/), the follow
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/nodejs-quickstart
+git clone https://github.com/couchbase-examples/nodejs-quickstart.git
 ```
 
 ### Install Dependencies
@@ -172,7 +172,7 @@ We will be setting up a REST API to manage airport documents.
 - [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
 - [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
 
-For CRUD operations, we will use the [Node JS SDK](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html) to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database.
+For CRUD operations, we will use the [Node JS SDK](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database.
 
 ## Document Structure
 
@@ -245,7 +245,7 @@ Now open the `validateRequiredField.js` and the function `validateRequiredFields
 ### POST Airport
 
 To insert a new airport document, locate the createAirline method within the `airportController` file found in the `controllers` package. This expects a POST request with the airport data provided in the request body.
-We extract this airport ID from the airport data, and create a airport document using [`.insert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#insert method. If the document is not found it is caught by the makeResponse method.
+We extract this airport ID from the airport data, and create a airport document using [`.insert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#insert) method. If the document is not found it is caught by the makeResponse method.
 
 ```js
     await makeResponse(res, async () => {
@@ -305,7 +305,7 @@ Delete Airport by Airport ID by using [`.remove()`](https://docs.couchbase.com/s
 
 This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
 
-[SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
+[SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL++ query to search for airports with Limit, Offset, and Country option.
 
 Navigate to the `listAirport` method in the `airportController.js` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
@@ -403,7 +403,7 @@ npm run test
 If you would like to add another entity to the APIs, these are the steps to follow:
 
 - **Create the New Entity in Couchbase Bucket:**
-  - Utilize the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html) to establish the new collection within the Couchbase bucket.
+  - Utilize the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html) to establish the new collection within the Couchbase bucket. Alternatively the collection can be created using the [createCollection](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/CollectionManager.html#createCollection) via the SDK.
 
 - **Define the New Route:**
   - Navigate to the `src/routes` folder and create the new route.
@@ -422,7 +422,7 @@ If you are running this quickstart with a self managed Couchbase cluster, you ne
 
 - Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
 
-You need to update the connection string and the credentials in the `.env` file in the source folder.
+You need to update the connection string and the credentials in the `dev.env` file in the `config` folder.
 
 > Note: Couchbase Server must be installed and running prior to running the app.
 
