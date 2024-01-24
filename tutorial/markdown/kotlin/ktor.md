@@ -2,72 +2,65 @@
 # frontmatter
 path: "/tutorial-quickstart-kotlin-ktor"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Start with Kotlin and Ktor
+title: Quickstart in Couchbase with Kotlin and Ktor
 short_title: Couchbase Kotlin SDK with Ktor
 description: 
-  - Build a REST API with Couchbase's Java SDK 3 and Kotlin
-  - Explore the various features of Ktor
-content_type: tutorial
+  - Learn to build a REST API in Kotlin using Ktor and Couchbase
+  - See how you can fetch data from Couchbase using SQL++ queries
+  - Explore CRUD operations in action with Couchbase
+content_type: quickstart
 filter: sdk
-technology: 
+technology:
   - kv
+  - index
   - query
 tags:
+  - Ktor
   - REST API
 sdk_language:
   - kotlin
 length: 30 Mins
 ---
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=kotlin-quickstart&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/kotlin-quickstart)
+<!-- [abstract] -->
+
+In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
 
 ## Prerequisites
-
 To run this prebuilt project, you will need:
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance (at least Couchbase Server 7)
-- Java SDK v1.8 or higher installed
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/kotlin-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+    - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- [Java SDK v1.8](https://www.oracle.com/java/technologies/downloads/) or higher installed.
+    - Ensure that the Java version is [compatible](https://docs.couchbase.com/kotlin-sdk/current/project-docs/compatibility.html) with the Couchbase SDK.
 - Code Editor installed (Vim, IntelliJ IDEA, Eclipse, or Visual Studio Code)
-- Gradle command line
+- Loading Travel Sample Bucket
+    - If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
+        - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-## What We'll Cover
+### Couchbase Capella Configuration
 
-A simple REST API using Ktor and Kotlin Couchbase SDK with the following endpoints:
+When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
 
-- [Create Profile Endpoint](#post-a-profile)
-- [Profile Management Endpoints](#working-with-existing-profiles) – List, Fetch, Update, and Delete operations
-- [Profile Search Endpoint](#get-profiles-by-searching)  – Get all profiles matching first or last Name
+- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
-## Source Code
+## App Setup
+
+We will walk through the different steps required to get the application running.
+
+### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/kotlin-quickstart
+git clone https://github.com/couchbase-examples/kotlin-quickstart.git
 ```
 
-## Install Dependencies
+### Install Dependencies
+
 ```shell
-gradle build
+./gradlew build -x test
 ```
-
-> Note: Most IDE will run a similar command automatically after you open the project.
-
-### Database Server Configuration
-
-All configuration for communication with the database is stored in the `src/main/resources/application.conf` file under the `couchbase` section:
-```
-couchbase {
-    connectionString = localhost
-    username = Administrator
-    password = password
-    bucket = user_profile
-    scope = default
-}
-```
-> _from [`src/main/resources/application.conf`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/resources/application.conf)_
-
-This includes the connection string, username, password, bucket and scope names.
-The default username is assumed to be `Administrator` and the default password is assumed to be `password`.
-If these are different in your environment you will need to change them before running the application.
 
 ### Dependency Injection via Couchbase Koin module
 
@@ -102,195 +95,357 @@ fun createScope(bucket: Bucket, configuration: CouchbaseConfiguration): Scope {
 
 Configured database objects like the bucket and scope must exist on the cluster prior to starting the application.
 
+### Setup Database Configuration
+
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
+
+Specifically, you need to do the following:
+
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+All configuration for communication with the database is stored in the `src/main/resources/application.conf` file under the `couchbase` section:
+
+```
+couchbase {
+    connectionString = "localhost"
+    username = "Administrator"
+    password = "password"
+    bucket = "travel-sample"
+    scope = "inventory"
+}
+```
+> _from [`src/main/resources/application.conf`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/resources/application.conf)_
+
+This includes the connection string, username, password, bucket and scope names. The default username is assumed to be `Administrator` and the default password is assumed to be `password`.
+If these are different in your environment you will need to change them before running the application.
+
 ## Running The Application
 
-At this point the application is ready, and you can run it via your IDE or from the terminal:
+### Directly on Machine
+
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
 ```shell
 ./gradlew run
 ```
 
-Once the site is up and running you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/) to test the APIs.
+### Using Docker
 
-## Document Structure
+- Build the Docker image
 
-We will be setting up a REST API to manage some profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
+```shell 
+docker build -t couchbase-koltin-quickstart .
+```
+
+- Run the docker image
+
+```shell 
+docker run -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket> -e DB_PASSWORD=<password_for_user> -p 8080:8080 couchbase-koltin-quickstart
+```
+
+You can access the Application on http://0.0.0.0:8080
+
+### Verifying the Application
+
+Once the application starts, you can see the details of the application on the logs.
+
+![Application Startup](app_startup.png)
+
+The application will run on port 8080 of your local machine (http://0.0.0.0:8080). You will find the Swagger documentation of the API if you go to the URL in your browser.
+Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+
+![Swagger Documentation](swagger_documentation.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![img](travel_sample_data_model.png)
+
+## Let Us Review the Code
+
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
+
+### Code Layout
+
+```
+├── src
+│   ├── main
+│   │   ├── kotlin/com/couchbase/kotlin/quickstart 
+│   │   │   ├── models
+│   │   │   │   ├── AirlineModel.kt
+│   │   │   │   ├── AirportModel.kt
+│   │   │   │   └── RouteModel.kt
+│   │   │   ├── repositories
+│   │   │   │   ├── AirlineRepository
+│   │   │   │   ├── AirportRepository
+│   │   │   │   └── RouteRepository
+│   │   │   ├── routes
+│   │   │   │   ├── AirlineRoutes.kt
+│   │   │   │   ├── AirportRoutes.kt
+│   │   │   │   └── RouteRoutes.kt
+│   │   │   ├── services
+│   │   │   │   ├── AirlineService
+│   │   │   │   ├── AirportService
+│   │   │   │   └── RouteService
+│   │   │   ├── Application.kt
+│   │   │   └── CouchbaseConfiguration.kt 
+│   │   └── resources
+│   │       ├── application.conf
+│   │       └── logback.xml
+│   └── test/kotlin/com/couchbase
+│       └── kotlin/quickstart
+│           ├── AirlineTests
+│           ├── AirportTests
+│           └── RouteTests
+├── build.gradle.kts
+└── Dockerfile
+```
+
+### Airport Entity
+
+For this tutorial, we will focus on the airport entity. The other entities are similar.
+
+We will be setting up a REST API to manage airport documents.
+
+- [POST Airport](#post-airport) – Create a new airport
+- [GET Airport](#get-airport) – Read specified airport
+- [PUT Airport](#put-airport) – Update specified airport
+- [DELETE Airport](#delete-airport) – Delete airport
+- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/dotnet-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+
+### Airport Document Structure
+
+Our airport document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
 
 ```json
 {
-  "pid": "b181551f-071a-4539-96a5-8a3fe8717faf",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@couchbase.com",
-  "password": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC"
+  "airportname": "Sample Airport",
+  "city": "Sample City",
+  "country": "United Kingdom",
+  "faa": "SAA",
+  "icao": "SAAA",
+  "tz": "Europe/Paris",
+  "geo": {
+    "lat": 48.864716,
+    "lon": 2.349014,
+    "alt": 92
+  }
 }
 ```
 
-## Let's Review the Code
+### POST Airport
 
-To begin, clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
+Open the [`AirportRoutes.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/routes/AirportRoutes.kt) file found in the `src/main/kotlin/com/couchbase/kotlin/quickstart/routes` folder.
+This file contains all http routes defined in the API, which are grouped under the `/api/v1/airport` common route.
+The first handler function allows API clients to create new airport by submitting a POST request with json-serialized airport.
 
-## Data models
-The application uses two data classes: 
-- `ProfileWithoutId` is used to handle requests to create a new Profile record. As the name suggests, it contains all profile information except for its identifier, which will be assigned by the application after the profile is created
-- `Profile` class represents profiles that are stored on Couchbase cluster and, thus, have an assigned identifier.
-
-All used data classes can be reviewed in the [`src/main/kotlin/com/couchbase/kotlin/quickstart/Models.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/Models.kt) file.
-
-## POST a Profile
-
-For CRUD operations we will use the [Key Value operations](https://docs.couchbase.com/kotlin-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete cluster documents.
-Every document will need an ID (similar to a primary key in other databases) in order to save it to the database.
-
-Open the [`ProfileRoutes.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRoutes.kt) file found in the `src/main/kotlin/com/couchbase/kotlin/quickstart` folder. 
-This file contains all http routes defined in the API, which are groupped under the `/profile` common route.
-The first handler function allows API clients create new profiles by submitting a POST request with json-serialized profile without an id object in its body.
-
-The handler passes received profile data to `createProfile` method of application's profile service, defined in [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileService.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileService.kt) which, in turn, delegates the request to `ProfileRepository::create` method:
+The handler passes received airport data to `createAirport` method of application's Airport service, defined in [`AirportService.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/services/AirportService.kt) which, in turn, delegates the request to `AirportRepository::create` method:
 
 ```
-fun create(data: ProfileWithoutId): Profile {
-    val profile = Profile(
-        pid = UUID.randomUUID()
-    ).apply {
-        firstName = data.firstName
-        lastName = data.lastName
-        email = data.email
-        password = data.password
-        balance = data.balance
+fun create(data: AirportModel, id: String): Airport {
+        val airport = Airport().apply {
+            airportname = data.airportname
+            city = data.city
+            country = data.country
+            faa = data.faa
+            geo = data.geo
+            icao = data.icao
+            tz = data.tz
+        }
+
+        runBlocking(databaseContext) {
+            collection.insert(id, airport)
+        }
+        return airport
     }
+```
+> _from [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt)_
 
-    runBlocking(databaseContext) {
-        collection.insert(profile.pid.toString(), profile)
+The repository method creates a new Airport object with an id, populates it with received data and then uses SDK collection object to store the airport on the cluster.
+
+Stored airport is then returned up the call stack and rendered as JSON in HTTP response body.
+
+### GET Airport
+
+The GET handler returns airport object with requested ID.
+It delegates all work to the airport service, which uses the SDK to fetch the requested document from Couchbase's key-value service:
+
+```
+fun getById(id: String): Airport {
+        var result: Airport
+        runBlocking(databaseContext) {
+            result = collection.get(id).contentAs()
+        }
+        return result
     }
-    return profile
-}
 ```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
+> _from [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt)_
 
-The repository method creates new Profile object with random UUID, populates it with received data and then uses SDK collection object to store the profile on the cluster.
+### PUT Airport
 
-Stored profile is then returned up the call stack and rendered as JSON in HTTP response body.
+The PUT handler additionally accepts an Airport object in the HTTP request body and then uses the SDK key-value operation to store it in Couchbase, overriding the previous profile data:
 
-## Working with existing Profiles
-
-### Listing profiles
-
-The next handler function processes HTTP GET requests to the `/profile` API endpoint.
-Clients can use this endpoint to request all previously created profiles.
-The function accepts a `PaginationRequest` object, which represents a set of GET parameters:
 ```
-data class PaginationRequest (
-    @QueryParam("Profiles to skip before the results", allowEmptyValues = true)
-    val skip: Int?,
-    @QueryParam("Number of results", allowEmptyValues = true)
-    val limit: Int?
-)
-```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRoutes.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRoutes.kt)_
-
-Following the same pattern as in the POST handler, request is delegated to `list` method of profile repository:
-```
-fun list(skip: Int, limit: Int): List<Profile> {
-    val result: LinkedList<Profile> = LinkedList()
-    runBlocking(databaseContext) {
-        collection.scope
-            .query("SELECT raw profile from profile OFFSET $skip LIMIT $limit")
-            .execute {
-                result.add(it.contentAs())
-            }
+fun update(airport: Airport, id: String): Airport {
+        runBlocking(databaseContext) {
+            collection.replace(id, airport)
+        }
+        return airport
     }
-    return result
-}
 ```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
 
-The method uses SQL++ to select profile documents from the cluster.
-Selected documents are then transformed to Profile objects using `contentAs` SDK method and returned back to the client.
+> _from [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt)_
 
-### Reading, updating and deleting profiles
-Our API exposes every profile object at its own URL that contains the "/profile/" prefix and ends with serialized profile identifier, for example: `/profile/5ba0c68c-935c-4f0b-bd09-1edb76f79cc9`.
+### DELETE Airport
 
-Requests sent using different HTTP methods handled by different functions that all use `ProfileRequest` object to retrieve the profile identifier from the requested URL.
-
-The GET handler returns profile object with requested ID. 
-It delegates all work to the profile service, which uses the SDK to fetch the requested document from Couchbase's key-value service:
+The DELETE handler, which accepts only an Airport identifier as the last part of the request URL, deletes corresponding airport documents from the cluster.
 
 ```
-fun getById(id: UUID): Profile {
-    var result: Profile
-    runBlocking(databaseContext) {
-        result = collection.get(id.toString()).contentAs()
+fun delete(id: String) {
+        runBlocking(databaseContext) {
+            collection.remove(id)
+        }
     }
-    return result
-}
 ```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
+> _from [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt)_
 
-The PUT handler additionally accepts a Profile object in the HTTP request body and then uses the SDK key-value operation to store it in Couchbase, overriding the previous profile data:
-```
-fun store(profile: Profile): Profile {
-    runBlocking(databaseContext) {
-        collection.insert(profile.pid.toString(), profile)
+### List Airport
+
+This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
+
+[SQL++](https://docs.couchbase.com/kotlin-sdk/current/howtos/n1ql-queries.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
+
+Open the [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt) file  and navigate to the `list` method. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
+
+We need to get the values from the query string for country, limit, and Offset that we will use in our query.
+
+This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
+
+We build our SQL++ query using the [parameters](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html#parameterized-queries) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
+
+Next, we pass that `query` to the `query` method of the Couchbase SDK. We save the results in a list form.
+
+This endpoint calls the `query` method defined in the [Scope](https://docs.couchbase.com/kotlin-sdk/current/howtos/n1ql-queries.html#search-non-default-collection) by the Couchbase SDK.
+
+```kotlin
+
+fun list(country: String? = null, limit: Int = 10, offset: Int = 0): List<Airport> {
+        val lowerCountry = country?.lowercase()
+        val query = if (!lowerCountry.isNullOrEmpty()) {
+            """
+        SELECT airport.airportname,
+               airport.city,
+               airport.country,
+               airport.faa,
+               airport.geo,
+               airport.icao,
+               airport.tz
+        FROM airport AS airport
+        WHERE lower(airport.country) = '$lowerCountry'
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset
+        """
+        } else {
+            """
+        SELECT airport.airportname,
+               airport.city,
+               airport.country,
+               airport.faa,
+               airport.geo,
+               airport.icao,
+               airport.tz
+        FROM airport AS airport
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset
+        """
+        }
+
+        return runBlocking(databaseContext) {
+            val result = collection.scope.query(query, readonly = true).execute()
+            result.rows.map {
+                it.contentAs<Airport>()
+            }.toList()
+        }
     }
-    return profile
-}
+           
 ```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
 
+### Direct Connections
 
-Finally, the DELETE handler, which accepts only a profile identifier as the last part of the request URL, deletes correspondig profile documents from the cluster.
+This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results similar to the List Airport endpoint.
+
+Let us look at the query used here:
+
+```sql
+SELECT distinct (route.destinationairport)
+FROM airport as airport
+JOIN route as route on route.sourceairport = airport.faa
+WHERE airport.faa = $airport and route.stops = 0
+ORDER BY route.destinationairport
+LIMIT $limit
+OFFSET $offset
 ```
-fun delete(id: UUID) {
-    runBlocking(databaseContext) {
-        collection.remove(id.toString());
-    }
-}
-```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
 
-## GET Profiles by Searching
+We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 
-[SQL++](https://docs.couchbase.com/kotlin-sdk/current/howtos/n1ql-queries.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL++ query to search for profiles with Skip, Limit, and Search string parameters.
-The search is implemented under the "/profile/search" url in the last handler function inside `ProfileRoutes.kt` file.
+## Running The Tests
 
-Search handfler function processes GET requests and uses `ProfileSearchRequest` data class to accept profile search string and optional pagination parameters.
-The actual search is again done by a repository function:
-
-```
-fun search(text: String, skip: Int = 0, limit: Int = 10): List<Profile> {
-    return runBlocking(databaseContext) {
-        val lowerText = text.lowercase()
-        val qryString = "SELECT p.* FROM `profile` p " +
-                "WHERE lower(p.firstName) LIKE '%$lowerText%' " +
-                "OR lower(p.lastName) LIKE '%$lowerText%' " +
-                "LIMIT $limit OFFSET $skip"
-        val result = collection.scope.query(qryString, readonly = true).execute()
-        result.rows.map {
-            it.contentAs<Profile>()
-        }.toList()
-    }
-}
-```
-> _from [`src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/ProfileRepository.kt)_
-
-We use `LIKE` SQL++ operator and lower case strings to perform case-insensitive lookup for all profile objects that contain the search string either in first or last name.
-
-### Running The Tests and using the API
+We have defined integration tests using the [JUnit](https://kotlinlang.org/docs/jvm-test-using-junit.html) package for all the API end points. The integration tests use the same database configuration as the application. For the integration tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document from the database and compare them. After the tests, the documents are cleaned up by calling the DELETE endpoint
 
 To run the standard integration tests, use the following commands:
 
-```shell
+```sh
+```sh
 ./gradlew test
 ```
 
-And, to run the application, use `./gradlew run`, which should create an HTTP server with OpenAPI UI at [http://localhost:8080](http://localhost:8080)
+## Appendix
 
-### Project Setup Notes
+### Data Model
 
-This project was based on the standard Ktor project.
-A full list of packages is referenced in the `build.gradle` file.
+For this quickstart, we use three collections, airport, airline and routes that contain sample airports, airlines and airline routes respectively. The routes collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
 
-## Conclusion
+![travel sample data model](travel_sample_data_model.png)
 
-Setting up a basic REST API in Kotlin with Couchbase is very straight-forward.  This project when run with Couchbase Server 7 installed uses a bucket in Couchbase, an index for our parameterized [N1QL query](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+### Extending API by Adding New Entity
+
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-net-client/api/Couchbase.Management.Collections.ICouchbaseCollectionManager.html#Couchbase_Management_Collections_ICouchbaseCollectionManager_CreateCollectionAsync_Couchbase_Management_Collections_CollectionSpec_Couchbase_Management_Collections_CreateCollectionOptions_) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Define the routes in a file inside the `src/main/kotlin/com/couchbase/kotlin/quickstart/routes` folder similar to the existing routes.
+- Define the services in a new file inside the `src/main/kotlin/com/couchbase/kotlin/quickstart/services` folder similar to the existing services.
+- Define the repository for this collection inside a new file inside the `src/main/kotlin/com/couchbase/kotlin/quickstart/repositories` folder similar to the existing repositories.
+- Add the tests for the new routes in a new file in the `src/test/kotlin/com/couchbase/kotlin/quickstart` folder similar to the existing ones.
+
+### Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+You need to update the connection string and the credentials in the [`src/main/resources/application.conf`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/resources/application.conf) file in the source folder.
+
+> **NOTE:** Couchbase must be installed and running prior to running the the ASP.NET app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
