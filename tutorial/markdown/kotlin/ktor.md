@@ -31,8 +31,8 @@ To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/kotlin-sdk/current/ref/travel-app-data-model.html) bucket loaded.
     - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
-- [Java SDK v1.8](https://www.oracle.com/java/technologies/downloads/) or higher installed.
-    - Ensure that the Java version is [compatible](https://docs.couchbase.com/kotlin-sdk/current/project-docs/compatibility.html) with the Couchbase SDK.
+- [Java JDK](https://docs.couchbase.com/kotlin-sdk/current/project-docs/compatibility.html#jdk-compat) installed.
+    - Ensure that the Java version is [compatible](https://docs.couchbase.com/kotlin-sdk/current/project-docs/compatibility.html#jdk-compat) with the Couchbase SDK.
 - Code Editor installed (Vim, IntelliJ IDEA, Eclipse, or Visual Studio Code)
 - Loading Travel Sample Bucket
     - If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
@@ -108,7 +108,7 @@ All configuration for communication with the database is stored in the `src/main
 
 ```
 couchbase {
-    connectionString = "localhost"
+    connectionString = "couchbases://yourassignedhostname.cloud.couchbase.com"
     username = "Administrator"
     password = "password"
     bucket = "travel-sample"
@@ -116,6 +116,9 @@ couchbase {
 }
 ```
 > _from [`src/main/resources/application.conf`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/resources/application.conf)_
+
+> Note: The connection string expects the `couchbases://` or `couchbase://` part.
+
 
 This includes the connection string, username, password, bucket and scope names. The default username is assumed to be `Administrator` and the default password is assumed to be `password`.
 If these are different in your environment you will need to change them before running the application.
@@ -216,7 +219,7 @@ We will be setting up a REST API to manage airport documents.
 - [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
 - [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
 
-For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/dotnet-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/kotlin-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/kotlin-sdk/current/howtos/n1ql-queries.html) to query for documents.
 
 ### Airport Document Structure
 
@@ -288,7 +291,7 @@ fun getById(id: String): Airport {
 
 ### PUT Airport
 
-The PUT handler additionally accepts an Airport object in the HTTP request body and then uses the SDK key-value operation to store it in Couchbase, overriding the previous profile data:
+The PUT handler additionally accepts an Airport object in the HTTP request body and then uses the SDK key-value operation to store it in Couchbase, overriding the previous airport data:
 
 ```
 fun update(airport: Airport, id: String): Airport {
@@ -322,11 +325,11 @@ This endpoint retrieves the list of airports in the database. The API has option
 
 Open the [`AirportRepository.kt`](https://github.com/couchbase-examples/kotlin-quickstart/blob/main/src/main/kotlin/com/couchbase/kotlin/quickstart/repositories/AirportRepository.kt) file  and navigate to the `list` method. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
-We need to get the values from the query string for country, limit, and Offset that we will use in our query.
+We need to get the values from the query string for country, limit, and offset that we will use in our query.
 
 This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
 
-We build our SQL++ query using the [parameters](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html#parameterized-queries) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
+We build our SQL++ query using the [parameters](https://docs.couchbase.com/kotlin-sdk/current/howtos/n1ql-queries.html#parameters) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
 
 Next, we pass that `query` to the `query` method of the Couchbase SDK. We save the results in a list form.
 
@@ -406,12 +409,6 @@ To run the standard integration tests, use the following commands:
 ```
 
 ## Appendix
-
-### Data Model
-
-For this quickstart, we use three collections, airport, airline and routes that contain sample airports, airlines and airline routes respectively. The routes collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
-
-![travel sample data model](travel_sample_data_model.png)
 
 ### Extending API by Adding New Entity
 
