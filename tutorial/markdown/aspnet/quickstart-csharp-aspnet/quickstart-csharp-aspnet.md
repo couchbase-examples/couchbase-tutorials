@@ -115,12 +115,10 @@ docker build -t couchbase-aspnet-quickstart .
 - Run the docker image
 ```shell 
 cd aspnet-quickstart
-docker run -d -p 8080:8080 --name couchbase-dotnet-container couchbase-aspnet-quickstart
+docker run -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket> -e DB_PASSWORD=<password_for_user> -p 8080:8080 couchbase-aspnet-quickstart
 ```
 
 You can access the Application on http://localhost:8080/index.html
-
->**Note:** Make the configuration changes inside `appsettings.json` file while running using docker.
 
 ### Verifying the Application
 
@@ -162,8 +160,7 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   │   │   └── InventoryScopeService.cs
 │   │   ├── Couchbase.TravelSample.csproj
 │   │   ├── Program.cs
-│   │   ├── appsettings.Development.json
-│   │   └── appsettings.json  
+│   │   └── appsettings.Development.json
 │   └── Org.Quickstart.IntegrationTests
 │       ├── ControllerTests
 │       │   ├── AirlineTests.cs
@@ -177,9 +174,10 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 `Org.Quickstart.API.Program:`
 
 
-In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.json` file.
+In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.Development.json` file.
 
 ```csharp
+// Register the configuration for Couchbase and Dependency Injection Framework
  builder.Services.Configure<CouchbaseConfig>(config);
  builder.Services.AddCouchbase(config);
 ```

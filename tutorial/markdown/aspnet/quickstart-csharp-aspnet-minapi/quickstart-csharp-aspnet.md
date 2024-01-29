@@ -115,12 +115,10 @@ docker build -t couchbase-aspnet-minapi-quickstart .
 - Run the docker image
 ```shell 
 cd aspnet-minapi-quickstart-travelsample
-docker run -p 8080:8080 couchbase-aspnet-minapi-quickstart
+docker run -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket> -e DB_PASSWORD=<password_for_user> -p 8080:8080 couchbase-aspnet-minapi-quickstart
 ```
 
 You can access the Application on http://localhost:8080/swagger/index.html
-
->**Note:** Make the configuration changes inside `appsettings.json` file while running using docker.
 
 ### Verifying the Application
 
@@ -156,8 +154,7 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   │   │   └── launchSettings.json
 │   │   ├── Couchbase.TravelSample.csproj
 │   │   ├── Program.cs
-│   │   ├── appsettings.Development.json
-│   │   └── appsettings.json  
+│   │   └── appsettings.Development.json
 │   └── Couchbase.TravelSample.Tests
 │       ├── AirlineTests.cs
 │       ├── AirportTests.cs
@@ -174,30 +171,12 @@ We register the validators for the `AirportCreateRequestCommand`, `AirlineCreate
 builder.Services.AddValidatorsFromAssemblyContaining(typeof(AirportCreateRequestCommandValidator));
 ```
 
-In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.json` file.
+In order to use the `Couchbase.Extensions.DependencyInjection` framework, we must first register the service.  The Couchbase Services requires the database configuration information, which can be provided by reading the database configuration from the `appsettings.Development.json` file.
 
 ```csharp
-var config = builder.Configuration.GetSection("Couchbase");
-
-//register the configuration for Couchbase and Dependency Injection Framework
-if (builder.Environment.EnvironmentName == "Testing")
-{
-    var connectionString = Environment.GetEnvironmentVariable("DB_CONN_STR");
-    var username = Environment.GetEnvironmentVariable("DB_USERNAME");
-    var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
-    config["ConnectionString"] = connectionString;
-    config["Username"] = username;
-    config["Password"] = password;
-    
-    builder.Services.Configure<CouchbaseConfig>(config);
-    builder.Services.AddCouchbase(config);
-}
-
-else
-{
-    builder.Services.Configure<CouchbaseConfig>(config);
-    builder.Services.AddCouchbase(config);
-}
+// Register the configuration for Couchbase and Dependency Injection Framework
+builder.Services.Configure<CouchbaseConfig>(config);
+builder.Services.AddCouchbase(config);
 ```
 
 We initialise the bucket and scope during the application startup.
@@ -205,7 +184,7 @@ We initialise the bucket and scope during the application startup.
 We check if the `inventory` scope exists in the provided `travel-sample` bucket when the application starts and throw and exception if the `inventory` scope does not exist inside the `travel-sample` bucket. We also log the Swagger URL here.
 
 ```csharp
- // Get the logger
+    // Get the logger
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
     // Get the address
