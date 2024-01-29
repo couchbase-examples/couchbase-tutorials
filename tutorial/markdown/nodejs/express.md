@@ -115,11 +115,9 @@ Once the app is up and running, you can launch your browser and go to the [Swagg
 ### Verifying the Application
 
 Once the application starts, you can see the details of the application on the logs.
-
 ![Application Startup](nodejs_app_startup.png)
 
 The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
-
 ![Swagger Documentation](nodejs_swagger_documentation.png)
 
 ## Data Model
@@ -195,19 +193,14 @@ Our airport document will have an airportname, city, country, faa code, icao cod
 ```
 Navigate to the `connection.js` in the `db` folder. We perform some basic required checks for the environment variable not being set in the dev.env, and then proceed to connect to the couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html#connect) method.
 ```js
-  if (IS_CAPELLA === 'true') {
-    // Use wan profile to avoid latency issues
-    cached.conn = await couchbase.connect(DB_CONN_STR, {
-      username: DB_USERNAME,
-      password: DB_PASSWORD,
-      configProfile: 'wanDevelopment',
-    })
-  } else {
-    cached.conn = await couchbase.connect(DB_CONN_STR, {
-      username: DB_USERNAME,
-      password: DB_PASSWORD,
-    })
-  }
+  // Use wan profile to avoid latency issues
+  cached.conn = await couchbase.connect(DB_CONN_STR, {
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    configProfile: 'wanDevelopment',
+  })
+
+  return cached.conn
 
   const airlineCollection = bucket.scope('inventory').collection('airline');
   const airportCollection = bucket.scope('inventory').collection('airport');
@@ -318,19 +311,43 @@ We build our SQL++ query using the [named parameters](https://docs.couchbase.com
 Next, we pass that `query` and the `parameters` to the  [scope.query()](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Scope.html#query) method and return the results.
 
 ```js
-  const country = req.query.country || "";
-  const limit = parseInt(req.query.limit, 10) || 10;
-  const offset = parseInt(req.query.offset, 10) || 0;
-  let filter = {};
-  if (country) {
-    filter.country = country;
-  }
+if (country !== '') {
+    query = `
+        SELECT airport.airportname,
+        airport.city,
+        airport.country,
+        airport.faa,
+        airport.geo,
+        airport.icao,
+        airport.tz
+    FROM airport AS airport
+    WHERE airport.country=$COUNTRY
+    ORDER BY airport.airportname
+    LIMIT $LIMIT
+    OFFSET $OFFSET;
+      `
+    options = { parameters: { COUNTRY: country, LIMIT: limit, OFFSET: offset } }
+  } else {
+    query = `
+        SELECT airport.airportname,
+        airport.city,
+        airport.country,
+        airport.faa,
+        airport.geo,
+        airport.icao,
+        airport.tz
+    FROM airport AS airport
+    ORDER BY airport.airportname
+    LIMIT $LIMIT
+    OFFSET $OFFSET;
+      `
 
-  const options = { limit: limit, offset: offset };
+    options = { parameters: { LIMIT: limit, OFFSET: offset } }
+  }
   await makeResponse(res, async () => {
-    const airports = await AirportModel.find(filter, options);
-    return airports.rows;
-  });
+    let results = await scope.query(query, options)
+    return results['rows']
+  })
 ```
 
 ### Direct Connections
