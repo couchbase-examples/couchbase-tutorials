@@ -38,9 +38,9 @@ length: 30 Mins
   - [Install Dependencies](#install-dependencies)
   - [Database Server Configuration](#database-server-configuration)
   - [Environment Variables](#environment-variables)
-- [Features](#features)
-- [Document Structure](#document-structure)
-- [Code Organization](#code-organization)
+- [What We'll Cover](#what-well-cover)
+  - [Document Structure](#document-structure)
+  - [Code Organization](#code-organization)
 - [Let's Review the Code](#lets-review-the-code)
   - [Integration Tests](#integration-tests)
   - [Repository](#repository)
@@ -62,7 +62,10 @@ length: 30 Mins
 - [Project Setup Notes](#project-setup-notes)
 - [Conclusion](#conclusion)
 
-## Prerequisites
+
+## Getting Started
+
+### Prerequisites
 
 To run this prebuilt project, you will need:
 
@@ -71,13 +74,13 @@ To run this prebuilt project, you will need:
 - Code Editor installed (IntelliJ IDEA, Eclipse, or Visual Studio Code)
 - Maven command line
 
-## Source Code
+### Source Code
 
 ```shell
 git clone https://github.com/couchbase-examples/java-springboot-quickstart
 ```
 
-## Install Dependencies
+### Install Dependencies
 
 ```shell
 mvn package
@@ -129,7 +132,7 @@ A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the
 - List airlines by country.
 - List airlines by destination airport.
 
-## Document Structure
+### Document Structure
 
 We will be setting up a REST API to manage some airline documents. Our airline document will have a structure similar to the following:
 
@@ -148,7 +151,7 @@ We will be setting up a REST API to manage some airline documents. Our airline d
 
 The `id` field is the unique identifier for the document. The `type` field is used to identify the type of document. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. The `active` field is a boolean value indicating whether the airline is active or not.
 
-## Code Organization
+### Code Organization
 
 - `src/test/java`: Contains integration tests.
 - `src/main/java/org/couchbase/quickstart/springboot/repositories`: Contains the repository implementation.

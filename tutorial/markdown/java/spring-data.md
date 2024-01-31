@@ -1,14 +1,14 @@
 ---
 # frontmatter
 path: "/tutorial-quickstart-java-springdata"
-title: Couchbase With Spring-Boot and Spring Data 
+title: Couchbase With Spring-Boot and Spring Data
 short_title: Spring Data
-description: 
+description:
   - Build a REST API with Couchbase and Spring Data
-  - Learn how to configure the Couchbase SDK 
+  - Learn how to configure the Couchbase SDK
 content_type: tutorial
 filter: sdk
-technology: 
+technology:
   - kv
   - query
 tags:
@@ -21,35 +21,64 @@ length: 30 Mins
 
 [![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=java-springdata-quickstart-repo&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/java-springdata-quickstart)
 
-## Overview
-This quickstart tutorial will review the basics of using Couchbase by building a simple Spring Data REST API that stores user profiles is used as an example.
+## Table of Contents
 
-## What We'll Cover
-- [Cluster Connection Configuration](#cluster-connection-configuration) – Configuring Spring Data to connect to a Couchbase cluster.
-- [Database Initialization](#database-initialization) – Creating required database structures upon application startup
-- [CRUD operations](#create-or-update-a-profile) – Standard create, update and delete operations.
-- [Custom SQL++ queries](#search-profiles-by-text) – Using [SQl++](https://www.couchbase.com/sqlplusplus) with Spring Data.
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Source Code](#source-code)
+  - [Install Dependencies](#install-dependencies)
+  - [Database Server Configuration](#database-server-configuration)
+  - [Environment Variables](#environment-variables)
+  - [Running the Application](#running-the-application)
+- [What We'll Cover](#what-well-cover)
+  - [Document Structure](#document-structure)
+  - [Code Organization](#code-organization)
+- [Let's Review the Code](#lets-review-the-code)
+  - [Integration Tests](#integration-tests)
+  - [Repository](#repository)
+  - [Model](#model)
+  - [Controller](#controller)
+  - [Service](#service)
+- [Route Specifications](#route-specifications)
+  - [GET Route](#get-route)
+  - [POST Route](#post-route)
+  - [PUT Route](#put-route)
+  - [DELETE Route](#delete-route)
+- [Route Workflow](#route-workflow)
+  - [GET Route Workflow](#get-route-workflow)
+  - [POST Route Workflow](#post-route-workflow)
+  - [PUT Route Workflow](#put-route-workflow)
+  - [DELETE Route Workflow](#delete-route-workflow)
+- [Custom SQL++ Queries](#custom-sql-queries)
+- [Running The Tests](#running-the-tests)
+- [Project Setup Notes](#project-setup-notes)
+- [Conclusion](#conclusion)
 
-## Useful Links
-- [Spring Data Couchbase - Reference Documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/)
-- [Spring Data Couchbase - JavaDoc](https://docs.spring.io/spring-data/couchbase/docs/current/api/)
+## Getting Started
 
-## Prerequisites
+### Prerequisites
+
 To run this prebuild project, you will need:
+
 - [Couchbase Capella](https://docs.couchbase.com/cloud/get-started/create-account.html) account or locally installed [Couchbase Server](/tutorial-couchbase-installation-options)
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Code Editor or an Integrated Development Environment (e.g., [Eclipse](https://www.eclipse.org/ide/))
 - [Java SDK v1.8 or higher installed](https://www.oracle.com/java/technologies/ee8-install-guide.html)
 - [Gradle Build Tool](https://gradle.org/install/)
 
-## Source Code
+### Source Code
+
 The sample source code used in this tutorial is [published on GitHub](https://github.com/couchbase-examples/java-springboot-quickstart).
 To obtain it, clone the git repository with your IDE or execute the following command:
+
 ```shell
 git clone https://github.com/couchbase-examples/java-springdata-quickstart
 ```
-## Dependencies
+
+### Install Dependencies
+
 Gradle dependencies:
+
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-web'
 // spring data couchbase connector
@@ -59,6 +88,7 @@ implementation 'org.springdoc:springdoc-openapi-ui:1.6.6'
 ```
 
 Maven dependencies:
+
 ```xml
 <dependency>
   <groupId>org.springframework.boot</groupId>
@@ -75,9 +105,23 @@ Maven dependencies:
 </dependency>
 ```
 
-## Cluster Connection Configuration
+## What We'll Cover
+
+- [Cluster Connection Configuration](#cluster-connection-configuration) – Configuring Spring Data to connect to a Couchbase cluster.
+- [Database Initialization](#database-initialization) – Creating required database structures upon application startup
+- [CRUD operations](#create-or-update-a-profile) – Standard create, update and delete operations.
+- [Custom SQL++ queries](#search-profiles-by-text) – Using [SQl++](https://www.couchbase.com/sqlplusplus) with Spring Data.
+
+## Useful Links
+
+- [Spring Data Couchbase - Reference Documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/)
+- [Spring Data Couchbase - JavaDoc](https://docs.spring.io/spring-data/couchbase/docs/current/api/)
+
+### Database Server Configuration
+
 Spring Data couchbase connector can be configured by providing a `@Configuration` [bean](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#beans-definition) that extends [`AbstractCouchbaseConfiguration`](https://docs.spring.io/spring-data/couchbase/docs/current/api/org/springframework/data/couchbase/config/AbstractCouchbaseConfiguration.html).
 The sample application provides a configuration bean that uses default couchbase login and password:
+
 ```java
 @Configuration
 public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
@@ -86,7 +130,7 @@ public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
   public String getConnectionString() {
     // capella
     // return "couchbases://cb.jnym5s9gv4ealbe.cloud.couchbase.com";
-    
+
     // localhost
     return "127.0.0.1"
   }
@@ -108,166 +152,230 @@ public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
 
   ...
 ```
-> *from config/CouchbaseConfiguration.java*
+
+> _from config/CouchbaseConfiguration.java_
 
 This default configuration assumes that you have a locally running Couchbae server and uses standard administrative login and password for demonstration purpose.
 Applications deployed to production or staging environments should use less privileged credentials created using [Role-Based Access Control](https://docs.couchbase.com/go-sdk/current/concept-docs/rbac.html).
 Please refer to [Managing Connections using the Java SDK with Couchbase Server](https://docs.couchbase.com/java-sdk/current/howtos/managing-connections.html) for more information on Capella and local cluster connections.
 
-# Running the Application
+### Environment Variables
+
+You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.s
+
+```properties
+spring.couchbase.bootstrap-hosts=DB_CONN_STR
+spring.couchbase.bucket.user=DB_USERNAME
+spring.couchbase.bucket.password=DB_PASSWORD
+```
+
+### Running the Application
 
 To install dependencies and run the application on Linux, Unix or OS X, execute `./gradlew bootRun` (`./gradew.bat bootRun` on Windows).
 
 Once the site is up and running, you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/) to test the APIs.
 
+## What We'll Cover
 
-## Document Structure
-We will be setting up a REST API to manage demo user profiles and store them as documents on a Couchbase Cluster. Every document needs a unique identifier with which it can be addressed in the API. We will use auto-generated UUIDs for this purpose and store in profile documents the first and the last name of the user, their age, and address:
+A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
+
+- Create new airlines with essential information.
+- Update airline details.
+- Delete airlines.
+- Retrieve airlines by ID.
+- List all airlines with pagination.
+- List airlines by country.
+- List airlines by destination airport.
+
+### Document Structure
+
+We will be setting up a REST API to manage some airline documents. Our airline document will have a structure similar to the following:
 
 ```json
 {
-  "id": "b181551f-071a-4539-96a5-8a3fe8717faf",
-  "firstName": "John",
-  "lastName": "Doe",
-  "age": "35",
-  "address": "123 Main St"
+  "id": "airline_8091",
+  "type": "airline",
+  "name": "Couchbase Airways",
+  "callsign": "Couchbase",
+  "iata": "CB",
+  "icao": "CBA",
+  "country": "United States",
+  "active": true
 }
 ```
+
+The `id` field is the unique identifier for the document. The `type` field is used to identify the type of document. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. The `active` field is a boolean value indicating whether the airline is active or not.
+
+### Code Organization
+
+- `src/test/java`: Contains integration tests.
+- `src/main/java/org/couchbase/quickstart/springdata/repository`: Contains the repository implementation.
+- `src/main/java/org/couchbase/quickstart/springdata/model`: Contains the data model.
+- `src/main/java/org/couchbase/quickstart/springdata/controller`: Contains the RESTful API controllers.
+- `src/main/java/org/couchbase/quickstart/springdata/service`: Contains the service classes.
 
 ## Let's Review the Code
 
-### Profile Model
-To work with submitted profiles, we first need to model their structure in a Java class, which would define the set of profile fields and their types.
-In our sample application, this is done in [`model/Profile.java`](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/model/Profile.java) class:
+To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
+
+### Integration Tests
+
+`AirlineIntegrationTest.java`
+This class contains integration tests for the REST API. It uses the `@SpringBootTest` annotation to load the application context and the `@AutoConfigureMockMvc` annotation to autowire the `MockMvc` object. The `MockMvc` object is used to perform HTTP requests to the REST API.
+
+### Repository
+
+`AirlineRepository.java`
+This interface extends the `CouchbaseRepository` interface and provides methods for CRUD operations. The `@N1qlPrimaryIndexed` annotation creates a primary index on the `airline` collection. The `@ViewIndexed` annotation creates a view index on the `airline` collection. The `@Query` annotation allows us to create custom N1QL queries. The `@ScanConsistency` annotation allows us to specify the scan consistency for the query. The `@Param` annotation allows us to specify parameters for the query.
+
+### Model
+
+`Airline.java`
+This class represents an airline document. The `@Document` annotation indicates that this class is a Couchbase document. The `@Id` annotation indicates that the `id` field is the document ID. The `@Field` annotation indicates that the following fields are Couchbase document fields: `type`, `name`, `callsign`, `iata`, `icao`, `country`, and `active`.
+
+### Controller
+
+`AirlineController.java`
+This class contains the REST API endpoints for CRUD operations. The `@RestController` annotation indicates that this class is a REST controller. The `@RequestMapping` annotation specifies the base URL for the REST API. The `@Autowired` annotation is used to autowire the `AirlineService` object. The `@GetMapping`, `@PostMapping`, `@PutMapping`, and `@DeleteMapping` annotations are used to map HTTP GET, POST, PUT, and DELETE requests respectively to their corresponding methods.
+
+### Service
+
+`AirlineService.java`
+This class contains the business logic for the REST API. The `@Autowired` annotation is used to autowire the `AirlineRepository` object.
+
+## Route Specifications
+
+### GET Route
+
+`@GetMapping("/{id}")`
+This route is used to retrieve an airline by its unique identifier (ID).
+
+- It expects the id of the airline as a path parameter.
+- It calls the `getAirlineById` method of the `AirlineService` to retrieve the airline with the specified ID.
+- If the airline is found, it returns a `ResponseEntity` with HTTP status `200 OK` and the airline data in the response body.
+- If the airline is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
+- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
+
+### POST Route
+
+`@PostMapping("/{id}")`
+This route is used to create a new airline.
+
+- It expects the id of the airline as a path parameter, but this ID is typically generated by the server.
+- It receives the airline data in the request body, which should be a valid JSON representation of an airline.
+- It calls the `createAirline` method of the `AirlineService` to create the new airline.
+- If the airline is created successfully, it returns a `ResponseEntity` with HTTP status `201 Created` and the created airline data in the response body.
+- If a conflict occurs (e.g., an airline with the same ID already exists), it returns a `ResponseEntity` with HTTP status `409 Conflict`.
+- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
+
+### PUT Route
+
+`@PutMapping("/{id}")`
+This route is used to update an existing airline by its ID.
+
+- It expects the id of the airline as a path parameter.
+- It receives the updated airline data in the request body.
+- It calls the `updateAirline` method of the `AirlineService` to update the airline with the specified ID.
+- If the airline is updated successfully, it returns a `ResponseEntity` with HTTP status `200 OK` and the updated airline data in the response body.
+- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
+- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
+
+### DELETE Route
+
+`@DeleteMapping("/{id}")`
+This route is used to delete an airline by its ID.
+
+- It expects the id of the airline as a path parameter.
+- It calls the `deleteAirline` method of the `AirlineService` to delete the airline with the specified ID.
+- If the airline is deleted successfully, it returns a `ResponseEntity` with HTTP status `204 No Content` (indicating success with no response body).
+- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
+- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
+
+
+## Route Workflow
+
+
+### GET Route Workflow
+- The client initiates a GET request to `/api/v1/airline/{id}`, providing the unique identifier (`{id}`) of the airline they want to retrieve.
+- The `AirlineController` receives the request and invokes the `getAirlineById(id)` method in the `AirlineService`.
+- Inside the `AirlineService`, the request is processed. The service interacts with the `AirlineRepository`.
+- The `AirlineRepository` executes a query against the Couchbase database to retrieve the airline information based on the provided ID.
+- If the airline is found, the `AirlineService` returns the retrieved information to the `AirlineController`.
+- The `AirlineController` sends an HTTP response with an HTTP status code of `200` (OK) and includes the airline information in the response body.
+- If the airline is not found in the database, the `AirlineService` returns `null`.
+- The `AirlineController` responds with an HTTP status code of `404` (Not Found) if the airline is not found.
+
+### POST Route Workflow
+- The client initiates a POST request to `/api/v1/airline/{id}` with a JSON payload containing the airline's information, including a unique ID.
+- The `AirlineController` receives the request and invokes the `createAirline(airline)` method in the `AirlineService`.
+- Inside the `AirlineService`, the incoming data is validated to ensure it meets the required criteria.
+- The `AirlineService` creates a new `Airline` object and saves it to the Couchbase database using the `AirlineRepository`.
+- If the airline is successfully created, the `AirlineService` returns the newly created airline object.
+- The `AirlineController` sends an HTTP response with an HTTP status code of `201` (Created), including the newly created airline information in the response body.
+- If the airline already exists in the database, a `DocumentExistsException` may be thrown.
+- In case of a conflict, the `AirlineController` responds with an HTTP status code of `409` (Conflict).
+
+### PUT Route Workflow
+- The client initiates a PUT request to `/api/v1/airline/{id}` with a JSON payload containing the updated airline information and the unique ID of the airline to be updated.
+- The `AirlineController` receives the request and invokes the `updateAirline(id, airline)` method in the `AirlineService`.
+- Inside the `AirlineService`, the incoming data is validated to ensure it meets the required criteria.
+- The `AirlineService` updates the airline record in the Couchbase database using the `AirlineRepository`.
+- If the airline is found and updated successfully, the `AirlineService` returns the updated airline object.
+- The `AirlineController` sends an HTTP response with an HTTP status code of `200` (OK), including the updated airline information in the response body.
+- If the airline is not found in the database, the `AirlineService` returns `null`.
+- In case of an update to a non-existent airline, the `AirlineController` responds with an HTTP status code of `404` (Not Found).
+
+### DELETE Route Workflow
+- The client initiates a DELETE request to `/api/v1/airline/{id}`, specifying the unique identifier (`{id}`) of the airline to be deleted.
+- The `AirlineController` receives the request and invokes the `deleteAirline(id)` method in the `AirlineService`.
+- Inside the `AirlineService`, the service attempts to find and delete the airline record from the Couchbase database using the `AirlineRepository`.
+- If the airline is found and successfully deleted, the `AirlineService` completes the operation.
+- The `AirlineController` responds with an HTTP status code of `204` (No Content) to indicate a successful deletion.
+- If the airline is not found in the database, the `AirlineService` may throw a `DocumentNotFoundException`.
+- In case the airline is not found, the `AirlineController` responds with an HTTP status code of `404` (Not Found).
+
+These detailed workflows provide a comprehensive understanding of how each route is handled by the controller, service, and repository components in your Spring Data project.
+
+## Custom SQL++ Queries
+
+The `AirlineRepository` interface contains a `@Query` annotation that allows us to create custom N1QL queries. The `@ScanConsistency` annotation allows us to specify the scan consistency for the query. The `@Param` annotation allows us to specify parameters for the query.
 
 ```java
-@Scope("_default")
-@Collection("profile")
-public class Profile {
-  @id
-  @GeneratedValue 
-  private UUID id;
-  private String firstName, lastName;
-  private byte age;
-  private String address;
-
-  // ...
-}
+@Query("#{#n1ql.selectEntity} WHERE #{#n1ql.filter} AND country = $country")
+@ScanConsistency(query = QueryScanConsistency.REQUEST_PLUS)
+List<Airline> findByCountry(@Param("country") String country);
 ```
-> from `model/Profile.java`
 
-The whole model is annotated with `@Scope` and `@Collection` annotations, which configure Spring Data to store model instances into `profile` collection in the default scope.
+> _from repository/AirlineRepository.java_
 
-It is also worth noting the use of `@Id` and `@GeneratedValue` annotations on `Profile::id` field.
-
-In couchbase, data is stored as JSON documents; each document has a unique identifier that can be used to address that document. 
-Every profile instance in our example corresponds to a single document and this annotation is used here to link the document's id to a java field. 
-Additionally, the `@GeneratedValue` annotation on the field instructs Spring Data to generate a random UUID if we try to store a profile without one, which will come in handy later.
-
-You can find more information on key generation in the [Connector Documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/#couchbase.autokeygeneration).
-
-Couchbase Spring Data connector will automatically serialize model instances into JSON when storing them on the cluster.
-
-### Database initialization
-Automated database initialization and migration is a common solution that simplifies database management operations.
-To keep it simple, our demo uses [DbSetupRunner](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/config/DbSetupRunner.java) component class that implements `CommandLineRunner` interface and is invoked every time the application starts.
-The runner tries to create required structure every startup but ignores any errors if such structure already exists.
-For example, this code creates a primary index for configured bucket:
-```java
-    try {
-      // We must create primary index on our bucket in order to query it
-      cluster.queryIndexes().createPrimaryIndex(config.getBucketName());
-      LOGGER.info("Created primary index {}", config.getBucketName());
-    } catch (IndexExistsException iee) {
-      LOGGER.info("Primary index {} already exists", config.getBucketName());
-    }
-```
-> From `config/DbSetupRunner.java`
-
-Primary indexes in Couchbase contain all document keys and are used to fetch documents by their unique identifiers. 
-Secondary indexes can be used to efficiently query documents by their properties.
-For example, `DbSetupRunner` creates additional indexes on the collection that allow querying profiles by first or last names or addresses:
-```java
-    try {
-      final String query = "CREATE INDEX secondary_profile_index ON " + config.getBucketName() + "._default." + CouchbaseConfiguration.PROFILE_COLLECTION + "(firstName, lastName, address)";
-      cluster.query(query);
-    } catch (IndexExistsException e) {
-      LOGGER.info("Secondary index exists on collection {}", CouchbaseConfiguration.PROFILE_COLLECTION);
-    }
-```
-> From `config/DbSetupRunner.java`
-
-More information on working with Couchbase indexes can be found [in our documentation](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/global-secondary-indexes.html).
-
-### Create or update a Profile
-For CRUD operations, we will extend [`PagingAndSortingRepository`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html) provided by the framework:
+The `findByCountry` method returns a list of airlines by country. It uses the `@Query` annotation to create a custom N1QL query. The `@Param` annotation is used to specify the `country` parameter for the query. The `@ScanConsistency` annotation is used to specify the scan consistency for the query.
 
 ```java
-@Repository
-public interface ProfileRepository extends PagingAndSortingRepository<Profile, UUID> {
-  @Query("#{#n1ql.selectEntity} WHERE firstName LIKE '%' || $1 || '%' OR lastName LIKE '%' || $1 || '%' OR address LIKE '%' || $1 || '%' OFFSET $2 * $3 LIMIT $3")
-  List<Profile> findByText(String query, int pageNum, int pageSize);
-
-  Page<Profile> findByAge(byte age, Pageable pageable);
-}
-```
-> From `repository/ProfileRepository.java`
-
-Open the [`ProfileController`](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/controller/ProfileController.java) class located in `controller` package and navigate to the `saveProfile` method.
-This method accepts `Profile` objects deserialized by Spring Web from the body of an HTTP request.
-
-```java
-  @PostMapping("/profile")
-  public ResponseEntity<Profile> saveProfile(@RequestBody Profile profile) {
-    // the same endpoint can be used to create and save the object
-    profile = profileRepository.save(profile);
-    return ResponseEntity.status(HttpStatus.CREATED).body(profile);
-  }
-```
-> *from `saveProfile` method of `controller/ProfileController.java`*
-
-This object can be modified according to business requirements and then saved directly into the database using `ProfileRepository::save` method.
-Because we used `@GeneratedValue` annotation on `id` field of our java model, Spring Data will automatically generate a document id when it is missing from the request. This allows clients to use `/profile` endpoint both to update existing profiles and create new records.
-To achieve this, a client needs to submit a Profile object without the id field.
-
-### Get Profile by Key
-Navigate to the `getProfileById` method in [`ProfileController`](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/controller/ProfileController.java) class.
-This method handles client requests to retrieve a single profile by its unique id.
-Sent by the client UUID is passed to the standard `findById` method of `ProfileRepository`, which returns an `Optional` with requested profile:
-
-```java
-Profile result = profileRepository.findById(id).orElse(null);
-```
-> *from getProfileById method of controller/ProfileController.java*
-
-### Search profiles by text
-Although Couchbase provides [powerful full-text search capabilities out of the box](https://www.couchbase.com/products/full-text-search), in this demo we use classic `LIKE` query for our profile search endpoint.
-Navigate to `listProfiles` method of [Profile Controller](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/controller/ProfileController.java). 
-The endpoint uses customized `findByText` method of [Profile Repository](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/repository/ProfileRepository.java):
-```java
-result = profileRepository.findByText(query, pageRequest).toList();
-```
-> *from `listProfiles` method in `controller/ProfileController.java`*
-
-The `ProfileRepository::findByQueryMethod` is generated automatically using provided in `@Query` annotation [SpEL](https://docs.spring.io/spring-integration/docs/5.3.0.RELEASE/reference/html/spel.html) template in SQL++:
-```java
-  @Query("#{#n1ql.selectEntity} WHERE firstName LIKE '%' || $1 || '%' OR lastName LIKE '%' || $1 || '%' OR address LIKE '%' || $1 || '%'")
-  Page<Profile> findByQuery(String query, Pageable pageable);
-```
-> *definition of `findByQuery` method in `repository/ProfileRepository.java`*
-
-You can find out more about SQL++ in Spring Data in the [connector documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/#couchbase.repository.querying).
-
-### DELETE Profile
-Navigate to the `deleteProfile` method in the [Profile Controller](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/java/trycb/controller/ProfileController.java).
-We only need the `Key` or id from the user to remove a document using a basic key-value operation.
-
-```java
-      profileRepository.deleteById(id);
+@Query("#{#n1ql.selectEntity} WHERE #{#n1ql.filter} AND ANY destination IN routes SATISFIES destination = $airport END")
+@ScanConsistency(query = QueryScanConsistency.REQUEST_PLUS)
+List<Airline> findByDestinationAirport(@Param("airport") String airport);
 ```
 
-> *from `deleteProfile` method of controller/ProfileController.java*
+> _from repository/AirlineRepository.java_
 
+
+The `findByDestinationAirport` method returns a list of airlines by destination airport. It uses the `@Query` annotation to create a custom N1QL query. The `@Param` annotation is used to specify the `airport` parameter for the query. The `@ScanConsistency` annotation is used to specify the scan consistency for the query.
+
+## Running The Tests
+
+To run the tests, execute `./gradlew test` (`./gradlew.bat test` on Windows).
+
+## Project Setup Notes
+
+This project was created using the [Spring Initializr](https://start.spring.io/) with the following options:
+
+- Project: Gradle Project
+- Language: Java
+- Spring Boot: 2.7.18
+- Packaging: Jar
+- Java: 8
+- Dependencies: Spring Web, Spring Data Couchbase, Springdoc OpenAPI UI
 
 ## Conclusion
-Setting up a basic REST API in Spring Data with Couchbase is fairly simple.  This project, when run with Couchbase Server 7 installed creates a collection in Couchbase, an index for our parameterized [N1QL query](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+
+Setting up a basic REST API in Spring Data with Couchbase is fairly simple. This project, when run with Couchbase Server 7 installed creates a collection in Couchbase, an index for our parameterized [N1QL query](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
