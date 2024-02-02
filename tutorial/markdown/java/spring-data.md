@@ -19,8 +19,6 @@ sdk_language:
 length: 30 Mins
 ---
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=java-springdata-quickstart-repo&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/java-springdata-quickstart)
-
 ## Table of Contents
 
 - [Getting Started](#getting-started)
@@ -29,10 +27,13 @@ length: 30 Mins
   - [Install Dependencies](#install-dependencies)
   - [Database Server Configuration](#database-server-configuration)
   - [Environment Variables](#environment-variables)
-  - [Running the Application](#running-the-application)
+- [Running the Application](#running-the-application)
+  - [Directly on the machine](#directly-on-the-machine)
+  - [Docker](#docker)
 - [What We'll Cover](#what-well-cover)
   - [Document Structure](#document-structure)
   - [Code Organization](#code-organization)
+- [Data Model](#data-model)
 - [Let's Review the Code](#lets-review-the-code)
   - [Integration Tests](#integration-tests)
   - [Repository](#repository)
@@ -52,7 +53,11 @@ length: 30 Mins
 - [Custom SQL++ Queries](#custom-sql-queries)
 - [Running The Tests](#running-the-tests)
 - [Project Setup Notes](#project-setup-notes)
-- [Conclusion](#conclusion)
+- [Contributing](#contributing)
+- [Appendix](#appendix)
+  - [Extending API by Adding New Entity](#extending-api-by-adding-new-entity)
+  - [Running Self Managed Couchbase Cluster](#running-self-managed-couchbase-cluster)
+  - [Swagger Documentation](#swagger-documentation)
 
 ## Getting Started
 
@@ -72,7 +77,7 @@ The sample source code used in this tutorial is [published on GitHub](https://gi
 To obtain it, clone the git repository with your IDE or execute the following command:
 
 ```shell
-git clone https://github.com/couchbase-examples/java-springdata-quickstart
+git clone https://github.com/couchbase-examples/java-springdata-quickstart.git
 ```
 
 ### Install Dependencies
@@ -169,23 +174,71 @@ spring.couchbase.bucket.user=DB_USERNAME
 spring.couchbase.bucket.password=DB_PASSWORD
 ```
 
-### Running the Application
+In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
 
-To install dependencies and run the application on Linux, Unix or OS X, execute `./gradlew bootRun` (`./gradew.bat bootRun` on Windows).
+The connection string should be in the following format:
+
+```properties
+spring.couchbase.bootstrap-hosts=couchbases://cb.fwu-oviwcpjq4v.cloud.couchbase.com
+OR
+spring.couchbase.bootstrap-hosts=localhost
+```
+
+The couchbases protocol is used for secure connections. If you are using Couchbase Server 6.5 or earlier, you should use the couchbase protocol instead.
+
+## Running the Application
+
+### Directly on Machine
+
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
+
+```sh
+gradle bootRun
+```
+
+Note: If you're using Windows, you can run the application using the `gradle.bat` executable.
+
+```sh
+./gradew.bat bootRun
+```
+
+<!-- Screeenshot -->
+
+![Spring Data Application](./app-startup-spring-data.png)
 
 Once the site is up and running, you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/) to test the APIs.
+
+<!-- Screenshot -->
+
+![Swagger UI](./swagger-documentation-spring-data.png)
+
+### Using Docker
+
+Build the Docker image
+
+```sh
+docker build -t java-springdata-quickstart .
+```
+
+Run the Docker image
+
+```sh
+docker run -d --name springdata-container -p 8080:8080 java-springdata-quickstart
+```
+
+Note: The `application.properties` file has the connection information to connect to your Capella cluster. These will be part of the environment variables in the Docker container.
 
 ## What We'll Cover
 
 A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
 
-- Create new airlines with essential information.
-- Update airline details.
-- Delete airlines.
-- Retrieve airlines by ID.
-- List all airlines with pagination.
-- List airlines by country.
-- List airlines by destination airport.
+- [Create new airlines with essential information](#post-route).
+- [Update airline details](#put-route).
+- [Delete airlines](#delete-route).
+- [Retrieve airlines by ID](#get-route).
+- [List all airlines with pagination](#get-route).
+- [List airlines by country](#get-route).
+- [List airlines by destination airport](#get-route).
 
 ### Document Structure
 
@@ -213,6 +266,12 @@ The `id` field is the unique identifier for the document. The `type` field is us
 - `src/main/java/org/couchbase/quickstart/springdata/model`: Contains the data model.
 - `src/main/java/org/couchbase/quickstart/springdata/controller`: Contains the RESTful API controllers.
 - `src/main/java/org/couchbase/quickstart/springdata/service`: Contains the service classes.
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![Data Model](./travel_sample_data_model.png)
 
 ## Let's Review the Code
 
@@ -291,13 +350,12 @@ This route is used to delete an airline by its ID.
 - If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
 - If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
 
-
 ## Route Workflow
 
-
 ### GET Route Workflow
+
 - The client initiates a GET request to `/api/v1/airline/{id}`, providing the unique identifier (`{id}`) of the airline they want to retrieve.
-- The `AirlineController` receives the request and invokes the `getAirlineById(id)` method in the `AirlineService`.
+- The `AirlineController` receives the request and invokes the `getAirlineById(id)` method in the `AirlineService`. This function internally calls the [findById](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#findById(ID)>) method of the `AirlineRepository`(which extends `CouchbaseRepository`) to retrieve the airline information from the Couchbase database.
 - Inside the `AirlineService`, the request is processed. The service interacts with the `AirlineRepository`.
 - The `AirlineRepository` executes a query against the Couchbase database to retrieve the airline information based on the provided ID.
 - If the airline is found, the `AirlineService` returns the retrieved information to the `AirlineController`.
@@ -306,8 +364,9 @@ This route is used to delete an airline by its ID.
 - The `AirlineController` responds with an HTTP status code of `404` (Not Found) if the airline is not found.
 
 ### POST Route Workflow
+
 - The client initiates a POST request to `/api/v1/airline/{id}` with a JSON payload containing the airline's information, including a unique ID.
-- The `AirlineController` receives the request and invokes the `createAirline(airline)` method in the `AirlineService`.
+- The `AirlineController` receives the request and invokes the `createAirline(airline)` method in the `AirlineService`. The `createAirline` method internally calls the [save](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#save(S)>) method of the `AirlineRepository` to save the airline information to the Couchbase database.
 - Inside the `AirlineService`, the incoming data is validated to ensure it meets the required criteria.
 - The `AirlineService` creates a new `Airline` object and saves it to the Couchbase database using the `AirlineRepository`.
 - If the airline is successfully created, the `AirlineService` returns the newly created airline object.
@@ -316,8 +375,9 @@ This route is used to delete an airline by its ID.
 - In case of a conflict, the `AirlineController` responds with an HTTP status code of `409` (Conflict).
 
 ### PUT Route Workflow
+
 - The client initiates a PUT request to `/api/v1/airline/{id}` with a JSON payload containing the updated airline information and the unique ID of the airline to be updated.
-- The `AirlineController` receives the request and invokes the `updateAirline(id, airline)` method in the `AirlineService`.
+- The `AirlineController` receives the request and invokes the `updateAirline(id, airline)` method in the `AirlineService`. The `updateAirline` method internally calls the [save](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#save(S)>) method of the `AirlineRepository` to update the airline information in the Couchbase database.
 - Inside the `AirlineService`, the incoming data is validated to ensure it meets the required criteria.
 - The `AirlineService` updates the airline record in the Couchbase database using the `AirlineRepository`.
 - If the airline is found and updated successfully, the `AirlineService` returns the updated airline object.
@@ -326,8 +386,9 @@ This route is used to delete an airline by its ID.
 - In case of an update to a non-existent airline, the `AirlineController` responds with an HTTP status code of `404` (Not Found).
 
 ### DELETE Route Workflow
+
 - The client initiates a DELETE request to `/api/v1/airline/{id}`, specifying the unique identifier (`{id}`) of the airline to be deleted.
-- The `AirlineController` receives the request and invokes the `deleteAirline(id)` method in the `AirlineService`.
+- The `AirlineController` receives the request and invokes the `deleteAirline(id)` method in the `AirlineService`. The `deleteAirline` method internally calls the [deleteById](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#deleteById(ID)>) method of the `AirlineRepository` to delete the airline from the Couchbase database.
 - Inside the `AirlineService`, the service attempts to find and delete the airline record from the Couchbase database using the `AirlineRepository`.
 - If the airline is found and successfully deleted, the `AirlineService` completes the operation.
 - The `AirlineController` responds with an HTTP status code of `204` (No Content) to indicate a successful deletion.
@@ -358,8 +419,11 @@ List<Airline> findByDestinationAirport(@Param("airport") String airport);
 
 > _from repository/AirlineRepository.java_
 
-
 The `findByDestinationAirport` method returns a list of airlines by destination airport. It uses the `@Query` annotation to create a custom N1QL query. The `@Param` annotation is used to specify the `airport` parameter for the query. The `@ScanConsistency` annotation is used to specify the scan consistency for the query.
+
+<!-- Link to docs -->
+
+For more information, see the [Couchbase Java SDK documentation](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html).
 
 ## Running The Tests
 
@@ -376,6 +440,43 @@ This project was created using the [Spring Initializr](https://start.spring.io/)
 - Java: 8
 - Dependencies: Spring Web, Spring Data Couchbase, Springdoc OpenAPI UI
 
-## Conclusion
+## Contributing
 
-Setting up a basic REST API in Spring Data with Couchbase is fairly simple. This project, when run with Couchbase Server 7 installed creates a collection in Couchbase, an index for our parameterized [N1QL query](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+Contributions are welcome! If you'd like to contribute to this project, please fork the repository and create a pull request.
+
+## Appendix
+
+### Extending API by Adding New Entity
+
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-java-client-3.5.2/com/couchbase/client/java/Collection.html#createScope-java.lang.String-) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Define the routes in a new file in the `controllers` folder similar to the existing routes like `AirportController.java`.
+- Define the service in a new file in the `services` folder similar to the existing services like `AirportService.java`.
+- Define the repository in a new file in the `repositories` folder similar to the existing repositories like `AirportRepository.java`.
+
+### Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+You need to update the connection string and the credentials in the [`src/main/resources/application.properties`](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/resources/application.properties) file.
+
+> **NOTE:** Couchbase must be installed and running prior to running the Spring Boot app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
