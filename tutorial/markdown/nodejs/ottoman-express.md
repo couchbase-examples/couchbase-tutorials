@@ -22,7 +22,7 @@ length: 30 Mins
 ---
 
 
-In this article, you will learn how to connect to a Couchbase cluster using [Ottoman JS](https://ottomanjs.com/) instead of the NodeJS SDK to create, read, update, and delete documents, and write simple parametrized SQL++ queries.
+In this tutorial, you will learn how to connect to a Couchbase cluster using [Ottoman JS](https://ottomanjs.com/) instead of the NodeJS SDK to create, read, update, and delete documents, and write simple parametrized SQL++ queries.
 
 
 ## Prerequisites
@@ -37,7 +37,7 @@ To run this prebuilt project, you will need:
 
   - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-> Note that this tutorial is designed to work with the latest Ottoman version (2) for Couchbase. It will not work with the older Ottoman versions  for Couchbase without adapting the code.
+> Note that this tutorial is designed to work with the latest Ottoman version (2) for Couchbase. It will not work with the older Ottoman versions for Couchbase without adapting the code.
 
 ### Couchbase Capella Configuration
 
@@ -50,7 +50,7 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/), the follow
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/ottomanjs-quickstart
+git clone https://github.com/couchbase-examples/ottomanjs-quickstart.git
 ```
 
 ### Install Dependencies
@@ -71,13 +71,12 @@ Specifically, you need to do the following:
 
 All configuration for communication with the database is read from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `dev.env` in the `config` folder.
 
-Add the values for the Couchbase connection in the config/dev.env file.
-
+Create a copy of `config/dev.env.example` file and rename it to `config/dev.env` and add the values for the Couchbase connection.
 
 ```sh
-CONNECTION_STRING=<connection_string>
-USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
-PASSWORD=<password_for_user>
+DB_CONN_STR=<connection_string>
+DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
+DB_PASSWORD=<password_for_user>
 ```
 > Note: The connection string expects the `couchbases://` or `couchbase://` part.
 ## Running the Application
@@ -126,6 +125,7 @@ The application will run on port 3000 of your local machine (http://localhost:30
 ## Data Model
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
 ![img](travel_sample_data_model.png)
 
 ## Let Us Review the Code
@@ -170,7 +170,7 @@ We will be setting up a REST API to manage airport documents.
 - [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
 - [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
 
-For CRUD operations, we will use the [Ottoman JS](https://ottomanjs.com), an object-document mapping built on top of the [Couchbase NodeJS SDK v3.x](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html) to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. For other end points, we will use [Ottoman Query API](https://ottomanjs.com/docs/quick-start#write-a-query-with-ottomans-query-api) to query for documents.
+For CRUD operations, we will use the [Ottoman JS](https://ottomanjs.com), an object-document mapping built on top of the [Couchbase NodeJS SDK](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html) to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. For other end points, we will use [Ottoman Query API](https://ottomanjs.com/docs/quick-start#write-a-query-with-ottomans-query-api) to query for documents.
 
 ## Document Structure
 
@@ -218,7 +218,7 @@ const AirportSchema = new Schema({
 });
 ```
 
-And finally we define our `model` using this `Schema` where we  specify `collectionName` and [`keyGeneratorDelimiter`](https://ottomanjs.com/docs/advanced/how-ottoman-works#keygenerator-function) as we do not plan on using the default which is `::` on travel-sample bucket :
+And finally we define our `model` using this `Schema` where we specify `collectionName` and [`keyGeneratorDelimiter`](https://ottomanjs.com/docs/advanced/how-ottoman-works#keygenerator-function) as we do not plan on using the default which is `::` on travel-sample bucket :
 
 ```js
 const AirportModel = model("airport", AirportSchema, {
@@ -416,7 +416,7 @@ Delete Airport by Airport ID by using Ottoman's [`removeById()`](https://ottoman
 
 This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
 
-[SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option. The SQL++ query is built using the models [find method](https://ottomanjs.com/docs/basic/query-builder#query-builder--model-find-method)
+[SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option. The SQL++ query is built using the models [find method.](https://ottomanjs.com/docs/basic/query-builder#query-builder--model-find-method)
 
 Navigate to the `listAirports` method in the `airportController.js` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
 
@@ -512,7 +512,7 @@ We have defined integration tests using [jest](https://jestjs.io/) for all the A
 
 The tests are configured in the `__test__` folder.
 
-To run the tests, run the below command after copying the content of the `dev.env` file to the `test.env` to ensure it uses the same database configuration:
+To run the tests, create a copy of `config/test.env.example` file and rename it to `config/test.env` and add the values for the Couchbase connection.
 
 ```bash
 # Execute this command in the project's root directory
