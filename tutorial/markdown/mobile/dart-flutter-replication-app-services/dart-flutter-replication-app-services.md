@@ -63,7 +63,7 @@ git clone https://github.com/couchbase-examples/flutter_cbl_learning_path.git
 
 In order to start replication with Couchbase Capella App Services, you will need to know the hostname of the Couchbase Capella App Services instance. You can find this by logging into <a target="_blank" rel="noopener noreferrer" href="https://cloud.couchbase.com/">Couchbase Capella</a>.
  
-* Click on `App Services` in the left side navigation menu
+* Click on `App Services` from the tab navigation menu
 
 * Click on your `Trial - App Services` instance
 
@@ -75,9 +75,28 @@ In order to start replication with Couchbase Capella App Services, you will need
   * wss://hostname.apps.cloud.couchbase.com:4984/projects
   * We will use this URL in a later step, so make sure you have it available.
 
+* Under Public Certificate, click the Download button to download the certificate.  This will be used in a later step to enable the mobile app to trust the App Services server.
+
+## Certificate Pinning Setup
+
+The dart/flutter SDK doesn't include the App Services certificate by default.  This means that the mobile app will not trust the App Services server and replication will not work.  To fix this, we need to add the certificate to the mobile app so that it will trust the App Services server.
+
+* Copy the certificate you downloaded from the previous step to the `src` folder in the mobile app.  This is the same folder where the `pubspec.yaml` file is located.
+
+* Open the `pubspec.yaml` file and add the file to the `assets` section.  When completed, it should look something like this:
+
+```yaml
+  assets:
+    - asset/images/couchbase.png
+    - asset/database/startingWarehouses.zip
+    - projects.pem
+```
+
 ## Update the Replication URL in the Audit Inventory Demo App 
 
-In Android Studio navigate to <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/database/replicator_provider.dart#L57">replicator_provider.dart</a> found in the lib -> features -> database.
+In Android Studio navigate to <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/database/replicator_provider.dart#82">replicator_provider.dart</a> found in the lib -> features -> database.
+
+- Uncomment line 82 that will load the pem file that you added into the prject and put in the YAML file 
 
 - Locate the `var url` definition
 
@@ -109,6 +128,8 @@ _replicatorConfiguration = ReplicatorConfiguration(
     continuous: true,
     replicatorType: ReplicatorType.pushAndPull,
     heartbeat: const Duration(seconds: 60),
+    // **UNCOMMENT** this the line below if you are using App Services or a custom certificate
+    pinnedServerCertificate: pem.buffer.asUint8List()
 );
 
 //check for nulls
@@ -120,10 +141,17 @@ if(config != null) {
 ```
 1. It's critical that the URL is correct.  If you have a typo or the URL is incorrect, replication will not work.  Make sure you have the correct URL. 
 2. Update the `replicatorConfiguration` to use the `url` you created in the previous step
-3. The replicator is created by passing in the `replicatorConfiguration` object
+3. Uncomment out line 103 in order to load tghe PEM file as a pinned certificate. This will allow the device to trust the connection between App Services and the mobile device. Your code should look something like this when done:
+4. The replicator is created by passing in the `replicatorConfiguration` object
 
 > **NOTE**:  DO NOT use the url provided in the example as it will not work.  You must use the url you copied from the Couchbase Capella App Services instance.
 
+## Update route_bloc.dart
+Finally you will need to update the route_bloc.dart to have replication init after the user logs in. This is done by uncommenting out line 110. 
+
+```dart
+await _replicatorProvider.init();
+```
 ## When to Start Replication
 
 Developers need to decide when to start replication.  For some apps it makes sense after the user logs in, while for others it might make more sense once the application is fully loaded.  In this app, two-way Replication between the app and the App Services is enabled from the Replication screen manually.  
@@ -167,11 +195,13 @@ Valdiating that the documents replicated from the device and from server can be 
 
 * Open your web browser of choice and log into <a target="_blank" rel="noopener noreferrer" href="https://cloud.couchbase.com/">Couchbase Capella</a>. 
 
-* Click on the `Clusters` link on the left side navigation menu
+* When logged in you should be at the Home tab for Trial accounts and the Database tab for non-trial accounts.
 
-* Click on the `Trial - Cluster` located under Clusters. 
+* Click on the `Trial - Cluster`. 
 
-* Click on `Tools` from the toolbar menu and select `Documents`.
+* The Data Tools `Documents` tab should appear by default.
+
+* Switch the bucket to your `prpojects` bucket
 
 * On this screen you can see the number items in the buck should have increased from the the previous step of the learning path.  To view the documents, click on the Documents link to open the Document browser.
 
@@ -179,157 +209,85 @@ Valdiating that the documents replicated from the device and from server can be 
 
 * Scrolling through the list you should find your random documents that were created on the mobile device during the Batch operations step of the learning path.  For example - prior to sync we didn't have any documents of documentType='audit' and now the bucket should have MANY audit documents.
 
-![Create Bucket workflow,1500](capella-review-docs.gif)
 
 ## Reviewing the Replicator code
 
 Now that we have tried out replication, let's review how the replicator and replicator configuration code is setup. All code used by the ReplicatorBloc and ReplicatorProvider. 
 
-* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/ReplicatorServiceDb.kt#L17"> **ReplicatorServiceDb.kt**</a> file.
+* Open the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/database/replicator_provider.dart#82">replicator_provider.dart</a> file.
 
 * As stated earlier, the override of replicatorConfig is used to setup the config with default values that you saw on the Replication Configuration screen.
   
-```kotlin
-//if your sync gateway server is running on a different IP change it here
-override var replicationConfig = mutableStateOf(
- ReplicatorConfig(
-  username = loggedInUser.username,
-  password = loggedInUser.password,
-  endpointUrl = "wss://hostname.apps.cloud.couchbase.com:4984/projects",
-  replicatorType = "PUSH AND PULL",
-  heartBeat = 60L,
-  continuous = true,
-  selfSignedCert = false 
- )
-)
+```dart
+_replicatorConfiguration = ReplicatorConfiguration(
+    database: db,
+    target: endPoint,
+    authenticator: basicAuthenticator,
+    continuous: true,
+    replicatorType: ReplicatorType.pushAndPull,
+    heartbeat: const Duration(seconds: 60),
+    // **UNCOMMENT** this the line below if you are using App Services or a custom certificate
+    pinnedServerCertificate: pem.buffer.asUint8List()
+);
 ```
 
-* Anytime the replication configuration is changed on this screen the <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/ReplicatorServiceDb.kt#L60"> **updateReplicatorConfig**</a> function is called. 
+* The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/database/replicator_provider.dart#L118"> **startReplicator**</a> function is used to start the replicator.
 
-```kotlin
-replicatorManager?.let { replicatorResources ->
- val urlEndPoint = URLEndpoint(URI(replicationConfig.endpointUrl)) // 1
- replicatorResources.replicatorConfiguration = ReplicatorConfiguration(replicatorResources.database, urlEndPoint) // 2
- replicatorResources.replicatorConfiguration?.let { replicatorConfiguration -> //3
-  replicatorConfiguration.isContinuous = replicationConfig.continuous // 4
+```dart
+  Future<void> startReplicator({
+    required Function(ReplicatorChange change)? onStatusChange,
+    required Function(DocumentReplication document)? onDocument }) async {
 
-  when (replicationConfig.replicatorType) { // 5
-   "PULL" -> replicatorConfiguration.type = ReplicatorType.PULL // 5
-   "PUSH" -> replicatorConfiguration.type = ReplicatorType.PUSH // 5
-   else -> replicatorConfiguration.type =  ReplicatorType.PUSH_AND_PULL // 5
+    debugPrint('${DateTime.now()} [ReplicatorProvider] info: starting replicator.');
+
+    var replicator = _replicator;
+    if (replicator != null) {
+
+      if(onStatusChange != null) {
+        var function = onStatusChange;
+        statusChangedToken = await replicator.addChangeListener(function);
+      }
+      if (onDocument != null) {
+        var function = onDocument;
+        replicator.addDocumentReplicationListener(function);
+      }
+      await replicator.start();
+
+      debugPrint('${DateTime.now()} [ReplicatorProvider] info: started replicator.');
+    }
+    else {
+      debugPrint('${DateTime.now()} [ReplicatorProvider] error: cannot start replicator, it is null.');
+    }
   }
-  val authenticator = BasicAuthenticator( // 6
-   replicationConfig.username, // 6
-   replicationConfig.password.toCharArray() // 6
-  )
-  replicatorConfiguration.setAuthenticator(authenticator) //6
-  replicatorResources.replicator =                            
-  Replicator(replicatorManager?.replicatorConfiguration!!) //7
+
+```
+
+* The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/database/replicator_provider.dart#L144"> **stopReplicator**</a> function is used to stop the replicator.
+
+```dart
+  Future<void> stopReplicator() async {
+    var replicator = _replicator;
+    if (replicator != null){
+
+      debugPrint('${DateTime.now()} [ReplicatorProvider] info: stopping replicator.');
+
+      //remove change listeners before stopping replicator, this should
+      //automatically be done with stopping, but just to be safe
+      await removeDocumentReplicationListener();
+      await removeStatusChangeListener();
+
+      await replicator.stop();
+
+      //null out tokens so they can be reused
+      statusChangedToken = null;
+      documentReplicationToken = null;
+
+      debugPrint('${DateTime.now()} [ReplicatorProvider] info: stopped replicator.');
+    } else {
+      debugPrint('${DateTime.now()} [ReplicatorProvider] warning: tried to stop replicator but it was null.');
+    }
   }
-
- canStartReplication.value = true //8
- this.replicationConfig.value = replicationConfig //9
-}
 ```
-1. The endpoint URL for the App Services is created
-2. A ReplicatorConfiguration is created using the database and urlEndpoint created in #1.
-3. Because the ReplicatorConfiguration could be null we need to unbox it for usage and create a reference to it using  replicatorConfiguration 
-4. Set the continuous setting for the replicator
-5. Set the Sync Mode of the replicator to either PUSH, PULL, or PUSH_AND_PULL 
-6. Set the username and password that will be used to communicate with the App Services server.
-7. Create a new Replicator reference using the configuration that can be used to start and stop replication
-8.  Set the canStartReplication state varible which is used in the UI to hide and show the Start, Stop, and Delete buttons on the main Replicator Status screen
-9.  Save the configuration for future modifications on the Replication Configuration screen.
-
-* The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/ReplicatorServiceDb.kt#L115"> **startReplication**</a> function is used to start the replicator.
-
-```kotlin
-override fun startReplication() {
- try {
-  replicatorManager?.replicator?.start()
-  isReplicationStarted = true
- } catch (e: Exception){
-  Log.e(e.message, e.stackTraceToString())
- }
-}
-```
-
-1. The start function is called on the replicatorManager's replicator
-
-* The <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/ReplicatorServiceDb.kt#L115"> **stopReplication**</a> function is used to stop the replicator.
-
-```kotlin
-override fun stopReplication() {
- try {
-  replicatorManager?.replicator?.stop()
-  isReplicationStarted = false
-  canStartReplication.value = false
- } catch (e: Exception){
-  Log.e(e.message, e.stackTraceToString())
- }
-}
-```
-1. The stop function is called on the replicatorManager's replicator
-
-2. The canStartReplication variable is used to force the user to go back into the configuration screen and click save again before starting replicaton.  This is because when the application is sent to the background this method is called so that replication doesn't run in the background and try to update UI components that it doesn't have access to because they are no longer running on the main thread.
-
-* To view the lifecycle code - open <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/ReplicatorServiceDb.kt#L115"> **MainViewModel.kt**</a> and locate the closeDatabase function.
-
-```kotlin
-val closeDatabase: () -> Unit = {
- viewModelScope.launch(Dispatchers.IO) {
-  context.get()?.let {
-   replicatorService.stopReplication()
-   DatabaseManager.getInstance(it).closeDatabases()
-  }
- }
-}
-```
-1. In the closeDatabase funciton we stop replication before closing the database
-
-* Now open <a target="_blank" rel="noopener noreferrer" href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/ui/MainActivity.kt#L156"> **MainViewModel.kt**</a> and locate the MainView function. 
-
-```kotlin
-@Composable
-fun MainView(startDatabase: () -> Unit,
-             closeDatabase: () -> Unit) {
-```
-
-* The MainView function takes in the startDatabase and closeDatabase functions from the MainViewModel and then tracks them in state.
-
-```kotlin
-// Safely update the current lambdas when a new one is provided
-val currentOnStart by rememberUpdatedState(startDatabase)
-val currentOnStop by rememberUpdatedState(closeDatabase)
-```
-
-* The DisposableEffect API is used passing in the lifecyleOwer to observe lifecycle events of the application.  These are used to detect when the application comes to the foreground or goes to the background.  When the application goes to the background we want to stop replication and close the database and when the application comes back to the foreground we want to open the database.
-
-```kotlin
-//if lifecycleOwner changes, dispose and reset the effect
-DisposableEffect(lifecycleOwner) {
-// Create an observer that triggers our remembered callbacks
- val observer = LifecycleEventObserver { _, event ->
-  if (event == Lifecycle.Event.ON_START) {
-   currentOnStart()
-  } else if (event == Lifecycle.Event.ON_PAUSE) {
-    currentOnStop()
-  }
- }
- // Add the observer to the lifecycle
- lifecycleOwner.lifecycle.addObserver(observer)
-
- // When the effect leaves the Composition, remove the observer
- onDispose {
-  lifecycleOwner.lifecycle.removeObserver(observer)
- }
-}
-``` 
-
-1. The `Lifecycle.Event.ON_START` is used to call the startDatabase function in our MainViewModel
-2. The `Lifecycle.Event.ON_PAUSE` is used to call the closeDatabase function in our MainViewModel. 
-3. More information on DisposableEffect can be found in the <a target="_blank" rel="noopener noreferrer" href="https://developer.android.com/jetpack/compose/side-effects#disposableeffect">Android documentation</a>.
-
 ## Exercise 
 
 In this exercise, we will observe how changes made on one app are synced across to the other app
