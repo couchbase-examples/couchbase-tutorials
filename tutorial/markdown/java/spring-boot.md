@@ -35,7 +35,7 @@ length: 30 Mins
   - [Source Code](#source-code)
   - [Install Dependencies](#install-dependencies)
   - [Database Server Configuration](#database-server-configuration)
-  - [Environment Variables](#environment-variables)
+  - [Application Properties](#application-properties)
 - [Running The Application](#running-the-application)
   - [Directly on the machine](#directly-on-the-machine)
   - [Docker](#docker)
@@ -44,23 +44,18 @@ length: 30 Mins
   - [Code Organization](#code-organization)
 - [Data Model](#data-model)
 - [Let's Review the Code](#lets-review-the-code)
-  - [Integration Tests](#integration-tests)
-  - [Repository](#repository)
   - [Model](#model)
   - [Controller](#controller)
   - [Service](#service)
-- [Route Specifications](#route-specifications)
-  - [GET Route](#get-route)
-  - [POST Route](#post-route)
-  - [PUT Route](#put-route)
-  - [DELETE Route](#delete-route)
-- [Route Workflow](#route-workflow)
-  - [GET Route Workflow](#get-route-workflow)
-  - [POST Route Workflow](#post-route-workflow)
-  - [PUT Route Workflow](#put-route-workflow)
-  - [DELETE Route Workflow](#delete-route-workflow)
+  - [Repository](#repository)
+- [Mapping Workflow](#mapping-workflow)
+  - [GET Mapping Workflow](#get-mapping-workflow)
+  - [POST Mapping Workflow](#post-mapping-workflow)
+  - [PUT Mapping Workflow](#put-mapping-workflow)
+  - [DELETE Mapping Workflow](#delete-mapping-workflow)
 - [Custom SQL++ Queries](#custom-sql-queries)
 - [Running The Tests](#running-the-tests)
+  - [Run Individual Tests](#run-individual-tests)
 - [Project Setup Notes](#project-setup-notes)
 - [Contributing](#contributing)
 - [Appendix](#appendix)
@@ -74,7 +69,8 @@ length: 30 Mins
 
 To run this prebuilt project, you will need:
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance (at least Couchbase Server 7)
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - Java SDK v1.8 or higher installed
 - Code Editor installed (IntelliJ IDEA, Eclipse, or Visual Studio Code)
 - Maven command line
@@ -95,13 +91,13 @@ mvn package
 
 ### Database Server Configuration
 
-the `CouchbaseConfig` class is a Spring configuration class responsible for setting up the connection to a Couchbase database in a Spring Boot application. It defines two beans:
+- The `CouchbaseConfig` class is a Spring configuration class responsible for setting up the connection to a Couchbase database in a Spring Boot application. It defines two beans:
 
-`getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
+- `getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
 
-`getCouchbaseBucket(Cluster cluster)`: This bean creates a Couchbase bucket within the cluster if it doesn't already exist and returns the Bucket object associated with the specified bucket name.
+- `getCouchbaseBucket(Cluster cluster)`: This bean creates a Couchbase bucket within the cluster if it doesn't already exist and returns the Bucket object associated with the specified bucket name.
 
-### Environment Variables
+### Application Properties
 
 You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.
 
@@ -115,7 +111,7 @@ OR
 spring.couchbase.bootstrap-hosts=localhost
 ```
 
-The couchbases protocol is used for secure connections. If you are using Couchbase Server 6.5 or earlier, you should use the couchbase protocol instead.
+The couchbases protocol is used for secure connections.
 
 ```properties
 spring.couchbase.bootstrap-hosts=DB_CONN_STR
@@ -137,7 +133,7 @@ mvn spring-boot:run -e -X
 
 ![Spring Boot Application](./app-startup-spring-boot.png)
 
-> Note: Couchbase Server 7 must be installed and running on localhost (http://127.0.0.1:8091) prior to running the Spring Boot app.
+> Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `application.properties` file.
 
 Once the site is up and running you can launch your browser and go to the Swagger Start Page]: `http://localhost:8080/swagger-ui/` to test the APIs.
 
@@ -161,11 +157,11 @@ docker run -p 8080:8080 springboot-couchbase
 
 A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
 
-- [Create new airlines with essential information](#post-route).
-- [Update airline details](#put-route).
-- [Delete airlines](#delete-route).
-- [Retrieve airlines by ID](#get-route).
-- [List all airlines with pagination](#get-route).
+- [Create new airlines with essential information](#post-mapping).
+- [Update airline details](#put-mapping).
+- [Delete airlines](#delete-mapping).
+- [Retrieve airlines by ID](#get-mapping).
+- [List all airlines with pagination](#get-mapping).
 - [List airlines by country](#custom-sql-queries).
 - [List airlines by destination airport](#custom-sql-queries).
 
@@ -204,17 +200,7 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 ## Let's Review the Code
 
-To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
-
-### Integration Tests
-
-`AirlineIntegrationTest.java`
-This class contains integration tests for the application. It tests various functionalities like getting, creating, updating, and deleting airlines, as well as listing airlines by country and destination airport.
-
-### Repository
-
-`AirlineRepositoryImpl.java`
-This class implements the AirlineRepository interface. It interacts with the Couchbase database to perform CRUD operations on airline documents. It uses the Couchbase Java SDK to execute queries and operations.
+To begin open the repository in an IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
 
 ### Model
 
@@ -226,68 +212,190 @@ This class represents the data model for an airline. It contains fields such as 
 `AirlineController.java`
 This class defines the RESTful API endpoints for managing airlines. It handles HTTP requests for creating, updating, deleting, and retrieving airlines. It also provides endpoints for listing airlines by various criteria.
 
+An example of the pattern for the `GET` mapping is shown below.For the full code, see the [AirlineController.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/controllers/AirlineController.java).
+
+```java
+@RestController
+@RequestMapping("/api/v1/airline")
+@Slf4j
+public class AirlineController {
+
+   private final AirlineService airlineService;
+
+    public AirlineController(AirlineService airlineService) {
+        this.airlineService = airlineService;
+    }
+
+    // Error messages
+    private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+    private static final String DOCUMENT_NOT_FOUND = "Document Not Found";
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get an airline by ID")
+    @Description(value = "Get Airline by specified ID.\n\nThis provides an example of using Key Value operations in Couchbase to retrieve a document with a specified ID. \n\n Code: [`controllers/AirlineController.java`](https://github.com/couchbase-examples/java-springboot-quickstart/blob/master/src/main/java/org/couchbase/quickstart/springboot/controllers/AirlineController.java) \n File: `AirlineController.java` \n Method: `getAirline`")
+    public ResponseEntity<Airline> getAirline(@PathVariable String id) {
+        try {
+            Airline airline = airlineService.getAirlineById(id);
+            if (airline != null) {
+                return new ResponseEntity<>(airline, HttpStatus.OK);
+            } else {
+                log.error(DOCUMENT_NOT_FOUND + ": " + id);
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+        } catch (DocumentNotFoundException e) {
+            log.error(DOCUMENT_NOT_FOUND + ": " + id);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error(INTERNAL_SERVER_ERROR + ": " + e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+}
+
+```
+
 ### Service
 
 `AirlineServiceImpl.java`
 This class implements the AirlineService interface. It acts as an intermediary between the controller and repository, providing business logic for managing airlines.
 
-## Route Specifications
+An example of the pattern for AirlineService is shown below. For the full code, see the [AirlineServiceImpl.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/services/AirlineServiceImpl.java).
 
-### GET Route
+```java
+public interface AirlineService {
+    Airline getAirlineById(String id);
+
+    Airline createAirline(Airline airline);
+
+    Airline updateAirline(String id, Airline airline);
+
+    void deleteAirline(String id);
+
+    List<Airline> listAirlines(int limit, int offset);
+
+    List<Airline> listAirlinesByCountry(String country, int limit, int offset);
+
+    List<Airline> listAirlinesByDestinationAirport(String destinationAirport, int limit, int offset);
+}
+
+@Service
+public class AirlineServiceImpl implements AirlineService {
+
+    private final AirlineRepository airlineRepository;
+
+    public AirlineServiceImpl(AirlineRepository airlineRepository) {
+        this.airlineRepository = airlineRepository;
+    }
+
+    @Override
+    public Airline getAirlineById(String id) {
+        return airlineRepository.findById(id);
+    }
+
+    @Override
+    public Airline createAirline(Airline airline) {
+        return airlineRepository.save(airline);
+    }
+
+    @Override
+    public Airline updateAirline(String id, Airline airline) {
+        return airlineRepository.update(id, airline);
+    }
+
+    @Override
+    public void deleteAirline(String id) {
+        airlineRepository.delete(id);
+    }
+
+    @Override
+    public List<Airline> listAirlines(int limit, int offset) {
+        return airlineRepository.findAll(limit, offset);
+    }
+
+    @Override
+    public List<Airline> listAirlinesByCountry(String country, int limit, int offset) {
+        return airlineRepository.findByCountry(country, limit, offset);
+    }
+
+    @Override
+    public List<Airline> listAirlinesByDestinationAirport(String destinationAirport, int limit, int offset) {
+        return airlineRepository.findByDestinationAirport(destinationAirport, limit, offset);
+    }
+
+}
+
+```
+
+### Repository
+
+`AirlineRepositoryImpl.java`
+This class implements the AirlineRepository interface. It interacts with the Couchbase database to perform CRUD operations on airline documents. It uses the Couchbase Java SDK to execute queries and operations.
+
+An example of the pattern for AirlineRepository is shown below. For the full code, see the [AirlineRepositoryImpl.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/repositories/AirlineRepositoryImpl.java).
+
+```java
+public interface AirlineRepository {
+    Airline findById(String id);
+
+    Airline save(Airline airline);
+
+    Airline update(String id, Airline airline);
+
+    void delete(String id);
+
+    List<Airline> findAll(int limit, int offset);
+
+    List<Airline> findByCountry(String country, int limit, int offset);
+
+    List<Airline> findByDestinationAirport(String destinationAirport, int limit, int offset);
+}
+
+@Repository
+public class AirlineRepositoryImpl implements AirlineRepository {
+
+    private final Cluster cluster;
+    private final Collection airlineCol;
+    private final CouchbaseConfig couchbaseConfig;
+
+    public AirlineRepositoryImpl(Cluster cluster, Bucket bucket, CouchbaseConfig couchbaseConfig) {
+        this.cluster = cluster;
+        this.airlineCol = bucket.scope("inventory").collection("airline");
+        this.couchbaseConfig = couchbaseConfig;
+    }
+
+    @Override
+    public Airline findById(String id) {
+        return airlineCol.get(id).contentAs(Airline.class);
+    }
+
+    @Override
+    public Airline save(Airline airline) {
+        airlineCol.insert(airline.getId(), airline);
+        return airline;
+    }
+
+    @Override
+    public Airline update(String id, Airline airline) {
+        airlineCol.replace(id, airline);
+        return airline;
+    }
+
+    @Override
+    public void delete(String id) {
+        airlineCol.remove(id);
+    }
+
+}
+
+```
+
+## Mapping Workflow
+
+### GET Mapping Workflow
 
 `@GetMapping("/{id}")`
-This route is used to retrieve an airline by its unique identifier (ID).
 
-- It expects the id of the airline as a path parameter.
-- It calls the `getAirlineById` method of the `AirlineService` to retrieve the airline with the specified ID.
-- If the airline is found, it returns a `ResponseEntity` with HTTP status `200 OK` and the airline data in the response body.
-- If the airline is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### POST Route
-
-`@PostMapping("/{id}")`
-This route is used to create a new airline.
-
-- It expects the id of the airline as a path parameter, but this ID is typically generated by the server.
-- It receives the airline data in the request body, which should be a valid JSON representation of an airline.
-- It calls the `createAirline` method of the `AirlineService` to create the new airline.
-- If the airline is created successfully, it returns a `ResponseEntity` with HTTP status `201 Created` and the created airline data in the response body.
-- If a conflict occurs (e.g., an airline with the same ID already exists), it returns a `ResponseEntity` with HTTP status `409 Conflict`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### PUT Route
-
-`@PutMapping("/{id}")`
-This route is used to update an existing airline by its ID.
-
-- It expects the id of the airline as a path parameter.
-- It receives the updated airline data in the request body.
-- It calls the `updateAirline` method of the `AirlineService` to update the airline with the specified ID.
-- If the airline is updated successfully, it returns a `ResponseEntity` with HTTP status `200 OK` and the updated airline data in the response body.
-- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### DELETE Route
-
-`@DeleteMapping("/{id}")`
-This route is used to delete an airline by its ID.
-
-- It expects the id of the airline as a path parameter.
-- It calls the `deleteAirline` method of the `AirlineService` to delete the airline with the specified ID.
-- If the airline is deleted successfully, it returns a `ResponseEntity` with HTTP status `204 No Content` (indicating success with no response body).
-- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-These routes together provide the basic CRUD (Create, Read, Update, Delete) operations for managing airlines via the RESTful API. The `AirlineService` contains the business logic for these operations, and the `AirlineRepository` interacts with the database to perform the actual data operations.
-
-## Route Workflow
-
-### GET Route Workflow
-
-`@GetMapping("/{id}")`
-
-The GET route is triggered when a client sends an HTTP GET request to `/api/v1/airline/{id}` where `{id}` is the unique identifier of the airline.
+The GET mapping is triggered when a client sends an HTTP GET request to `/api/v1/airline/{id}` where `{id}` is the unique identifier of the airline.
 
 1. The `AirlineController` receives the request and extracts the `id` from the URL path.
 2. It then calls the `getAirlineById` method of the `AirlineService`, passing the extracted `id` as a parameter.This function internally calls [airlineCol.get()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#retrieving-documents) to retrieve the airline from the database.
@@ -296,11 +404,11 @@ The GET route is triggered when a client sends an HTTP GET request to `/api/v1/a
 5. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the airline data in the response body as a JSON object.
 6. The response is sent back to the client with the airline data if found, or a 404 Not Found response if the airline does not exist.
 
-### POST Route Workflow
+### POST Mapping Workflow
 
 `@PostMapping("/{id}")`
 
-The POST route is triggered when a client sends an HTTP POST request to `/api/v1/airline/{id}`, where `{id}` is typically a unique identifier generated by the server (not provided by the client).
+The POST mapping is triggered when a client sends an HTTP POST request to `/api/v1/airline/{id}`, where `{id}` is typically a unique identifier generated by the server (not provided by the client).
 
 1. The client includes the data of the new airline to be created in the request body as a JSON object.
 2. The `AirlineController` receives the request and extracts the `id` from the URL path, but this `id` is not used for creating the airline; it's often generated by the server.
@@ -310,11 +418,11 @@ The POST route is triggered when a client sends an HTTP POST request to `/api/v1
 6. The `AirlineController` constructs an HTTP response with a status code of 201 Created and includes the created airline data in the response body as a JSON object.
 7. The response is sent back to the client with the newly created airline data.
 
-### PUT Route Workflow
+### PUT Mapping Workflow
 
 `@PutMapping("/{id}")`
 
-The PUT route is triggered when a client sends an HTTP PUT request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be updated.
+The PUT mapping is triggered when a client sends an HTTP PUT request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be updated.
 
 1. The client includes the updated data of the airline in the request body as a JSON object.
 2. The `AirlineController` receives the request, extracts the `id` from the URL path, and retrieves the updated airline data from the request body.
@@ -324,11 +432,11 @@ The PUT route is triggered when a client sends an HTTP PUT request to `/api/v1/a
 6. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the updated airline data in the response body as a JSON object.
 7. The response is sent back to the client with the updated airline data if found, or a 404 Not Found response if the airline with the specified ID does not exist.
 
-### DELETE Route Workflow
+### DELETE Mapping Workflow
 
 `@DeleteMapping("/{id}")`
 
-The DELETE route is triggered when a client sends an HTTP DELETE request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be deleted.
+The DELETE mapping is triggered when a client sends an HTTP DELETE request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be deleted.
 
 1. The `AirlineController` receives the request and extracts the `id` from the URL path.
 2. The `AirlineController` calls the `deleteAirline` method of the `AirlineService`, passing the `id` of the airline to be deleted. This function internally calls [airlineCol.remove()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#removing) to remove the airline from the database.
@@ -360,17 +468,13 @@ These workflows illustrate how each HTTP method interacts with the `AirlineServi
 
 <!-- Explaination -->
 
-In the above example, we are using the `QueryOptions` class to set the `scanConsistency` to `REQUEST_PLUS` to ensure that the query returns the latest data. We are also using the `JsonObject` class to set the `country` parameter in the query.
+In the above example, we are using the `QueryOptions` class to set the `scanConsistency` to `REQUEST_PLUS` to ensure that the query returns the latest data. We are also using the `JsonObject` class to set the `country` parameter in the query. [Query Options and Scan Consistency](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html#scan-consistency).
 
 Finally, we are using the `rowsAs` method to return the query results as a list of `Airline` objects.
 
 In the query, we are using the `country` parameter to filter the results by country. We are also using the `limit` and `offset` parameters to limit the number of results returned and to implement pagination.
 
 Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
-
-<!-- Link to docs -->
-
-For more information on the `QueryOptions` class, see the [Couchbase Java SDK documentation](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html).
 
 2. Get all airlines by destination airport
 
@@ -404,10 +508,32 @@ Once the query is executed, the `AirlineController` constructs an HTTP response 
 
 ## Running The Tests
 
-To run the standard integration tests, use the following commands:
-
-```shell
+```sh
 mvn test
+```
+
+This command will execute all the test cases in your project.
+
+### Run Individual Tests:
+
+Additionally, you can run individual test classes or methods using the following commands:
+
+To run the tests for the AirlineIntegrationTest class:
+
+```sh
+mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.AirlineIntegrationTest
+```
+
+To run the tests for the AirportIntegrationTest class:
+
+```sh
+mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.AirportIntegrationTest
+```
+
+To run the tests for the RouteIntegrationTest class:
+
+```sh
+mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.RouteIntegrationTest
 ```
 
 ## Project Setup Notes

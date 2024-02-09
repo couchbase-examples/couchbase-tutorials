@@ -26,7 +26,7 @@ length: 30 Mins
   - [Source Code](#source-code)
   - [Install Dependencies](#install-dependencies)
   - [Database Server Configuration](#database-server-configuration)
-  - [Environment Variables](#environment-variables)
+  - [Application Properties](#application-properties)
 - [Running the Application](#running-the-application)
   - [Directly on the machine](#directly-on-the-machine)
   - [Docker](#docker)
@@ -39,17 +39,12 @@ length: 30 Mins
   - [Repository](#repository)
   - [Model](#model)
   - [Controller](#controller)
-  - [Service](#service)
-- [Route Specifications](#route-specifications)
-  - [GET Route](#get-route)
-  - [POST Route](#post-route)
-  - [PUT Route](#put-route)
-  - [DELETE Route](#delete-route)
-- [Route Workflow](#route-workflow)
-  - [GET Route Workflow](#get-route-workflow)
-  - [POST Route Workflow](#post-route-workflow)
-  - [PUT Route Workflow](#put-route-workflow)
-  - [DELETE Route Workflow](#delete-route-workflow)
+  - [Service](#service)i
+- [Mapping Workflow](#mapping-workflow)
+  - [GET Mapping Workflow](#get-mapping-workflow)
+  - [POST Mapping Workflow](#post-mapping-workflow)
+  - [PUT Mapping Workflow](#put-mapping-workflow)
+  - [DELETE Mapping Workflow](#delete-mapping-workflow)
 - [Custom SQL++ Queries](#custom-sql-queries)
 - [Running The Tests](#running-the-tests)
 - [Project Setup Notes](#project-setup-notes)
@@ -65,7 +60,8 @@ length: 30 Mins
 
 To run this prebuild project, you will need:
 
-- [Couchbase Capella](https://docs.couchbase.com/cloud/get-started/create-account.html) account or locally installed [Couchbase Server](/tutorial-couchbase-installation-options)
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Code Editor or an Integrated Development Environment (e.g., [Eclipse](https://www.eclipse.org/ide/))
 - [Java SDK v1.8 or higher installed](https://www.oracle.com/java/technologies/ee8-install-guide.html)
@@ -164,7 +160,7 @@ This default configuration assumes that you have a locally running Couchbae serv
 Applications deployed to production or staging environments should use less privileged credentials created using [Role-Based Access Control](https://docs.couchbase.com/go-sdk/current/concept-docs/rbac.html).
 Please refer to [Managing Connections using the Java SDK with Couchbase Server](https://docs.couchbase.com/java-sdk/current/howtos/managing-connections.html) for more information on Capella and local cluster connections.
 
-### Environment Variables
+### Application Properties
 
 You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.s
 
@@ -232,13 +228,13 @@ Note: The `application.properties` file has the connection information to connec
 
 A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
 
-- [Create new airlines with essential information](#post-route).
-- [Update airline details](#put-route).
-- [Delete airlines](#delete-route).
-- [Retrieve airlines by ID](#get-route).
-- [List all airlines with pagination](#get-route).
-- [List airlines by country](#get-route).
-- [List airlines by destination airport](#get-route).
+- [Create new airlines with essential information](#post-mapping).
+- [Update airline details](#put-mapping).
+- [Delete airlines](#delete-mapping).
+- [Retrieve airlines by ID](#get-mapping).
+- [List all airlines with pagination](#get-mapping).
+- [List airlines by country](#get-mapping).
+- [List airlines by destination airport](#get-mapping).
 
 ### Document Structure
 
@@ -277,11 +273,6 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
 
-### Integration Tests
-
-`AirlineIntegrationTest.java`
-This class contains integration tests for the REST API. It uses the `@SpringBootTest` annotation to load the application context and the `@AutoConfigureMockMvc` annotation to autowire the `MockMvc` object. The `MockMvc` object is used to perform HTTP requests to the REST API.
-
 ### Repository
 
 `AirlineRepository.java`
@@ -302,57 +293,9 @@ This class contains the REST API endpoints for CRUD operations. The `@RestContro
 `AirlineService.java`
 This class contains the business logic for the REST API. The `@Autowired` annotation is used to autowire the `AirlineRepository` object.
 
-## Route Specifications
+## Mapping Workflow
 
-### GET Route
-
-`@GetMapping("/{id}")`
-This route is used to retrieve an airline by its unique identifier (ID).
-
-- It expects the id of the airline as a path parameter.
-- It calls the `getAirlineById` method of the `AirlineService` to retrieve the airline with the specified ID.
-- If the airline is found, it returns a `ResponseEntity` with HTTP status `200 OK` and the airline data in the response body.
-- If the airline is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### POST Route
-
-`@PostMapping("/{id}")`
-This route is used to create a new airline.
-
-- It expects the id of the airline as a path parameter, but this ID is typically generated by the server.
-- It receives the airline data in the request body, which should be a valid JSON representation of an airline.
-- It calls the `createAirline` method of the `AirlineService` to create the new airline.
-- If the airline is created successfully, it returns a `ResponseEntity` with HTTP status `201 Created` and the created airline data in the response body.
-- If a conflict occurs (e.g., an airline with the same ID already exists), it returns a `ResponseEntity` with HTTP status `409 Conflict`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### PUT Route
-
-`@PutMapping("/{id}")`
-This route is used to update an existing airline by its ID.
-
-- It expects the id of the airline as a path parameter.
-- It receives the updated airline data in the request body.
-- It calls the `updateAirline` method of the `AirlineService` to update the airline with the specified ID.
-- If the airline is updated successfully, it returns a `ResponseEntity` with HTTP status `200 OK` and the updated airline data in the response body.
-- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-### DELETE Route
-
-`@DeleteMapping("/{id}")`
-This route is used to delete an airline by its ID.
-
-- It expects the id of the airline as a path parameter.
-- It calls the `deleteAirline` method of the `AirlineService` to delete the airline with the specified ID.
-- If the airline is deleted successfully, it returns a `ResponseEntity` with HTTP status `204 No Content` (indicating success with no response body).
-- If the airline with the specified ID is not found, it returns a `ResponseEntity` with HTTP status `404 Not Found`.
-- If any other error occurs, it returns a `ResponseEntity` with HTTP status `500 Internal Server Error`.
-
-## Route Workflow
-
-### GET Route Workflow
+### GET Mapping Workflow
 
 - The client initiates a GET request to `/api/v1/airline/{id}`, providing the unique identifier (`{id}`) of the airline they want to retrieve.
 - The `AirlineController` receives the request and invokes the `getAirlineById(id)` method in the `AirlineService`. This function internally calls the [findById](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#findById(ID)>) method of the `AirlineRepository`(which extends `CouchbaseRepository`) to retrieve the airline information from the Couchbase database.
@@ -363,7 +306,7 @@ This route is used to delete an airline by its ID.
 - If the airline is not found in the database, the `AirlineService` returns `null`.
 - The `AirlineController` responds with an HTTP status code of `404` (Not Found) if the airline is not found.
 
-### POST Route Workflow
+### POST Mapping Workflow
 
 - The client initiates a POST request to `/api/v1/airline/{id}` with a JSON payload containing the airline's information, including a unique ID.
 - The `AirlineController` receives the request and invokes the `createAirline(airline)` method in the `AirlineService`. The `createAirline` method internally calls the [save](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#save(S)>) method of the `AirlineRepository` to save the airline information to the Couchbase database.
@@ -374,7 +317,7 @@ This route is used to delete an airline by its ID.
 - If the airline already exists in the database, a `DocumentExistsException` may be thrown.
 - In case of a conflict, the `AirlineController` responds with an HTTP status code of `409` (Conflict).
 
-### PUT Route Workflow
+### PUT Mapping Workflow
 
 - The client initiates a PUT request to `/api/v1/airline/{id}` with a JSON payload containing the updated airline information and the unique ID of the airline to be updated.
 - The `AirlineController` receives the request and invokes the `updateAirline(id, airline)` method in the `AirlineService`. The `updateAirline` method internally calls the [save](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#save(S)>) method of the `AirlineRepository` to update the airline information in the Couchbase database.
@@ -385,7 +328,7 @@ This route is used to delete an airline by its ID.
 - If the airline is not found in the database, the `AirlineService` returns `null`.
 - In case of an update to a non-existent airline, the `AirlineController` responds with an HTTP status code of `404` (Not Found).
 
-### DELETE Route Workflow
+### DELETE Mapping Workflow
 
 - The client initiates a DELETE request to `/api/v1/airline/{id}`, specifying the unique identifier (`{id}`) of the airline to be deleted.
 - The `AirlineController` receives the request and invokes the `deleteAirline(id)` method in the `AirlineService`. The `deleteAirline` method internally calls the [deleteById](<https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/CrudRepository.html#deleteById(ID)>) method of the `AirlineRepository` to delete the airline from the Couchbase database.
@@ -395,7 +338,7 @@ This route is used to delete an airline by its ID.
 - If the airline is not found in the database, the `AirlineService` may throw a `DocumentNotFoundException`.
 - In case the airline is not found, the `AirlineController` responds with an HTTP status code of `404` (Not Found).
 
-These detailed workflows provide a comprehensive understanding of how each route is handled by the controller, service, and repository components in your Spring Data project.
+These detailed workflows provide a comprehensive understanding of how each mapping is handled by the controller, service, and repository components in your Spring Data project.
 
 ## Custom SQL++ Queries
 
@@ -429,6 +372,10 @@ For more information, see the [Couchbase Java SDK documentation](https://docs.co
 
 To run the tests, execute `./gradlew test` (`./gradlew.bat test` on Windows).
 
+```sh
+./gradlew test
+```
+
 ## Project Setup Notes
 
 This project was created using the [Spring Initializr](https://start.spring.io/) with the following options:
@@ -451,7 +398,7 @@ Contributions are welcome! If you'd like to contribute to this project, please f
 If you would like to add another entity to the APIs, these are the steps to follow:
 
 - Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-java-client-3.5.2/com/couchbase/client/java/Collection.html#createScope-java.lang.String-) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
-- Define the routes in a new file in the `controllers` folder similar to the existing routes like `AirportController.java`.
+- Define the mappings in a new file in the `controllers` folder similar to the existing mappings like `AirportController.java`.
 - Define the service in a new file in the `services` folder similar to the existing services like `AirportService.java`.
 - Define the repository in a new file in the `repositories` folder similar to the existing repositories like `AirportRepository.java`.
 
