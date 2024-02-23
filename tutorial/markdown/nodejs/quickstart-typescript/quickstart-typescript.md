@@ -1,11 +1,11 @@
 ---
 # frontmatter
-path: "/tutorial-quickstart-nodejs"
+path: "/tutorial-quickstart-typescript"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Using Typescript with Node.js & Express
+title: Using TypeScript with Node.js & Express
 short_title: Node.js and Express
 description:
-  - Build a basic REST API using Type Script, Express and the Couchbase Node.js SDK
+  - Build a basic REST API using TypeScript, Express and the Couchbase Node.js SDK
   - See how you can fetch data from Couchbase using SQL++ queries
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
@@ -16,13 +16,12 @@ technology:
 tags:
   - Express
   - REST API
-sdk_language: 
+sdk_language:
   - nodejs
 length: 30 Mins
 ---
 
 In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
-
 
 ## Prerequisites
 
@@ -36,7 +35,7 @@ To run this prebuilt project, you will need:
 
   - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-> Note that this tutorial is designed to work with the latest Node SDK version (4.x) for Couchbase. It will not work with the older Node js versions  for Couchbase without adapting the code.
+> Note that this tutorial is designed to work with the latest Node SDK version (4.x) for Couchbase. It will not work with the older Node.js versions for Couchbase without adapting the code.
 
 ### Couchbase Capella Configuration
 
@@ -45,7 +44,9 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/), the follow
 - The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
 - Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
 ## App Setup
+
 ### Cloning Repo
 
 ```shell
@@ -59,6 +60,7 @@ Any dependencies will be installed by running the npm install command from the r
 ```shell
 npm install
 ```
+
 ### Setup Database Configuration
 
 To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
@@ -72,13 +74,14 @@ All configuration for communication with the database is read from the environme
 
 Create a copy of `config/dev.env.example` file and rename it to `config/dev.env` and add the values for the Couchbase connection.
 
-
 ```sh
 CONNECTION_STRING=<connection_string>
 USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
 PASSWORD=<password_for_user>
 ```
+
 > Note: The connection string expects the `couchbases://` or `couchbase://` part.
+
 ## Running the Application
 
 ### Directly on Local Machine
@@ -91,6 +94,7 @@ The application will run on port 3000 of your local machine (http://localhost:30
 # Execute this command in the project's root directory
 npm start
 ```
+
 ### Docker
 
 If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
@@ -98,13 +102,14 @@ If you prefer to run this quick start using Docker, we have provided the Dockerf
 - Build the Docker image
 
 ```sh
-cd src
+# Execute this command in the project's root directory
 docker build -t couchbase-typescriptjs-quickstart .
 ```
 
 - Run the Docker image
 
 ```sh
+# Execute this command in the project's root directory
 docker run -it --env-file config/dev.env -p 3000:3000 couchbase-typescriptjs-quickstart
 ```
 
@@ -125,6 +130,7 @@ The application will run on port 3000 of your local machine (http://localhost:30
 ## Data Model
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
 ![img](travel_sample_data_model.png)
 
 ## Let Us Review the Code
@@ -153,11 +159,9 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 ├── src/server.ts
 ├── Dockerfile
 └── __test__
-
-
 ```
 
-We have separated out the  code into separate files by the entity (collection) in the `controllers` folder. The tests for the  project are present in the `__test__` folder.
+We have separated out the code into separate files by the entity (collection) in the `controllers` folder. The tests for the project are present in the `__test__` folder.
 
 ### Airport Entity
 
@@ -193,56 +197,54 @@ Our airport document will have an airportname, city, country, faa code, icao cod
   }
 }
 ```
+
 Navigate to the `connection.ts` in the `db` folder. We perform some basic required checks for the environment variable not being set in the dev.env, and then proceed to connect to the couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/nodejs-sdk/current/hello-world/start-using-sdk.html#connect) method.
+
 ```ts
-
 async function createCouchbaseCluster(): Promise<couchbase.Cluster> {
-    if (cached.conn) {
-        return cached.conn
-    }
-    const cluster = await couchbase.connect(DB_CONN_STR, {
-        username: DB_USERNAME,
-        password: DB_PASSWORD,
-        configProfile: 'wanDevelopment',
-    })
+  if (cached.conn) {
+    return cached.conn;
+  }
+  const cluster = await couchbase.connect(DB_CONN_STR, {
+    username: DB_USERNAME,
+    password: DB_PASSWORD,
+    configProfile: "wanDevelopment",
+  });
 
-    cached.conn = cluster
-    return cluster
+  cached.conn = cluster;
+  return cluster;
 }
 
-    const airlineCollection = scope.collection('airline')
-    const airportCollection = scope.collection('airport')
-    const routeCollection = scope.collection('route')
+const airlineCollection = scope.collection("airline");
+const airportCollection = scope.collection("airport");
+const routeCollection = scope.collection("route");
 ```
-
 
 ## Shared Directory
 
 Open the `src/shared` folder and navigate to the `makeResponse.ts` which contains a asynchronous function `makeResponse` for handling Express responses, executing provided actions, and managing errors. It specifically logs errors, sets appropriate HTTP status codes, and responds with a JSON object containing the error message. The status code is determined based on whether the error is a ValidationError or contains the string "not found."
 
-
 ```ts
 async function makeResponse(res: Response, action: () => Promise<any>) {
-    try {
-        const result = await action()
-        res.json(result)
-    } catch (e: any) {
-        console.error(e)
-        let status: number
+  try {
+    const result = await action();
+    res.json(result);
+  } catch (e: any) {
+    console.error(e);
+    let status: number;
 
-        if (isCouchbaseError(e) && e.message.indexOf('not found') !== -1) {
-            status = 404
-        } else {
-            status = isCouchbaseError(e) ? 400 : 500
-        }
-
-        const errorResponse: ErrorResponse = { message: e.message }
-        res.status(status)
-        res.json(errorResponse)
+    if (isCouchbaseError(e) && e.message.indexOf("not found") !== -1) {
+      status = 404;
+    } else {
+      status = isCouchbaseError(e) ? 400 : 500;
     }
+
+    const errorResponse: ErrorResponse = { message: e.message };
+    res.status(status);
+    res.json(errorResponse);
+  }
 }
 ```
-<!-- Now open the `validateRequiredField.ts` and the function `validateRequiredFields` checks if certain fields specified in requiredFields are missing from the request body. If any fields are missing, it sends a 400 status response with an error message detailing the missing fields; otherwise, it returns true, indicating that all required fields are present. -->
 
 ### POST Airport
 
@@ -250,13 +252,12 @@ To insert a new airport document, locate the createAirline method within the `ai
 We extract this airport ID from the airport data, and create a airport document using [`.insert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#insert) method. If the document is not found it is caught by the makeResponse method.
 
 ```js
-    await makeResponse(res, async () => {
-        await airportCollection.insert(req.params.id, newairport)
-        res.status(201)
-        return newairport
-    })
+await makeResponse(res, async () => {
+  await airportCollection.insert(req.params.id, newairport);
+  res.status(201);
+  return newairport;
+});
 ```
-
 
 ## GET Airport
 
@@ -279,12 +280,11 @@ To update a airport document, locate the updateAirline method within the `airpor
 This expects a PUT request with the airport ID (id) specified in the URL path and the airport data to be updated provided in the request body.
 
 ```js
-    await makeResponse(res, async () => {
-        await airportCollection.upsert(req.params.id, newairport)
-        return newairport
-    })
+await makeResponse(res, async () => {
+  await airportCollection.upsert(req.params.id, newairport);
+  return newairport;
+});
 ```
-
 
 The `updateAirport` method calls the [`.upsert()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#upsert) method.
 
@@ -292,14 +292,14 @@ The `updateAirport` method calls the [`.upsert()`](https://docs.couchbase.com/sd
 
 To delete a airport document, locate the DeleteDocumentForAirport method within the `airportController.ts` file found in the `controllers` package.
 This expects a DELETE request with the airport document ID (id) specified in the URL path.
- We just need to supply the `id` of the document we want to remove.
+We just need to supply the `id` of the document we want to remove.
 
 ```ts
-    await makeResponse(res, async () => {
-        await airportCollection.remove(req.params.id)
-        res.status(204)
-        return
-    })
+await makeResponse(res, async () => {
+  await airportCollection.remove(req.params.id);
+  res.status(204);
+  return;
+});
 ```
 
 Delete Airport by Airport ID by using [`.remove()`](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Collection.html#remove) method and returns a 404 if the document is not found.
@@ -318,23 +318,24 @@ This end point has two queries depending on the value for the country parameter.
 
 We build our SQL++ query using the [named parameters](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
 
-Next, we pass that `query` and the `parameters` to the  [scope.query()](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Scope.html#query) method and return the results.
+Next, we pass that `query` and the `parameters` to the [scope.query()](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/Scope.html#query) method and return the results.
 
 ```ts
-    const country = (req.query.country as string) ?? ''
-    let limit = parseInt(req.query.limit as string, 10) || 10
-    let offset = parseInt(req.query.offset as string, 10) || 0
-    let query: string
-    type QueryOptions = {
-        parameters: {
-            COUNTRY?: string
-            LIMIT: number
-            OFFSET: number
-        }
-    }
-    let options: QueryOptions
-    if (country !== '') {
-        query = `
+const country = (req.query.country as string) ?? "";
+let limit = parseInt(req.query.limit as string, 10) || 10;
+let offset = parseInt(req.query.offset as string, 10) || 0;
+let query: string;
+type QueryOptions = {
+  parameters: {
+    COUNTRY?: string;
+    LIMIT: number;
+    OFFSET: number;
+  };
+};
+let options: QueryOptions;
+
+if (country !== "") {
+  query = `
           SELECT airport.airportname,
           airport.city,
           airport.country,
@@ -347,12 +348,12 @@ Next, we pass that `query` and the `parameters` to the  [scope.query()](https://
       ORDER BY airport.airportname
       LIMIT $LIMIT
       OFFSET $OFFSET;
-        `
-        options = {
-            parameters: { COUNTRY: country, LIMIT: limit, OFFSET: offset },
-        }
-    } else {
-        query = `
+        `;
+  options = {
+    parameters: { COUNTRY: country, LIMIT: limit, OFFSET: offset },
+  };
+} else {
+  query = `
           SELECT airport.airportname,
           airport.city,
           airport.country,
@@ -364,14 +365,14 @@ Next, we pass that `query` and the `parameters` to the  [scope.query()](https://
       ORDER BY airport.airportname
       LIMIT $LIMIT
       OFFSET $OFFSET;
-        `
+        `;
 
-        options = { parameters: { LIMIT: limit, OFFSET: offset } }
-    }
-    await makeResponse(res, async () => {
-        let results: QueryResult = await scope.query(query, options)
-        return results['rows']
-    })
+  options = { parameters: { LIMIT: limit, OFFSET: offset } };
+}
+await makeResponse(res, async () => {
+  let results: QueryResult = await scope.query(query, options);
+  return results["rows"];
+});
 ```
 
 ### Direct Connections
@@ -398,9 +399,7 @@ We have set up a `.babelrc` file at the root of our project so that we can use E
 
 ```json
 {
-  "presets": [
-    "@babel/preset-env"
-  ]
+  "presets": ["@babel/preset-env"]
 }
 ```
 
@@ -441,19 +440,22 @@ npm run test
 If you would like to add another entity to the APIs, these are the steps to follow:
 
 - **Create the New Entity in Couchbase Bucket:**
+
   - Utilize the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html) to establish the new collection within the Couchbase bucket. Alternatively the collection can be created using the [createCollection](https://docs.couchbase.com/sdk-api/couchbase-node-client/classes/CollectionManager.html#createCollection) via the SDK.
 
 - **Define the New Route:**
+
   - Navigate to the `src/routes` folder and create the new route.
 
 - **Controller Configuration:**
-  - Develop a new file in the `controllers` folder, mirroring the existing structures (e.g., `airportController.ts`). Craft the corresponding method within this file to manage the new entity.
 
+  - Develop a new file in the `controllers` folder, mirroring the existing structures (e.g., `airportController.ts`). Craft the corresponding method within this file to manage the new entity.
 
 - **Add Tests:**
   - Add the tests for the new routes in a new file in the `__test__` folder similar to other collection tests.
 
 Following these steps ensures a systematic and organized approach to expanding the API functionality with a new entity.
+
 ### Running Self Managed Couchbase Cluster
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
