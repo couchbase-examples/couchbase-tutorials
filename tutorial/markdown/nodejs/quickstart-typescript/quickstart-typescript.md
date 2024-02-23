@@ -88,7 +88,7 @@ PASSWORD=<password_for_user>
 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
-The application will run on port 3000 of your local machine (http://localhost:3000). You will find the Swagger documentation of the API which you can use to try the API endpoints.
+The application will run on the port specified by the `APP_PORT` variable in your configuration environment variable file on your local machine (eg: http://localhost:3000). You will find the Swagger documentation of the API which you can use to try the API endpoints.
 
 ```sh
 # Execute this command in the project's root directory
@@ -109,13 +109,14 @@ docker build -t couchbase-typescriptjs-quickstart .
 - Run the Docker image
 
 ```sh
-# Execute this command in the project's root directory
-docker run -it --env-file config/dev.env -p 3000:3000 couchbase-typescriptjs-quickstart
+# Execute this command in the project's root directory. Replace APP_PORT with the value of your APP_PORT variable.
+docker run -it --env-file config/dev.env -p ${APP_PORT}:${APP_PORT} couchbase-typescript-express-js-quickstart
+# For eg: docker run -it --env-file config/dev.env -p 3000:3000 couchbase-typescript-express-js-quickstart
 ```
 
 > Note: The `config/dev.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
 
-Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:3000/) to test the APIs.
+Once the app is up and running, you can launch your browser and go to the [Swagger documentation](eg: https://localhost:3000/ if APP_PORT is set to 3000) to test the APIs.
 
 ### Verifying the Application
 
@@ -123,7 +124,7 @@ Once the application starts, you can see the details of the application on the l
 
 ![Application Startup](typescript_app_startup.png)
 
-The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+The application will run on the port specified by the `APP_PORT` variable in your configuration environment variable file on your local machine (eg: http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
 ![Swagger Documentation](typescript_swagger_documentation.png)
 
