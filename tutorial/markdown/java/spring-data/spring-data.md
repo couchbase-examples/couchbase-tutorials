@@ -104,14 +104,14 @@ Maven dependencies:
 </dependency>
 ```
 
-## What We'll Cover
+#### What We'll Cover
 
 - [Cluster Connection Configuration](#cluster-connection-configuration) – Configuring Spring Data to connect to a Couchbase cluster.
 - [Database Initialization](#database-initialization) – Creating required database structures upon application startup
 - [CRUD operations](#create-or-update-a-profile) – Standard create, update and delete operations.
 - [Custom SQL++ queries](#search-profiles-by-text) – Using [SQl++](https://www.couchbase.com/sqlplusplus) with Spring Data.
 
-## Useful Links
+#### Useful Links
 
 - [Spring Data Couchbase - Reference Documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/)
 - [Spring Data Couchbase - JavaDoc](https://docs.spring.io/spring-data/couchbase/docs/current/api/)
