@@ -28,18 +28,16 @@ length: 30 Mins
   - [Database Server Configuration](#database-server-configuration)
   - [Application Properties](#application-properties)
 - [Running the Application](#running-the-application)
-  - [Directly on the machine](#directly-on-the-machine)
-  - [Docker](#docker)
-- [What We'll Cover](#what-well-cover)
-  - [Document Structure](#document-structure)
-  - [Code Organization](#code-organization)
+  - [Directly on Machine](#directly-on-machine)
+  - [Using Docker](#using-docker)
 - [Data Model](#data-model)
+- [Airline Document Structure](#airline-document-structure)
 - [Let's Review the Code](#lets-review-the-code)
-  - [Integration Tests](#integration-tests)
+  - [Code Organization](#code-organization)
   - [Repository](#repository)
   - [Model](#model)
   - [Controller](#controller)
-  - [Service](#service)i
+  - [Service](#service)
 - [Mapping Workflow](#mapping-workflow)
   - [GET Mapping Workflow](#get-mapping-workflow)
   - [POST Mapping Workflow](#post-mapping-workflow)
@@ -198,16 +196,6 @@ Note: If you're using Windows, you can run the application using the `gradle.bat
 ./gradew.bat bootRun
 ```
 
-<!-- Screeenshot -->
-
-![Spring Data Application](./app-startup-spring-data.png)
-
-Once the site is up and running, you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/) to test the APIs.
-
-<!-- Screenshot -->
-
-![Swagger UI](./swagger-documentation-spring-data.png)
-
 ### Using Docker
 
 Build the Docker image
@@ -222,21 +210,24 @@ Run the Docker image
 docker run -d --name springdata-container -p 8080:8080 java-springdata-quickstart
 ```
 
-Note: The `application.properties` file has the connection information to connect to your Capella cluster. These will be part of the environment variables in the Docker container.
+Note: The `application.properties` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
+If you choose not to pass the environment variables, you can update the `application.properties` file in the `src/main/resources` folder.
 
-## What We'll Cover
+Once the application is running, you can see the logs in the console. You should see the following log message indicating that the application has started successfully:
 
-A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
+![Spring Data Application](./app-startup-spring-data.png)
 
-- [Create new airlines with essential information](#post-mapping).
-- [Update airline details](#put-mapping).
-- [Delete airlines](#delete-mapping).
-- [Retrieve airlines by ID](#get-mapping).
-- [List all airlines with pagination](#get-mapping).
-- [List airlines by country](#get-mapping).
-- [List airlines by destination airport](#get-mapping).
+Once the site is up and running, you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/) to test the APIs.
 
-### Document Structure
+![Swagger UI](./swagger-documentation-spring-data.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![Data Model](./travel_sample_data_model.png)
+
+## Airline Document Structure
 
 We will be setting up a REST API to manage some airline documents. Our airline document will have a structure similar to the following:
 
@@ -255,6 +246,10 @@ We will be setting up a REST API to manage some airline documents. Our airline d
 
 The `id` field is the unique identifier for the document. The `type` field is used to identify the type of document. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. The `active` field is a boolean value indicating whether the airline is active or not.
 
+## Let's Review the Code
+
+To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
+
 ### Code Organization
 
 - `src/test/java`: Contains integration tests.
@@ -262,16 +257,6 @@ The `id` field is the unique identifier for the document. The `type` field is us
 - `src/main/java/org/couchbase/quickstart/springdata/model`: Contains the data model.
 - `src/main/java/org/couchbase/quickstart/springdata/controller`: Contains the RESTful API controllers.
 - `src/main/java/org/couchbase/quickstart/springdata/service`: Contains the service classes.
-
-## Data Model
-
-For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
-
-![Data Model](./travel_sample_data_model.png)
-
-## Let's Review the Code
-
-To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
 
 ### Repository
 
@@ -294,6 +279,18 @@ This class contains the REST API endpoints for CRUD operations. The `@RestContro
 This class contains the business logic for the REST API. The `@Autowired` annotation is used to autowire the `AirlineRepository` object.
 
 ## Mapping Workflow
+
+Mapping workflows describe how the HTTP methods (GET, POST, PUT, DELETE) interact with the `AirlineService` and the underlying database through the `AirlineRepository` to perform various operations on airline data.
+
+A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
+
+- [Retrieve airlines by ID](#get-mapping-workflow).
+- [Create new airlines with essential information](#post-mapping-workflow).
+- [Update airline details](#put-mapping-workflow).
+- [Delete airlines](#delete-mapping-workflow).
+- [List all airlines with pagination](#get-mapping-workflow).
+- [List airlines by country](#get-mapping-workflow).
+- [List airlines by destination airport](#get-mapping-workflow).
 
 ### GET Mapping Workflow
 
@@ -401,6 +398,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
 - Define the mappings in a new file in the `controllers` folder similar to the existing mappings like `AirportController.java`.
 - Define the service in a new file in the `services` folder similar to the existing services like `AirportService.java`.
 - Define the repository in a new file in the `repositories` folder similar to the existing repositories like `AirportRepository.java`.
+- For integration tests, create a new class in the `controllers` package similar to the existing tests like `AirportIntegrationTest.java`.
 
 ### Running Self Managed Couchbase Cluster
 
