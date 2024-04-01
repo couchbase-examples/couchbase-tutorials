@@ -28,10 +28,9 @@ In this tutorial, you will learn how to connect to a Couchbase Capella cluster t
 
 To run this prebuilt project, you will need:
 
-- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/nodejs-sdk/current/ref/travel-app-data-model.html) bucket loaded.
   - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - [Next.js](https://nextjs.org/) 14 or higher installed
-  - Ensure that Next.js is [compatible](https://docs.couchbase.com/cloud/sdk-compatibility.html#next-js-version-compat) with the Couchbase SDK.
 - Loading Travel Sample Bucket
   If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
 
@@ -104,7 +103,7 @@ If you prefer to run this quick start using Docker, we have provided the Dockerf
 - Build the Docker image
 
 ```sh
-docker build -t docker build -t nextjs-capella-quickstart . -f Dockerfile.dev
+docker build -t nextjs-capella-quickstart . -f Dockerfile.dev
 ```
 
 - Run the Docker image
@@ -113,7 +112,7 @@ docker build -t docker build -t nextjs-capella-quickstart . -f Dockerfile.dev
 docker run -p 3000:3000 nextjs-capella-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket> -e DB_PASSWORD=<password_for_user>
 ```
 
-> Note: The `.env` file has the environment variables for the application. The `-e` flag is used to pass the environment variables to the container.
+> Note: The `dev.env` file has the environment variables for the application. The `-e` flag is used to pass the environment variables to the container.
 
 ### Verifying the Application
 
@@ -138,7 +137,7 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 ### Code Layout
 
 ```
-Dockerfile
+Dockerfile.dev
 app
 ├── api
 │   ├── hello
@@ -271,7 +270,7 @@ We will be setting up a REST API to manage airline documents.
 - [DELETE Airline](#delete-airline) – Delete airline
 - [Airline List](#list-airline) – Get all airlines. Optionally filter the list by country
 
-For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/python-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/python-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/nodejs-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
 
 ### Airline Document Structure
 
@@ -279,8 +278,6 @@ Our profile document will have an airportname, city, country, faa code, icao cod
 
 ```json
 {
-  "id": 10,
-  "type": "airline",
   "name": "40-Mile Air",
   "iata": "Q5",
   "icao": "MLA",
@@ -296,36 +293,6 @@ In the `GET` method, we use the `get` method of the `airlineCollection` to fetch
 If the document is found, we return the document as a JSON response with a 200 status code.
 
 ```ts
-/**
- * @swagger
- * /api/v1/airline/{airlineId}:
- *   get:
- *     summary: Get an airline by ID
- *     description: |
- *       Get Airline with specified ID.
- *
- *       This provides an example of using [Key Value operations](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) in Couchbase to get a document with specified ID.
- *
- *       Key Value operations are unique to Couchbase and provide very high-speed get/set/delete operations.
- *
- *       Code: `airline/[airlineId]/route.ts` Method: `GET`
- *     tags:
- *        - Airline
- *     parameters:
- *       - name: airlineId
- *         in: path
- *         description: ID of the airline
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Returns the airline
- *       404:
- *         description: Airline not found
- *       500:
- *         description: An error occurred while fetching airline
- */
 export async function GET(
   req: NextRequest,
   { params }: { params: { airlineId: string } }
@@ -361,44 +328,6 @@ In the `POST` method, we use the `insert` method of the `airlineCollection` to c
 If the document is created successfully, we return the document as a JSON response with a 201 status code.
 
 ```ts
-/**
- * @swagger
- * /api/v1/airline/{airlineId}:
- *   post:
- *     summary: Create an airline
- *     description: |
- *       Create an airline with specified ID.
- *
- *       This provides an example of using [Key Value operations](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) in Couchbase to create a document with specified ID.
- *
- *       Key Value operations are unique to Couchbase and provide very high-speed get/set/delete operations.
- *
- *       Code: `airline/[airlineId]/route.ts` Method: `POST`
- *     tags:
- *        - Airline
- *     parameters:
- *       - name: airlineId
- *         in: path
- *         description: ID of the airline
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Airline'
- *     responses:
- *       201:
- *         description: Returns the created airline
- *       400:
- *         description: Invalid request body
- *       409:
- *         description: Airline already exists
- *       500:
- *         description: An error occurred while creating airline
- */
 export async function POST(
   req: NextRequest,
   { params }: { params: { airlineId: string } }
@@ -459,42 +388,6 @@ In the `PUT` method, we use the `upsert` method of the `airlineCollection` to up
 If the document is updated successfully, we return the document as a JSON response with a 200 status code.
 
 ```ts
-/**
- * @swagger
- * /api/v1/airline/{airlineId}:
- *   put:
- *     summary: Update an airline
- *     description: |
- *       Update an airline with specified ID.
- *
- *       This provides an example of using [Key Value operations](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) in Couchbase to update a document with specified ID.
- *
- *       Key Value operations are unique to Couchbase and provide very high-speed get/set/delete operations.
- *
- *       Code: `airline/[airlineId]/route.ts` Method: `PUT`
- *     tags:
- *        - Airline
- *     parameters:
- *       - name: airlineId
- *         in: path
- *         description: ID of the airline
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Airline'
- *     responses:
- *       200:
- *         description: Returns the updated airline
- *       400:
- *         description: Invalid request body
- *       500:
- *         description: An error occurred while updating airline
- */
 export async function PUT(
   req: NextRequest,
   { params }: { params: { airlineId: string } }
@@ -543,36 +436,6 @@ In the `DELETE` method, we use the `remove` method of the `airlineCollection` to
 If the document is deleted successfully, we return a JSON response with a 202 status code.
 
 ```ts
-/**
- * @swagger
- * /api/v1/airline/{airlineId}:
- *   delete:
- *     summary: Delete an airline
- *     description: |
- *       Delete an airline with specified ID.
- *
- *       This provides an example of using [Key Value operations](https://docs.couchbase.com/nodejs-sdk/current/howtos/kv-operations.html) in Couchbase to delete a document with specified ID.
- *
- *       Key Value operations are unique to Couchbase and provide very high-speed get/set/delete operations.
- *
- *       Code: `airline/[airlineId]/route.ts` Method: `DELETE`
- *     tags:
- *        - Airline
- *     parameters:
- *       - name: airlineId
- *         in: path
- *         description: ID of the airline
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       202:
- *         description: Successfully deleted the airline
- *       404:
- *         description: Airline not found
- *       500:
- *         description: An error occurred while deleting airline
- */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { airlineId: string } }
@@ -623,46 +486,6 @@ specified by `$` symbol for both these scenarios. The difference between the two
 Next, we pass that `query` to the CouchbaseClient class `query` method. We save the results in a list, `airlines`.
 
 ```ts
-/**
- * @swagger
- * /api/v1/airline/list:
- *   get:
- *     summary: Get all airlines by country
- *     description: |
- *       Get list of Airlines. Optionally, you can filter the list by Country.
- *
- *       This provides an example of using SQL++ query in Couchbase to fetch a list of documents matching the specified criteria.
- *
- *       Code: [`app/api/v1/airline/list/route.ts`] Method: `GET`
- *     tags:
- *       - Airline
- *     parameters:
- *       - name: country
- *         in: query
- *         description: Country of the airline
- *         required: false
- *         schema:
- *           type: string
- *       - name: limit
- *         in: query
- *         description: Maximum number of results to return
- *         required: false
- *         schema:
- *           type: integer
- *           default: 10
- *       - name: offset
- *         in: query
- *         description: Number of results to skip for pagination
- *         required: false
- *         schema:
- *           type: integer
- *           default: 0
- *     responses:
- *       200:
- *         description: A list of airlines from the specified country
- *       500:
- *         description: An error occurred while fetching airlines
- */
 export async function GET(req: NextRequest) {
   try {
     const { scope } = await getDatabase();
@@ -781,9 +604,9 @@ If you are running this quickstart with a self managed Couchbase cluster, you ne
 
 - Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
 
-You need to update the connection string and the credentials in the `.env` file in the source folder.
+You need to update the connection string and the credentials in the `dev.env` file in the source folder.
 
-> Note: Couchbase Server must be installed and running prior to running the FastAPI Python app.
+> Note: Couchbase Server must be installed and running prior to running the Nextjs app.
 
 ### Swagger Documentation
 
