@@ -16,7 +16,6 @@ technology:
 tags:
   - REST API
   - Spring Boot
-  - Spring Data
 sdk_language:
   - java
 length: 30 Mins
@@ -107,7 +106,7 @@ In the connection string, replace `DB_CONN_STR` with the connection string of yo
 The connection string should be in the following format:
 
 ```properties
-spring.couchbase.bootstrap-hosts=couchbases://cb.fwu-oviwcpjq4v.cloud.couchbase.com
+spring.couchbase.bootstrap-hosts=couchbases://xyz.cloud.couchbase.com
 OR
 spring.couchbase.bootstrap-hosts=localhost
 ```
@@ -155,7 +154,7 @@ Once the application is running, you can see the logs in the console. You should
 
 ![Spring Boot Application](./app-startup-spring-boot.png)
 
-Once the site is up and running you can launch your browser and go to the Swagger Start Page]: `http://localhost:8080/swagger-ui/index.html` to test the APIs.
+Once the site is up and running you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/index.html) to test the APIs.
 
 ![Swagger UI](./swagger-documentation-spring-boot.png)
 
@@ -167,19 +166,17 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 ## Airline Document Structure
 
-We will be setting up a REST API to manage some airline documents.The `id` field is the unique identifier for the document. The `type` field is used to identify the type of document. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. The `active` field is a boolean value indicating whether the airline is active or not.
+We will be setting up a REST API to manage some airline documents. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. 
 
 Our airline document will have a structure similar to the following example:
 
 ```json
 {
-  "id": "airline_8091",
   "name": "Couchbase Airways",
   "callsign": "Couchbase",
   "iata": "CB",
   "icao": "CBA",
   "country": "United States",
-  "active": true
 }
 ```
 

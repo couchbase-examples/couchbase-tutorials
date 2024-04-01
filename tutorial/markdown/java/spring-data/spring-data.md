@@ -12,7 +12,6 @@ technology:
   - kv
   - query
 tags:
-  - Spring Boot
   - Spring Data
 sdk_language:
   - java
@@ -62,7 +61,7 @@ To run this prebuild project, you will need:
   - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Code Editor or an Integrated Development Environment (e.g., [Eclipse](https://www.eclipse.org/ide/))
-- [Java SDK v1.8 or higher installed](https://www.oracle.com/java/technologies/ee8-install-guide.html)
+- Java SDK 17 or higher installed
 - [Gradle Build Tool](https://gradle.org/install/)
 
 ### Source Code
@@ -104,13 +103,6 @@ Maven dependencies:
 </dependency>
 ```
 
-#### What We'll Cover
-
-- [Cluster Connection Configuration](#cluster-connection-configuration) – Configuring Spring Data to connect to a Couchbase cluster.
-- [Database Initialization](#database-initialization) – Creating required database structures upon application startup
-- [CRUD operations](#create-or-update-a-profile) – Standard create, update and delete operations.
-- [Custom SQL++ queries](#search-profiles-by-text) – Using [SQl++](https://www.couchbase.com/sqlplusplus) with Spring Data.
-
 #### Useful Links
 
 - [Spring Data Couchbase - Reference Documentation](https://docs.spring.io/spring-data/couchbase/docs/current/reference/html/)
@@ -128,7 +120,7 @@ public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
   @Override
   public String getConnectionString() {
     // capella
-    // return "couchbases://cb.jnym5s9gv4ealbe.cloud.couchbase.com";
+    // return "couchbases://cb.xyz.cloud.couchbase.com";
 
     // localhost
     return "127.0.0.1"
@@ -233,18 +225,15 @@ We will be setting up a REST API to manage some airline documents. Our airline d
 
 ```json
 {
-  "id": "airline_8091",
-  "type": "airline",
   "name": "Couchbase Airways",
   "callsign": "Couchbase",
   "iata": "CB",
   "icao": "CBA",
   "country": "United States",
-  "active": true
 }
 ```
 
-The `id` field is the unique identifier for the document. The `type` field is used to identify the type of document. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. The `active` field is a boolean value indicating whether the airline is active or not.
+ The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. 
 
 ## Let's Review the Code
 
@@ -266,7 +255,7 @@ This interface extends the `CouchbaseRepository` interface and provides methods 
 ### Model
 
 `Airline.java`
-This class represents an airline document. The `@Document` annotation indicates that this class is a Couchbase document. The `@Id` annotation indicates that the `id` field is the document ID. The `@Field` annotation indicates that the following fields are Couchbase document fields: `type`, `name`, `callsign`, `iata`, `icao`, `country`, and `active`.
+This class represents an airline document. The `@Document` annotation indicates that this class is a Couchbase document. The `@Field` annotation indicates that the following fields are Couchbase document fields:  `name`, `callsign`, `iata`, `icao`, `country`.
 
 ### Controller
 
@@ -394,7 +383,7 @@ Contributions are welcome! If you'd like to contribute to this project, please f
 
 If you would like to add another entity to the APIs, these are the steps to follow:
 
-- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-java-client-3.5.2/com/couchbase/client/java/Collection.html#createScope-java.lang.String-) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/java-sdk/current/howtos/provisioning-cluster-resources.html#collection-management) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
 - Define the mappings in a new file in the `controllers` folder similar to the existing mappings like `AirportController.java`.
 - Define the service in a new file in the `services` folder similar to the existing services like `AirportService.java`.
 - Define the repository in a new file in the `repositories` folder similar to the existing repositories like `AirportRepository.java`.
