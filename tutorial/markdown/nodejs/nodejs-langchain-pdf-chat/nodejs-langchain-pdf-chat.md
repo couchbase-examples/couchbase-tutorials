@@ -2,7 +2,7 @@
 # frontmatter
 path: "/tutorial-nodejs-langchain-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Langchain, Couchbase Nodejs SDK and Couchbase Vector Search
+title: Build PDF Chat App With Couchbase Nodejs SDK and Langchain
 short_title: Build PDF Chat App
 description:
   - Construct a PDF Chat App with Langchain, Couchbase Node.js SDK, Couchbase Vector Search, and Next.js.
