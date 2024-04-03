@@ -165,7 +165,7 @@ In the connection string, replace `DB_CONN_STR` with the connection string of yo
 The connection string should be in the following format:
 
 ```properties
-spring.couchbase.bootstrap-hosts=couchbases://cb.fwu-oviwcpjq4v.cloud.couchbase.com
+spring.couchbase.bootstrap-hosts=couchbases://xyz.cloud.couchbase.com
 OR
 spring.couchbase.bootstrap-hosts=localhost
 ```
