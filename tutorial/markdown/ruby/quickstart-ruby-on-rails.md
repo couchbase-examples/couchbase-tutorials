@@ -1,0 +1,554 @@
+---
+# frontmatter
+path: "/tutorial-quickstart-ruby-on-rails"
+title: Quickstart in Couchbase with Ruby on Rails
+short_title: Ruby on Rails
+description:
+  - Learn to build a REST API in Ruby on Rails and Couchbase
+  - See how you can fetch data from Couchbase using SQL++ queries
+  - Explore CRUD operations in action with Couchbase
+content_type: quickstart
+filter: sdk
+technology:
+  - kv
+  - index
+  - query
+tags:
+  - Ruby
+  - Rails
+  - REST API
+sdk_language:
+  - ruby
+length: 30 Mins
+---
+
+<!-- [abstract] -->
+
+In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents and how to write simple parametrized SQL++ queries.
+
+## Prerequisites
+
+To run this prebuilt project, you will need:
+
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/ruby-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- [Ruby](https://www.ruby-lang.org/en/documentation/installation/) installed on your machine.
+  - Ensure that the Ruby version is [compatible](https://docs.couchbase.com/ruby-sdk/current/project-docs/compatibility.html#ruby-version-compatibility) with the Couchbase SDK.
+- Loading Travel Sample Bucket
+  If travel-sample is not loaded in your Capella cluster, you can load it by following the instructions for your Capella Cluster:
+
+  - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
+
+
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
+
+- The application requires the travel-sample bucket to be [loaded](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data) in the cluster from the Capella UI.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+## App Setup
+
+### Cloning Repo
+
+```shell
+git clone https://github.com/couchbase-examples/ruby-on-rails-quickstart.git
+```
+
+### Install Dependencies
+
+The dependencies for the application are specified in the `Gemfile` file in the source folder. Dependencies can be installed through `bundler` the default package manager for Ruby.
+
+```shell
+cd ruby-on-rails-quickstart
+gem install bundler
+bundle install
+```
+
+The application uses the following gems and needs to be installed globally even though they are specified in the `Gemfile`.
+
+```shell
+gem install rails
+gem install rspec
+gem install rubocop
+gem install rswag
+gem install couchbase
+```
+
+> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info. -->
+
+### Setup Database Configuration
+
+To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
+
+Specifically, you need to do the following:
+
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+All configuration for communication with the database is fetched from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `dev.env` in the source folder.
+
+Create a copy of `dev.env.example` file & rename it to `dev.env` & add the values for the Couchbase cluster.
+
+```sh
+DB_CONN_STR=<connection_string>
+DB_USERNAME=<user_with_read_write_permission_to_travel-sample_bucket>
+DB_PASSWORD=<password_for_user>
+```
+
+> Note: The connection string expects the `couchbases://` or `couchbase://` part.
+
+## Running the Application
+
+### Directly on Local Machine
+
+At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
+
+The application will run on port 8080 of your local machine (http://localhost:8080). You will find the Swagger documentation of the API which you can use to try the API endpoints.
+
+The Swagger Page will be available at [http://localhost:8080/api-docs](http://localhost:8080/api-docs).
+
+```shell
+rails s
+```
+
+### Using Docker
+
+If you prefer to run this quick start using Docker, we have provided the Dockerfile which you can use to build the image and run the API as a container.
+
+- Build the Docker image
+
+```sh
+cd src
+docker build -t couchbase-rails-quickstart .
+```
+
+- Run the Docker image
+
+```sh
+docker run --env-file dev.env -p 3000:3000 couchbase-rails-quickstart
+```
+
+> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
+
+Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
+
+### Verifying the Application
+
+Once the application starts, you can see the details of the application on the logs.
+
+![Application Startup](app_startup.png)
+
+The application will run on port 8080 of your local machine (http://localhost:8080). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+
+![Swagger Documentation](swagger_documentation.png)
+
+## Data Model
+
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+
+![img](travel_sample_data_model.png)
+
+## Let Us Review the Code
+
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
+
+### Code Layout
+
+```
+.
+├── app
+│   ├── controllers
+│   │   ├── api
+│   │   │   └── v1
+│   │   │       ├── airlines_controller.rb
+│   │   │       ├── airports_controller.rb
+│   │   │       └── routes_controller.rb
+│   │   ├── application_controller.rb
+│   │   └── concerns
+│   ├── models
+│   │   ├── airline.rb
+│   │   ├── airport.rb
+│   │   ├── application_record.rb
+│   │   ├── concerns
+│   │   └── route.rb
+│   └── views
+│       └── layouts
+│           ├── application.html.erb
+│           ├── mailer.html.erb
+│           └── mailer.text.erb
+├── config
+│   ├── importmap.rb
+│   ├── initializers
+│   │   ├── couchbase.rb
+│   │   ├── rswag_api.rb
+│   │   └── rswag_ui.rb
+│   ├── routes.rb
+├── config.ru
+├── db
+│   └── seeds.rb
+├── dev.env
+├── dev.env.example
+├── Dockerfile
+├── Gemfile
+├── Gemfile.lock
+├── spec
+│   ├── rails_helper.rb
+│   ├── requests
+│   │   └── api
+│   │       └── v1
+│   │           ├── airlines_spec.rb
+│   │           ├── airports_spec.rb
+│   │           └── routes_spec.rb
+│   ├── spec_helper.rb
+│   └── swagger_helper.rb
+├── swagger
+│   └── v1
+│       └── swagger.yaml
+├── test
+│   ├── channels
+│   │   └── application_cable
+│   │       └── connection_test.rb
+│   ├── controllers
+│   ├── integration
+│   │   ├── airlines_spec.rb
+│   │   ├── airports_spec.rb
+│   │   └── routes_spec.rb
+│   ├── models
+```
+
+We have separated out the API code into separate files by the entity (collection) in the `api` folder. The tests are similarly separated out by entity in the `tests` folder.
+
+In `routes.rb`, we define the routes for the application including the API routes.
+
+We have the Couchbase SDK operations defined in the `CouchbaseClient` class inside the `config/initializers/couchbase.rb` file.
+
+We recommend creating a single Couchbase connection when your application starts up, and sharing this instance throughout your application. If you know at startup time which buckets, scopes, and collections your application will use, we recommend obtaining them from the Cluster at startup time and sharing those instances throughout your application as well.
+
+In this application, we have created the connection object in `config/initializers/couchbase.rb` and we use this object in all of our APIs. The object is initialized in `config/initializers/couchbase.rb`. We have also stored the reference to our bucket, `travel-sample` and the scope, `inventory` in the connection object.
+
+```rb
+require 'couchbase'
+
+# Get environment variables
+DB_USERNAME = ENV['DB_USERNAME']
+DB_PASSWORD = ENV['DB_PASSWORD']
+DB_CONN_STR = ENV['DB_CONN_STR']
+DB_BUCKET_NAME = 'travel-sample' # Hardcoded bucket name
+
+# Check if running in CI environment
+if ENV['CI']
+  # Use environment variables from GitHub Secrets
+  options = Couchbase::Cluster::ClusterOptions.new
+  options.authenticate(DB_USERNAME, DB_PASSWORD)
+  COUCHBASE_CLUSTER = Couchbase::Cluster.connect(DB_CONN_STR, options)
+else
+  # Load environment variables from dev.env file
+  require 'dotenv'
+  Dotenv.load('dev.env')
+
+  # Define default values
+  DEFAULT_DB_USERNAME = 'Administrator'
+  DEFAULT_DB_PASSWORD = 'password'
+  DEFAULT_DB_CONN_STR = 'couchbase://localhost'
+
+  # Get environment variables with fallback to default values
+  DB_USERNAME = ENV.fetch('DB_USERNAME', DEFAULT_DB_USERNAME)
+  DB_PASSWORD = ENV.fetch('DB_PASSWORD', DEFAULT_DB_PASSWORD)
+  DB_CONN_STR = ENV.fetch('DB_CONN_STR', DEFAULT_DB_CONN_STR)
+
+  # Connect to the Couchbase cluster
+  options = Couchbase::Cluster::ClusterOptions.new
+  options.authenticate(DB_USERNAME, DB_PASSWORD)
+  COUCHBASE_CLUSTER = Couchbase::Cluster.connect(DB_CONN_STR, options)
+end
+
+# Open the bucket
+bucket = COUCHBASE_CLUSTER.bucket(DB_BUCKET_NAME)
+
+# Open the default collection
+default_collection = bucket.default_collection
+
+# Create scope and collections if they don't exist
+begin
+  scope = bucket.scope('inventory')
+rescue Couchbase::Error::ScopeNotFoundError
+  bucket.create_scope('inventory')
+  scope = bucket.scope('inventory')
+end
+
+%w[airline airport route].each do |collection_name|
+  scope.collection(collection_name)
+rescue Couchbase::Error::CollectionNotFoundError
+  scope.create_collection(collection_name)
+end
+
+AIRLINE_COLLECTION = scope.collection('airline')
+AIRPORT_COLLECTION = scope.collection('airport')
+ROUTE_COLLECTION = scope.collection('route')
+
+```
+
+
+
+
+### Airport Entity
+
+For this tutorial, we will focus on the airline entity. The other entities are similar.
+
+We will be setting up a REST API to manage airport documents.
+
+- [POST Airport](#post-airport) – Create a new airport
+- [GET Airport](#get-airport) – Read specified airport
+- [PUT Airport](#put-airport) – Update specified airport
+- [DELETE Airport](#delete-airport) – Delete airport
+- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+
+### Airport Document Structure
+
+Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
+
+```json
+{
+  "airportname": "Sample Airport",
+  "city": "Sample City",
+  "country": "United Kingdom",
+  "faa": "SAA",
+  "icao": "SAAA",
+  "tz": "Europe/Paris",
+  "geo": {
+    "lat": 48.864716,
+    "lon": 2.349014,
+    "alt": 92
+  }
+}
+```
+
+### POST Airport
+
+Open the `airport.py` file and navigate to the `post` method in the `AirportId` class. We make a reference of the json data to a variable `data` that we insert into the database using the datbase client, `couchbase_db`.
+
+```python
+# post method in class AirportId of airport.py
+data = request.json
+couchbase_db.insert_document(AIRPORT_COLLECTION, key=id, doc=data)
+return data, 201
+```
+
+We call the `insert_document` method in CouchbaseClient class, which calls the [`insert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.insert) method for the collection defined in the Couchbase SDK. The insert method takes the key (ID) by which the document is referenced and the content to be inserted into the collection.
+
+```python
+# CouchbaseClient class in db.py
+def insert_document(self, collection_name: str, key: str, doc: dict):
+  """Insert document using KV operation"""
+  return self.scope.collection(collection_name).insert(key, doc)
+```
+
+### GET Airport
+
+Navigate to the `get` method of the `AirportId` class in the `airport.py` file. We only need the airport document ID or our key from the user to retrieve a particular airport document using a key-value operation which is passed in the get_document method. The result is converted into a python dictionary using the `.content_as[dict]` operation defined for the result returned by the SDK.
+
+```python
+# get method in class AirportId of airport.py
+result = couchbase_db.get_document(AIRPORT_COLLECTION, key=id)
+return result.content_as[dict]
+```
+
+The CouchbaseClient client `get_document` method calls the [`get`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.get) method defined for collections in the Couchbase SDK. We fetch the documents based on the key by which it is stored.
+
+```python
+# CouchbaseClient class in db.py
+def get_document(self, collection_name: str, key: str):
+  """Get document by key using KV operation"""
+  return self.scope.collection(collection_name).get(key)
+```
+
+If the document is not found in the database, we get an exception, `DocumentNotFoundException` from the SDK and return the status as 404.
+
+### PUT Airport
+
+Update an Airport by Document ID
+
+We use the ID value passed in via the URL to call the `upsert_document` method in CouchbaseClient passing it the key and the data provided in the request body using request.json.
+
+```python
+# put method in class AirportId of airport.py
+updated_doc = request.json
+couchbase_db.upsert_document(AIRPORT_COLLECTION, key=id, doc=updated_doc)
+return updated_doc
+```
+
+The CouchbaseClient class `upsert_document` method calls the [`upsert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.upsert) method defined for collection in the Couchbase SDK with the key and json data to update the document in the database.
+
+```python
+# CouchbaseClient class in db.py
+def upsert_document(self, collection_name: str, key: str, doc: dict):
+  """Upsert document using KV operation"""
+  return self.scope.collection(collection_name).upsert(key, doc)
+```
+
+### DELETE Airport
+
+Navigate to the `delete` function in `airport.py`. We only need the key or document ID from the user to delete a document using the key-value operation.
+
+```python
+# delete method in class AirportId of airport.py
+couchbase_db.delete_document(AIRPORT_COLLECTION, key=id)
+return "Deleted", 204
+```
+
+The `delete_document` method in CouchbaseClient class calls the [`remove`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.remove) method defined for collection in the Couchbase SDK sending the key of the document to remove from the database.
+
+```python
+# CouchbaseClient class in db.py
+def delete_document(self, collection_name: str, key: str):
+    """Delete document using KV operation"""
+    return self.scope.collection(collection_name).remove(key)
+```
+
+### List Airport
+
+This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
+
+[SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
+
+Navigate to the `get` method in the `AirportList` class of `airport.py` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
+
+First, we need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `request.args.get` method.
+
+This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
+
+We build our SQL++ query using the [parameters](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
+
+Next, we pass that `query` to the CouchbaseClient class `query` method. We save the results in a list, `airports`. By default, the Python SDK will [stream result set from the server](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#streaming-large-result-sets). To gather all the results, we need to iterate over the results.
+
+```python
+# get method in AirportList class in airport.py
+country = request.args.get("country", "")
+limit = int(request.args.get("limit", 10))
+offset = int(request.args.get("offset", 0))
+
+# create query
+if country:
+    query = """
+        SELECT airport.airportname,
+            airport.city,
+            airport.country,
+            airport.faa,
+            airport.geo,
+            airport.icao,
+            airport.tz
+        FROM airport AS airport
+        WHERE airport.country = $country
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset;
+    """
+else:
+    query = """
+        SELECT airport.airportname,
+            airport.city,
+            airport.country,
+            airport.faa,
+            airport.geo,
+            airport.icao,
+            airport.tz
+        FROM airport AS airport
+        ORDER BY airport.airportname
+        LIMIT $limit
+        OFFSET $offset;
+    """
+
+# run query
+results = couchbase_db.query(
+            query, country=country, limit=limit, offset=offset
+          )
+# gather all documents
+airports = [r for r in results]
+return airports
+```
+
+The `query` method in the CouchbaseClient class executes the SQL++ query using the [`query`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.scope.Scope.query) method defined in the [Scope](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
+
+```python
+# CouchbaseClient class in db.py
+def query(self, sql_query, *options, **kwargs):
+  """Query Couchbase using SQL++"""
+  # options are used for positional parameters
+  # kwargs are used for named parameters
+  return self.scope.query(sql_query, *options, **kwargs)
+```
+
+### Direct Connections
+
+This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results simlar to the List Airport endpoint.
+
+Let us look at the query used here:
+
+```sql
+SELECT distinct (route.destinationairport)
+FROM airport as airport
+JOIN route as route on route.sourceairport = airport.faa
+WHERE airport.faa = $airport and route.stops = 0
+ORDER BY route.destinationairport
+LIMIT $limit
+OFFSET $offset
+```
+
+We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
+
+## Running Tests
+
+We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
+
+The tests including the fixtures and helpers for the tests are configured in the `conftest.py` file in the tests folder.
+
+To run the tests, use the following commands:
+
+```bash
+cd src
+python -m pytest
+```
+
+## Appendix
+
+### Extending API by Adding New Entity
+
+If you would like to add another entity to the APIs, these are the steps to follow:
+
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_management.html#couchbase.management.collections.CollectionManager.create_collection) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Define the routes in a new file in the `api` folder similar to the existing routes like `airport.py`.
+- Add the new routes to the application in `app.py`.
+- Add the tests for the new routes in a new file in the `tests` folder similar to `test_airport.py`.
+
+### Running Self Managed Couchbase Cluster
+
+If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
+
+You need to update the connection string and the credentials in the `.env` file in the source folder.
+
+> Note: Couchbase Server must be installed and running prior to running the Flask Python app.
+
+### Swagger Documentation
+
+Swagger documentation provides a clear view of the API including endpoints, HTTP methods, request parameters, and response objects.
+
+Click on an individual endpoint to expand it and see detailed information. This includes the endpoint's description, possible response status codes, and the request parameters it accepts.
+
+#### Trying Out the API
+
+You can try out an API by clicking on the "Try it out" button next to the endpoints.
+
+- Parameters: If an endpoint requires parameters, Swagger UI provides input boxes for you to fill in. This could include path parameters, query strings, headers, or the body of a POST/PUT request.
+
+- Execution: Once you've inputted all the necessary parameters, you can click the "Execute" button to make a live API call. Swagger UI will send the request to the API and display the response directly in the documentation. This includes the response code, response headers, and response body.
+
+#### Models
+
+Swagger documents the structure of request and response bodies using models. These models define the expected data structure using JSON schema and are extremely helpful in understanding what data to send and expect.
