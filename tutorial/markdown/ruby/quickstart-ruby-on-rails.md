@@ -292,8 +292,6 @@ ROUTE_COLLECTION = scope.collection('route')
 
 In the above code, we first get the environment variables for the connection string, username, and password. We then create a connection object using the `Couchbase::Cluster.connect` method. We authenticate the connection using the username and password. We then open the bucket and the default collection. We create a scope and collections if they don't exist. We store the reference to the collections in the connection object.
 
-
-
 ### Airline Entity
 
 For this tutorial, we will focus on the airline entity. The other entities are similar.
@@ -309,26 +307,6 @@ We will be setting up a REST API to manage airline documents.
 
 For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents. 
 
-<!-- ### Airport Document Structure
-
-Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
-
-```json
-{
-  "airportname": "Sample Airport",
-  "city": "Sample City",
-  "country": "United Kingdom",
-  "faa": "SAA",
-  "icao": "SAAA",
-  "tz": "Europe/Paris",
-  "geo": {
-    "lat": 48.864716,
-    "lon": 2.349014,
-    "alt": 92
-  }
-}
-``` -->
-
 ### Airline Document Structure
 
 Our airline document will have an airline name, IATA code, ICAO code, callsign, and country. For this demo, we will store all airline information in one document in the `airline` collection in the `travel-sample` bucket.
@@ -342,26 +320,6 @@ Our airline document will have an airline name, IATA code, ICAO code, callsign, 
   "country": "United States"
 }
 ```
-
-<!-- ### POST Airport
-
-Open the `airport.py` file and navigate to the `post` method in the `AirportId` class. We make a reference of the json data to a variable `data` that we insert into the database using the datbase client, `couchbase_db`.
-
-```python
-# post method in class AirportId of airport.py
-data = request.json
-couchbase_db.insert_document(AIRPORT_COLLECTION, key=id, doc=data)
-return data, 201
-```
-
-We call the `insert_document` method in CouchbaseClient class, which calls the [`insert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.insert) method for the collection defined in the Couchbase SDK. The insert method takes the key (ID) by which the document is referenced and the content to be inserted into the collection.
-
-```python
-# CouchbaseClient class in db.py
-def insert_document(self, collection_name: str, key: str, doc: dict):
-  """Insert document using KV operation"""
-  return self.scope.collection(collection_name).insert(key, doc)
-``` -->
 
 ### POST Airline 
 
@@ -442,29 +400,6 @@ end
 
 In the above code, we first check if all the required fields are present in the request. If any fields are missing, we raise an ArgumentError with the missing fields. If there are any extra fields in the request, we raise an ArgumentError with the extra fields. We then format the attributes and insert the document into the database using the `insert` method. We then create a new instance of the `Airline` class with the formatted attributes and return it.
 
-
-<!-- ### GET Airport
-
-Navigate to the `get` method of the `AirportId` class in the `airport.py` file. We only need the airport document ID or our key from the user to retrieve a particular airport document using a key-value operation which is passed in the get_document method. The result is converted into a python dictionary using the `.content_as[dict]` operation defined for the result returned by the SDK.
-
-```python
-# get method in class AirportId of airport.py
-result = couchbase_db.get_document(AIRPORT_COLLECTION, key=id)
-return result.content_as[dict]
-```
-
-The CouchbaseClient client `get_document` method calls the [`get`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.get) method defined for collections in the Couchbase SDK. We fetch the documents based on the key by which it is stored.
-
-```python
-# CouchbaseClient class in db.py
-def get_document(self, collection_name: str, key: str):
-  """Get document by key using KV operation"""
-  return self.scope.collection(collection_name).get(key)
-```
-
-If the document is not found in the database, we get an exception, `DocumentNotFoundException` from the SDK and return the status as 404. -->
-
-
 ### GET Airline
 
 Navigate to the `show` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to retrieve a particular airline document using a key-value operation which is passed in the `find` method. The result is converted into a JSON object using the `to_json` method.
@@ -497,150 +432,160 @@ The `find` method in the `Airline` class is used to fetch the document from the 
 
 In the `find` method, we use the `get` method to fetch the document from the database using the key. If the document is found, we create a new instance of the `Airline` class with the document content and return it. If the document is not found, we return `nil`.
 
+### PUT Airline
 
-### PUT Airport
+Navigate to the `update` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to update a particular airline document using a key-value operation which is passed in the `update` method. The result is converted into a JSON object using the `to_json` method.
 
-Update an Airport by Document ID
-
-We use the ID value passed in via the URL to call the `upsert_document` method in CouchbaseClient passing it the key and the data provided in the request body using request.json.
-
-```python
-# put method in class AirportId of airport.py
-updated_doc = request.json
-couchbase_db.upsert_document(AIRPORT_COLLECTION, key=id, doc=updated_doc)
-return updated_doc
+```rb
+    # PUT /api/v1/airlines/{id}
+    def update
+      @airline = Airline.new(airline_params).update(params[:id], airline_params)
+      render json: @airline, status: :ok
+    rescue ArgumentError => e
+      render json: { error: 'Invalid request', message: e.message }, status: :bad_request
+    rescue StandardError => e
+      render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+    end
 ```
 
-The CouchbaseClient class `upsert_document` method calls the [`upsert`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.upsert) method defined for collection in the Couchbase SDK with the key and json data to update the document in the database.
+Inn the above code, we first create an instance of the `Airline` class using the `update` method. We pass the ID and the airline data to the `update` method. If the airline is updated successfully, we return the airline document with a status of 200. If there are any missing fields in the request, we return a bad request status of 400. If there is any other error, we return an internal server error status of 500.
 
-```python
-# CouchbaseClient class in db.py
-def upsert_document(self, collection_name: str, key: str, doc: dict):
-  """Upsert document using KV operation"""
-  return self.scope.collection(collection_name).upsert(key, doc)
+```rb
+  def update(id, attributes)
+    required_fields = %w[name iata icao callsign country]
+    missing_fields = required_fields - attributes.keys
+    extra_fields = attributes.keys - required_fields
+
+    raise ArgumentError, "Missing fields: #{missing_fields.join(', ')}" if missing_fields.any?
+
+    raise ArgumentError, "Extra fields: #{extra_fields.join(', ')}" if extra_fields.any?
+
+    formatted_attributes = {
+      'name' => attributes['name'],
+      'iata' => attributes['iata'],
+      'icao' => attributes['icao'],
+      'callsign' => attributes['callsign'],
+      'country' => attributes['country']
+    }
+    AIRLINE_COLLECTION.upsert(id, formatted_attributes)
+    self.class.new(formatted_attributes)
+  end
+
+  def destroy(id)
+    AIRLINE_COLLECTION.remove(id)
+  end
+end
 ```
 
-### DELETE Airport
+In the `update` method, we first check if all the required fields are present in the request. If any fields are missing, we raise an ArgumentError with the missing fields. If there are any extra fields in the request, we raise an ArgumentError with the extra fields. We then format the attributes and update the document in the database using the `upsert` method. We then create a new instance of the `Airline` class with the formatted attributes and return it.
 
-Navigate to the `delete` function in `airport.py`. We only need the key or document ID from the user to delete a document using the key-value operation.
+### DELETE Airline
 
-```python
-# delete method in class AirportId of airport.py
-couchbase_db.delete_document(AIRPORT_COLLECTION, key=id)
-return "Deleted", 204
+Navigate to the `destroy` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to delete a particular airline document using a key-value operation which is passed in the `destroy` method.
+
+```rb
+    # DELETE /api/v1/airlines/{id}
+      def destroy
+        if @airline
+          if @airline.destroy(params[:id])
+            render json: { message: 'Airline deleted successfully' }, status: :accepted
+          else
+            render json: { message: 'Failed to delete airline' }, status: :bad_request
+          end
+        else
+          render json: { error: "Airline with ID #{params[:id]} not found" }, status: :not_found
+        end
+      rescue Couchbase::Error::DocumentNotFound => e
+        render json: { error: "Airline with ID #{params[:id]} not found", message: e.message }, status: :not_found
+      rescue StandardError => e
+        render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+      end
 ```
 
-The `delete_document` method in CouchbaseClient class calls the [`remove`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.collection.Collection.remove) method defined for collection in the Couchbase SDK sending the key of the document to remove from the database.
+In the above code, we first check if the airline document exists. If the document exists, we call the `destroy` method on the `Airline` class. If the document is deleted successfully, we return a status of 202. If the document is not deleted successfully, we return a bad request status of 400. If the document is not found, we return a not found status of 404. If there is any other error, we return an internal server error status of 500.
 
-```python
-# CouchbaseClient class in db.py
-def delete_document(self, collection_name: str, key: str):
-    """Delete document using KV operation"""
-    return self.scope.collection(collection_name).remove(key)
+```rb
+  def destroy(id)
+    AIRLINE_COLLECTION.remove(id)
+  end
+end
 ```
 
-### List Airport
+### List Airlines
 
-This endpoint retrieves the list of airports in the database. The API has options to specify the page size for the results and country from which to fetch the airport documents.
+Navigate to the `index` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the country, limit, and offset values from the user to retrieve a list of airline documents using a SQL++ query. The result is converted into a JSON object using the `to_json` method.
 
-[SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL+ query to search for airports with Limit, Offset, and Country option.
+```rb
+  # GET /api/v1/airlines/list
+  def index
+    country = params[:country]
+    limit = params[:limit] || 10
+    offset = params[:offset] || 0
 
-Navigate to the `get` method in the `AirportList` class of `airport.py` file. This endpoint is different from the others we have seen before because it makes the SQL++ query rather than a key-value operation. This usually means more overhead because the query engine is involved. For this query, we are using the predefined indices in the `travel-sample` bucket. We can create an additional [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query to make it perform better.
+    @airlines = Airline.all(country, limit, offset)
 
-First, we need to get the values from the query string for country, limit, and Offset that we will use in our query. These are pulled from the `request.args.get` method.
-
-This end point has two queries depending on the value for the country parameter. If a country name is specified, we retrieve the airport documents for that specific country. If it is not specified, we retrieve the list of airports across all countries. The queries are slightly different for these two scenarios.
-
-We build our SQL++ query using the [parameters](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#queries-placeholders) specified by `$` symbol for both these scenarios. The difference between the two queries is the presence of the `country` parameter in the query. Normally for the queries with pagination, it is advised to order the results to maintain the order of results across multiple queries.
-
-Next, we pass that `query` to the CouchbaseClient class `query` method. We save the results in a list, `airports`. By default, the Python SDK will [stream result set from the server](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#streaming-large-result-sets). To gather all the results, we need to iterate over the results.
-
-```python
-# get method in AirportList class in airport.py
-country = request.args.get("country", "")
-limit = int(request.args.get("limit", 10))
-offset = int(request.args.get("offset", 0))
-
-# create query
-if country:
-    query = """
-        SELECT airport.airportname,
-            airport.city,
-            airport.country,
-            airport.faa,
-            airport.geo,
-            airport.icao,
-            airport.tz
-        FROM airport AS airport
-        WHERE airport.country = $country
-        ORDER BY airport.airportname
-        LIMIT $limit
-        OFFSET $offset;
-    """
-else:
-    query = """
-        SELECT airport.airportname,
-            airport.city,
-            airport.country,
-            airport.faa,
-            airport.geo,
-            airport.icao,
-            airport.tz
-        FROM airport AS airport
-        ORDER BY airport.airportname
-        LIMIT $limit
-        OFFSET $offset;
-    """
-
-# run query
-results = couchbase_db.query(
-            query, country=country, limit=limit, offset=offset
-          )
-# gather all documents
-airports = [r for r in results]
-return airports
+    if @airlines.empty?
+      render json: { message: 'No airlines found' }, status: :ok
+    else
+      render json: @airlines, status: :ok
+    end
+  rescue StandardError => e
+    render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+  end
 ```
 
-The `query` method in the CouchbaseClient class executes the SQL++ query using the [`query`](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_core.html#couchbase.scope.Scope.query) method defined in the [Scope](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html#querying-at-scope-level) by the Couchbase SDK.
+In the above code, we first get the values for the country, limit, and offset from the request parameters. We then call the `all` method in the `Airline` class to fetch the list of airlines. If the list is empty, we return a status of 200 with a message. If the list is not empty, we return a status of 200 with the list of airlines. If there is any other error, we return an internal server error status of 500.
 
-```python
-# CouchbaseClient class in db.py
-def query(self, sql_query, *options, **kwargs):
-  """Query Couchbase using SQL++"""
-  # options are used for positional parameters
-  # kwargs are used for named parameters
-  return self.scope.query(sql_query, *options, **kwargs)
+
+```rb
+  def self.all(country = nil, limit = 10, offset = 0)
+    bucket_name = 'travel-sample'
+    scope_name = 'inventory'
+    collection_name = 'airline'
+
+    query = country ? "SELECT * FROM `#{bucket_name}`.`#{scope_name}`.`#{collection_name}` WHERE country = $country LIMIT $limit OFFSET $offset" : "SELECT * FROM `#{bucket_name}`.`#{scope_name}`.`#{collection_name}` LIMIT $limit OFFSET $offset"
+    options = Couchbase::Cluster::QueryOptions.new
+    options.named_parameters(country ? { 'country' => country, 'limit' => limit.to_i,
+                                         'offset' => offset.to_i } : { 'limit' => limit.to_i, 'offset' => offset.to_i })
+
+    result = COUCHBASE_CLUSTER.query(query, options)
+    result.rows.map { |row| new(row.fetch('airline', {})) }.to_a
+  end
 ```
+
+In the `all` method, we first define the bucket, scope, and collection names. We then build the SQL++ query based on the country parameter. We then create a `QueryOptions` object and set the named parameters based on the country parameter. We then execute the query using the `query` method and iterate over the results to create a list of `Airline` objects and return it.
 
 ### Direct Connections
 
-This endpoint fetches the airports that can be reached directly from the specified source airport code. This also uses a SQL++ query to fetch the results simlar to the List Airport endpoint.
+Navigate to the `direct_connections` method in the `AirportController` class in the `airports_controller.rb` file. We only need the airport document ID or our key from the user to retrieve a list of airlines directly connected to the specified airport using a SQL++ query. The result is converted into a JSON object using the `to_json` method.
 
-Let us look at the query used here:
+```rb
+def direct_connections
+  destination_airport_code = params[:destinationAirportCode]
+  limit = params[:limit] || 10
+  offset = params[:offset] || 0
 
-```sql
-SELECT distinct (route.destinationairport)
-FROM airport as airport
-JOIN route as route on route.sourceairport = airport.faa
-WHERE airport.faa = $airport and route.stops = 0
-ORDER BY route.destinationairport
-LIMIT $limit
-OFFSET $offset
+  if destination_airport_code.blank?
+    render json: { message: 'Destination airport code is required' }, status: :bad_request
+  else
+    @connections = Airport.direct_connections(destination_airport_code, limit, offset)
+    render json: @connections, status: :ok
+  end
+rescue StandardError => e
+  render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+end
 ```
-
-We are fetching the direct connections by joining the airport collection with the route collection and filtering based on the source airport specified by the user and by routes with no stops.
 
 ## Running Tests
 
-We have defined integration tests using [pytest](https://docs.pytest.org/en/7.4.x/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
-
-The tests including the fixtures and helpers for the tests are configured in the `conftest.py` file in the tests folder.
+We have defined integration tests using [RSpec](https://rspec.info/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
 
 To run the tests, use the following commands:
 
 ```bash
-cd src
-python -m pytest
+rspec test/integration/airlines_spec.rb
+rspec test/integration/airports_spec.rb
+rspec test/integration/routes_spec.rb
 ```
 
 ## Appendix
@@ -649,10 +594,13 @@ python -m pytest
 
 If you would like to add another entity to the APIs, these are the steps to follow:
 
-- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_management.html#couchbase.management.collections.CollectionManager.create_collection) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
-- Define the routes in a new file in the `api` folder similar to the existing routes like `airport.py`.
-- Add the new routes to the application in `app.py`.
-- Add the tests for the new routes in a new file in the `tests` folder similar to `test_airport.py`.
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-ruby-client/Couchbase/Collection.html#create_collection-instance_method) or via the [Couchbase Server interface](https://docs.couchbase.com/server/current/manage/manage-settings/manage-collections.html).
+- Define the routes in a new file in the `api` folder similar to the existing routes like `airline_controller.rb`.
+- Add the new routes to the application in `routes.rb`.
+- Add the tests for the new routes in a new file in the `test/integration/api/v1` folder similar to `airlines_spec.rb`.
+- For Swagger documentation, add the configuration in the `spec/request/api/v1` folder similar to `airlines_spec.rb`.
+- Run the command `rake rswag:specs:swaggerize` to generate the Swagger documentation.
+- The new entity is now ready to be used in the API.
 
 ### Running Self Managed Couchbase Cluster
 
@@ -660,9 +608,9 @@ If you are running this quickstart with a self managed Couchbase cluster, you ne
 
 - Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance.
 
-You need to update the connection string and the credentials in the `.env` file in the source folder.
+You need to update the connection string and the credentials in the `dev.env` file in the source folder.
 
-> Note: Couchbase Server must be installed and running prior to running the Flask Python app.
+> Note: Couchbase Server must be installed and running prior to running the Ruby on Rails App
 
 ### Swagger Documentation
 
