@@ -290,25 +290,26 @@ ROUTE_COLLECTION = scope.collection('route')
 
 ```
 
+In the above code, we first get the environment variables for the connection string, username, and password. We then create a connection object using the `Couchbase::Cluster.connect` method. We authenticate the connection using the username and password. We then open the bucket and the default collection. We create a scope and collections if they don't exist. We store the reference to the collections in the connection object.
 
 
 
-### Airport Entity
+### Airline Entity
 
 For this tutorial, we will focus on the airline entity. The other entities are similar.
 
-We will be setting up a REST API to manage airport documents.
+We will be setting up a REST API to manage airline documents.
 
-- [POST Airport](#post-airport) – Create a new airport
-- [GET Airport](#get-airport) – Read specified airport
-- [PUT Airport](#put-airport) – Update specified airport
-- [DELETE Airport](#delete-airport) – Delete airport
-- [Airport List](#list-airport) – Get all airports. Optionally filter the list by country
-- [Direct Connections](#direct-connections) - Get a list of airports directly connected to the specified airport
+- [POST Airline](#post-airline) – Create a new airline
+- [GET Airline](#get-airline) – Read specified airline
+- [PUT Airline](#put-airline) – Update specified airline
+- [DELETE Airline](#delete-airline) – Delete airline
+- [Airline List](#list-airline) – Get all airlines. Optionally filter the list by country
+- [Direct Connections](#direct-connections) - Get a list of airlines directly connected to the specified airport
 
-For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents. 
 
-### Airport Document Structure
+<!-- ### Airport Document Structure
 
 Our profile document will have an airportname, city, country, faa code, icao code, timezone info and the geographic coordinates. For this demo, we will store all airport information in one document in the `airport` collection in the `travel-sample` bucket.
 
@@ -326,9 +327,23 @@ Our profile document will have an airportname, city, country, faa code, icao cod
     "alt": 92
   }
 }
+``` -->
+
+### Airline Document Structure
+
+Our airline document will have an airline name, IATA code, ICAO code, callsign, and country. For this demo, we will store all airline information in one document in the `airline` collection in the `travel-sample` bucket.
+
+```json
+{
+  "name": "40-Mile Air",
+  "iata": "Q5",
+  "icao": "MLA",
+  "callsign": "MILE-AIR",
+  "country": "United States"
+}
 ```
 
-### POST Airport
+<!-- ### POST Airport
 
 Open the `airport.py` file and navigate to the `post` method in the `AirportId` class. We make a reference of the json data to a variable `data` that we insert into the database using the datbase client, `couchbase_db`.
 
@@ -346,9 +361,89 @@ We call the `insert_document` method in CouchbaseClient class, which calls the [
 def insert_document(self, collection_name: str, key: str, doc: dict):
   """Insert document using KV operation"""
   return self.scope.collection(collection_name).insert(key, doc)
+``` -->
+
+### POST Airline 
+
+
+```rb
+# frozen_string_literal: true
+
+module Api
+  module V1
+    class AirlinesController < ApplicationController
+      skip_before_action :verify_authenticity_token, only: %i[create update destroy]
+      before_action :set_airline, only: %i[show update destroy]
+
+      ...
+      # POST /api/v1/airlines/{id}
+      def create
+        @airline = Airline.create(params[:id], airline_params)
+        if @airline
+          render json: @airline, status: :created
+        else
+          render json: { message: 'Airline already exists' }, status: :conflict
+        end
+      rescue ArgumentError => e
+        render json: { error: 'Invalid request', message: e.message }, status: :bad_request
+      rescue Couchbase::Error::DocumentExists => e
+        render json: { error: "Airline with ID #{params[:id]} already exists", message: e.message }, status: :conflict
+      rescue StandardError => e
+        render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+      end
+    end
+    ... 
+
+  end
+end
 ```
 
-### GET Airport
+In the above code, we first create an instance of the `Airline` class using the `create` method. We pass the ID and the airline data to the `create` method. If the airline is created successfully, we return the airline document with a status of 201. If the airline already exists, we return a conflict status of 409. If there are any missing fields in the request, we return a bad request status of 400. If there is any other error, we return an internal server error status of 500.
+
+```rb
+# frozen_string_literal: true
+
+class Airline
+  attr_accessor :name, :iata, :icao, :callsign, :country
+
+  def initialize(attributes)
+    @name = attributes['name']
+    @iata = attributes['iata']
+    @icao = attributes['icao']
+    @callsign = attributes['callsign']
+    @country = attributes['country']
+  end
+  ...
+
+  def self.create(id, attributes)
+    required_fields = %w[name iata icao callsign country]
+    missing_fields = required_fields - attributes.keys
+    extra_fields = attributes.keys - required_fields
+
+    raise ArgumentError, "Missing fields: #{missing_fields.join(', ')}" if missing_fields.any?
+
+    raise ArgumentError, "Extra fields: #{extra_fields.join(', ')}" if extra_fields.any?
+
+    formatted_attributes = {
+      'name' => attributes['name'],
+      'iata' => attributes['iata'],
+      'icao' => attributes['icao'],
+      'callsign' => attributes['callsign'],
+      'country' => attributes['country']
+    }
+    AIRLINE_COLLECTION.insert(id, formatted_attributes)
+    new(formatted_attributes)
+  end
+
+  ... 
+end
+
+```
+
+In the above code, we first check if all the required fields are present in the request. If any fields are missing, we raise an ArgumentError with the missing fields. If there are any extra fields in the request, we raise an ArgumentError with the extra fields. We then format the attributes and insert the document into the database using the `insert` method. We then create a new instance of the `Airline` class with the formatted attributes and return it.
+
+
+<!-- ### GET Airport
 
 Navigate to the `get` method of the `AirportId` class in the `airport.py` file. We only need the airport document ID or our key from the user to retrieve a particular airport document using a key-value operation which is passed in the get_document method. The result is converted into a python dictionary using the `.content_as[dict]` operation defined for the result returned by the SDK.
 
@@ -367,7 +462,41 @@ def get_document(self, collection_name: str, key: str):
   return self.scope.collection(collection_name).get(key)
 ```
 
-If the document is not found in the database, we get an exception, `DocumentNotFoundException` from the SDK and return the status as 404.
+If the document is not found in the database, we get an exception, `DocumentNotFoundException` from the SDK and return the status as 404. -->
+
+
+### GET Airline
+
+Navigate to the `show` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to retrieve a particular airline document using a key-value operation which is passed in the `find` method. The result is converted into a JSON object using the `to_json` method.
+
+```rb
+  # GET /api/v1/airlines/{id}
+  def show
+    if @airline
+      render json: @airline, status: :ok
+    else
+      render json: { error: "Airline with ID #{params[:id]} not found" }, status: :not_found
+    end
+  rescue Couchbase::Error::DocumentNotFound => e
+    render json: { error: "Airline with ID #{params[:id]} not found", message: e.message }, status: :not_found
+  rescue StandardError => e
+    render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
+  end
+```
+
+The `find` method in the `Airline` class is used to fetch the document from the database using the key. If the document is found, we return the document with a status of 200. If the document is not found, we return a not found status of 404. If there is any other error, we return an internal server error status of 500.
+
+```rb
+  def self.find(id)
+    result = AIRLINE_COLLECTION.get(id)
+    new(result.content) if result.success?
+  rescue Couchbase::Error::DocumentNotFound
+    nil
+  end
+```
+
+In the `find` method, we use the `get` method to fetch the document from the database using the key. If the document is found, we create a new instance of the `Airline` class with the document content and return it. If the document is not found, we return `nil`.
+
 
 ### PUT Airport
 
