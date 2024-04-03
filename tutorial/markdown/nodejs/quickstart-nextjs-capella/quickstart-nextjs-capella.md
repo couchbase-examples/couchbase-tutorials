@@ -594,7 +594,7 @@ vitest app/api/v1/airline/[airlineId]/route.test.ts
 
 If you would like to add another entity to the APIs, these are the steps to follow:
 
-- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-python-client/couchbase_api/couchbase_management.html#couchbase.management.collections.CollectionManager.create_collection) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/nodejs-sdk/current/howtos/provisioning-cluster-resources.html#collection-management) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
 - Create the new entity model in the `models` folder similar to the existing models like `Airline.ts`.
 - Create the new API routes in the `api/v1` folder similar to the existing routes like `airline`.
 
