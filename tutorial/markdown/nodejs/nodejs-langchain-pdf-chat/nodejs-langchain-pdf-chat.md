@@ -96,7 +96,7 @@ You may also create a vector index using Search UI on both [Couchbase Capella](h
 
 #### Index Definition
 
-Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 1536 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to dot_product. If there is a change in these parameters, please adapt the index accordingly.
+Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 1536 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
 
 ```json
 {
@@ -209,7 +209,7 @@ In the projects root directory, run the following command
 npm run dev
 ```
 
-The application will run on your local machine at (http://localhost:3000).
+The application will run on your local machine at http://localhost:3000.
 
 ### Using PDF Chat App
 
@@ -247,26 +247,26 @@ The PDF Chat app uses LangChain to convert the text from the PDF documents into 
 When a user asks a question or provides a prompt:
 
 - The app converts the user's query into an embedding using LangChain's embedding models (e.g., OpenAI's embeddings).
-- Couchbase's Vector Search capability is utilized, which supports search indexes. A dedicated search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
-- The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the similarity (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
+- [Couchbase's Vector Search](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#vector-search) capability is utilized, which supports search indexes. A dedicated search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
+- The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
 - The nearest neighbor embeddings represent the most semantically similar passages or sections from the PDF documents compared to the user's query.
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
-- Couchbase's Vector Search supports advanced indexing techniques, such as scoped indexes, dynamic indexing and hybrid search, allowing for efficient management, better scaling of the vector store and multiple types of search supported.
+- Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
-- Couchbase's Vector Search integrates seamlessly with LangChain's CouchbaseVectorStore class, abstracting away the complexities of vector similarity calculations.
+- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseVectorStore](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class, abstracting away the complexities of vector similarity calculations.
 
 ### Langchain.js
 
-LangChain is a powerful library that simplifies the process of building applications with large language models (LLMs) and vector stores like Couchbase.
+LangChain is a powerful library that simplifies the process of building applications with [large language models](https://en.wikipedia.org/wiki/Large_language_model) (LLMs) and vector stores like Couchbase.
 
 In the PDF Chat app, LangChain is used for several tasks:
 
-- **Loading and processing PDF documents**: LangChain's _PDFLoader_ is used to load the PDF files and convert them into text documents.
-- **Text splitting**: LangChain's _RecursiveCharacterTextSplitter_ is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: LangChain integrates with various embedding models, such as OpenAI's embeddings, to convert the text chunks into embeddings.
-- **Vector store integration**: LangChain provides a _CouchbaseVectorStore_ class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
-- **Chains**: Langchain provides various chains for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
-- **Streaming Output**: LangChain integrates with the StreamingTextResponse class, allowing the app to stream the generated answer to the client in real-time.
+- **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://js.langchain.com/docs/integrations/document_loaders/file_loaders/pdf) is used to load the PDF files and convert them into text documents.
+- **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Embedding generation**: LangChain integrates with [various embedding models](https://js.langchain.com/docs/integrations/text_embedding), such as OpenAI's embeddings, to convert the text chunks into embeddings.
+- **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
+- **Chains**: Langchain provides various [chains](https://js.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
+- **Streaming Output**: LangChain integrates with the [_StreamingTextResponse_](https://js.langchain.com/docs/expression_language/streaming) class, allowing the app to stream the generated answer to the client in real-time.
 
 By combining Vector Search with Couchbase, RAG, and LangChain; the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models. This approach provides users with a powerful and intuitive way to explore and interact with large PDF files.
 
@@ -383,7 +383,7 @@ const buffer = Buffer.from(bytes);
 
 ### Load PDF File
 
-It then creates a PDFLoader instance from the LangChain library and initializes it with the binary data of the uploaded PDF file. We then load the PDF Files to LangChain Document type.
+It then creates a [PDFLoader](<(https://js.langchain.com/docs/integrations/document_loaders/file_loaders/pdf)>) instance from the LangChain library and initializes it with the binary data of the uploaded PDF file. We then load the PDF Files to LangChain [Document](https://js.langchain.com/docs/modules/chains/document/) type.
 
 ```typescript
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
@@ -394,7 +394,7 @@ const rawDocs = await loader.load();
 
 ### Split Documents
 
-This Langchain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's _RecursiveCharacterTextSplitter_:
+This Langchain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter):
 
 - chunkSize: 1000: This parameter specifies that each chunk should contain approximately 1000 characters.
 - chunkOverlap: 200: This parameter ensures that there is an overlap of 200 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
@@ -411,7 +411,7 @@ const docs = await textSplitter.splitDocuments(rawDocs);
 
 ### Initialize OpenAI and Couchbase Vector Store
 
-We will now initialize OpenAI embeddings which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
+We will now initialize [OpenAI embeddings](https://js.langchain.com/docs/integrations/text_embedding/openai) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
 
 We will also initialize couchbase vector store with couchbase bucket info. Firstly we will connect to couchbase cluster using[`createCouchbaseCluster`](#connecting-to-couchbase).
 
@@ -449,7 +449,7 @@ const couchbaseConfig: CouchbaseVectorStoreArgs = {
 
 ### Create Vector Store From Documents
 
-With everything ready for initializing Vector store, we create it using `CouchbaseVectorStore.fromDocuments` function in Langchain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
+With everything ready for initializing Vector store, we create it using [_CouchbaseVectorStore.fromDocuments_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) function in Langchain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
 
 ```typescript
 await CouchbaseVectorStore.fromDocuments(docs, embeddings, couchbaseConfig);
@@ -465,7 +465,7 @@ await writeFile(path.join(process.cwd(), "public/assets/" + file.name), buffer);
 
 ### Response
 
-After all the above steps, The PDF uploading part is complete, and now we can use this PDF data during our chats. We return the _NextResponse_ back to UI so that we can switch to the Chat Page.
+After all the above steps, The PDF uploading part is complete, and now we can use this PDF data during our chats. We return the [_NextResponse_](https://nextjs.org/docs/app/api-reference/functions/next-response) back to UI so that we can switch to the Chat Page.
 
 ```typescript
 return NextResponse.json({
@@ -482,9 +482,24 @@ This API at `/app/api/chat/route.ts` is used when user asks a question from the 
 
 The user will type a message and the message will be sent to the chat API. The current message and other history messages are segregated.
 
-All the message history is formatted using _formatVercelMessages_ Function. This function takes a _VercelChatMessage_ object and converts it into a HumanMessage or AIMessage object, which are classes from the Langchain library used to represent conversation messages.
+All the message history is formatted using _formatVercelMessages_ Function. This function takes a _VercelChatMessage_ object and converts it into a [HumanMessage](https://api.js.langchain.com/classes/langchain_core_messages.HumanMessage.html) or [AIMessage](https://api.js.langchain.com/classes/langchain_core_messages.AIMessage.html) object, which are classes from the Langchain library used to represent [conversation messages](https://js.langchain.com/docs/expression_language/how_to/with_history).
+
+At the end we get all the previous messages in chat formatted form and current question (message) from user
 
 ```typescript
+const formatVercelMessages = (message: VercelChatMessage) => {
+  if (message.role === "user") {
+    return new HumanMessage(message.content);
+  } else if (message.role === "assistant") {
+    return new AIMessage(message.content);
+  } else {
+    console.warn(
+      `Unknown message type passed: "${message.role}". Falling back to generic message type.`
+    );
+    return new ChatMessage({ content: message.content, role: message.role });
+  }
+};
+
 const body = await request.json();
 const messages = body.messages ?? [];
 if (!messages.length) {
@@ -499,11 +514,11 @@ const currentMessageContent = messages[messages.length - 1].content;
 
 ### Configure Open AI
 
-We require Open AI's embedding model and LLM model.
+We require Open AI's embedding model and [LLM model](https://js.langchain.com/docs/integrations/llms/openai).
 
-OpenAI Embeddings are vector representations of text generated by OpenAI's language models. In this API, the _OpenAIEmbeddings_ class from the Langchain library is used to generate embeddings for the documents stored in the Couchbase Vector Store.
+OpenAI Embeddings are vector representations of text generated by OpenAI's language models. In this API, the [_OpenAIEmbeddings_](https://js.langchain.com/docs/integrations/text_embedding/openai) class from the Langchain library is used to generate embeddings for the documents stored in the Couchbase Vector Store.
 
-The _ChatOpenAI_ class from the Langchain library is used as the language model for generating responses. It is an interface to OpenAI's chat models, which are capable of understanding and generating human-like conversations.
+The [_ChatOpenAI_](https://js.langchain.com/docs/integrations/chat/openai) class from the Langchain library is used as the language model for generating responses. It is an interface to OpenAI's chat models, which are capable of understanding and generating human-like conversations.
 
 ```typescript
 const model = new ChatOpenAI({});
@@ -514,9 +529,9 @@ const embeddings = new OpenAIEmbeddings({
 
 ### Initialize Couchbase Vector Store
 
-Just like in [PDF Ingest API](#Initialize-OpenAI-and-Couchbase-Vector-Store), we will initialize the couchbase vector store here. Use the same details here as well of couchbase collection and index. Now we will initialize the store using `CouchbaseVectorStore.initialize()` method.
+Just like in [PDF Ingest API](#Initialize-OpenAI-and-Couchbase-Vector-Store), we will initialize the couchbase vector store here. Use the same details here as well of couchbase collection and index. Now we will initialize the store using [_CouchbaseVectorStore.initialize()_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) method.
 
-We also create the retriever of the couchbase vector store. This retriever will be used to retrieve the previously documents which are similar to current query. We also define a callback to get document details as well.
+We also create the [retriever](https://js.langchain.com/docs/modules/data_connection/retrievers/vectorstore) of the couchbase vector store. This retriever will be used to retrieve the previously documents which are similar to current query. We also define a callback to get document details as well.
 
 ```typescript
 const bucketName = process.env.DB_BUCKET || "";
@@ -554,11 +569,25 @@ const retriever = couchbaseVectorStore.asRetriever({
 });
 ```
 
+### Langchain Expression Language (LCEL)
+
+We will now utilize the power of Langchain Chains using the [Langchain Expression Language](https://js.langchain.com/docs/expression_language/) (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
+
+LCEL is a domain-specific language that provides several key advantages when working with Langchain:
+
+- Composability: It allows you to easily combine different Langchain components like retrievers, language models, and output parsers into complex workflows.
+- Readability: The syntax is concise and expressive, making it easy to understand the flow of operations within a chain or sequence.
+- Reusability: You can define reusable sub-chains or components that can be incorporated into larger chains, promoting code reuse and modularity.
+
+In summary, LCEL streamlines the process of building sophisticated natural language processing applications by providing a composable, readable, reusable, extensible, type-safe, and abstracted way to define and orchestrate Langchain components into complex workflows.
+
+We will be using LCEL chains in next few sections and will see how LCEL optimizes our whole workflow.
+
 ### History Aware Prompt
 
 The _historyAwarePrompt_ is used to generate a query for the vector store based on the conversation history and the current user message.
 
-The _historyAwarePrompt_ is a _ChatPromptTemplate_ from the Langchain library.
+The _historyAwarePrompt_ is a [_ChatPromptTemplate_](https://js.langchain.com/docs/modules/model_io/concepts#chatprompttemplate) from the Langchain library.
 It is defined to include the conversation history, the current user message, and a prompt asking for a concise vector store search query.
 
 ```typescript
@@ -574,7 +603,7 @@ const historyAwarePrompt = ChatPromptTemplate.fromMessages([
 
 ### History Aware Chain
 
-The _historyAwareRetrieverChain_ is created using the _createHistoryAwareRetriever_ function from the Langchain library. It takes the _historyAwarePrompt_, the language model (ChatOpenAI instance), and the vector store retriever as input.
+The _historyAwareRetrieverChain_ is created using the [_createHistoryAwareRetriever_](https://api.js.langchain.com/functions/langchain_chains_history_aware_retriever.createHistoryAwareRetriever.html) function from the Langchain library. It takes the _historyAwarePrompt_, the language model (ChatOpenAI instance), and the vector store retriever as input.
 
 The _historyAwareRetrieverChain_ is responsible for generating a query based on the conversation history and retrieving relevant documents from the vector store.
 
@@ -588,7 +617,7 @@ const historyAwareRetrieverChain = await createHistoryAwareRetriever({
 
 ### Document Chain
 
-The documentChain is created using the _createStuffDocumentsChain_ function from the Langchain library. It takes the language model (ChatOpenAI instance) and a prompt (answerPrompt) as input.
+The documentChain is created using the [_createStuffDocumentsChain_](https://api.js.langchain.com/functions/langchain_chains_combine_documents.createStuffDocumentsChain.html) function from the Langchain library. It takes the language model (ChatOpenAI instance) and a prompt (answerPrompt) as input.
 
 The answerPrompt is a _ChatPromptTemplate_ that includes instructions for the language model to generate an answer based on the provided context (retrieved documents) and the user's question.
 
@@ -619,7 +648,7 @@ const documentChain = await createStuffDocumentsChain({
 
 The _conversationalRetrievalChain_ combines the _historyAwareRetrieverChain_ and the _documentChain_.
 
-- The _conversationalRetrievalChain_ is created using the createRetrievalChain function from the Langchain library.
+- The _conversationalRetrievalChain_ is created using the [_createRetrievalChain_](https://api.js.langchain.com/functions/langchain_chains_retrieval.createRetrievalChain.html) function from the Langchain library.
 - It takes the _historyAwareRetrieverChain_ and the _documentChain_ as input.
 - This chain combines the retrieval and question-answering steps into a single workflow.
 
@@ -632,7 +661,7 @@ const conversationalRetrievalChain = await createRetrievalChain({
 
 ### Output Chain
 
-- The _outputChain_ is a sequence of _runnable_ steps.
+- The _outputChain_ is a sequence of [_runnable_](https://js.langchain.com/docs/expression_language/interface) steps.
 - It includes the _conversationalRetrievalChain_, a _RunnablePick_ step to extract the "answer" key from the output, and an _HttpResponseOutputParser_ to stream the response as plain text.
 
 ```typescript
@@ -645,10 +674,10 @@ const outputChain = RunnableSequence.from([
 
 ### Chat Response
 
-The response is streamed back to the client, along with metadata about the message index and the retrieved document sources.
+The response is [streamed](https://js.langchain.com/docs/modules/model_io/chat/streaming) back to the client, along with metadata about the message index and the retrieved document sources.
 
 - The _outputChain_ is executed with the _formattedPreviousMessages_ and the current user message as input.
-- The response is streamed back to the client as a _StreamingTextResponse_.
+- The response is streamed back to the client as a [_StreamingTextResponse_](https://sdk.vercel.ai/docs/api-reference/streaming-text-response).
 - The response headers include the message index and a base64-encoded string representing the retrieved document sources (truncated to the first 50 characters of the page content and metadata). This source will be used in showing from which page of PDF, the answer is based up on.
 
 ```typescript
