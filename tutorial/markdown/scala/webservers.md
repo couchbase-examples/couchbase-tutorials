@@ -28,22 +28,15 @@ length: 30 Mins
 
 <!-- TODO:  Figure out how to add width to image size in try it now links -->
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=scala-quickstart-repo&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/scala-quickstart)
+<!--[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=scala-quickstart-repo&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/scala-quickstart)-->
 
 ## Prerequisites
 
 To run this prebuilt project, you will need:
 
-- Scala 2, version 2.12 or higher installed
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster
+- Scala 3, version 3.4.1 or higher installed
 - Code Editor installed (IntelliJ IDEA, Eclipse, or Visual Studio Code)
-- Set up Couchbase, using one of the two options below
-
-**Option 1: Couchbase Capella**
-  - [A Couchbase Capella account](https://cloud.couchbase.com/sign-up) – free trials are available with a simple sign-up
-  - Capella Cluster [deployed](https://docs.couchbase.com/cloud/get-started/deploy-first-cluster.html)
-
-**Option 2: Couchbase Server**
-  - Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance (at least Couchbase Server 7)
 
 ## Source Code
 
@@ -53,7 +46,7 @@ git clone https://github.com/couchbase-examples/scala-quickstart
 
 ### Database and Web Server Configuration
 
-All configuration for communication with the database and the three web servers is stored in the `/src/main/resources/application.conf` file.  This includes the connection string, username, and password for Couchbase, and the port numbers for Play/Akka http/htt4ps.  
+All configuration for communication with the database and the three web servers is stored in the `/src/main/resources/application.conf` file.  This includes the connection string, username, password for Couchbase, and the port numbers for Play/Akka http/htt4ps.  
 
 The default username for Couchbase server is assumed to be `Administrator` and the default password is assumed to be `password`.  If these are different in your environment you will need to change them before running the application.
 
@@ -66,7 +59,7 @@ To enable the tutorial code to establish a connection to Capella, you will need 
 - enable the flag `capella = true` in `application.conf`
 - add a bucket to Capella with the same `bucket-name` as the one defined in `application.conf`
 - make sure your `username` in `application.conf` is [configured for access](https://docs.couchbase.com/cloud/get-started/configure-cluster-access.html) to this bucket
-- change the `host` in `application.conf` to the **Wide Area Network** address in Capella -> Cluster -> `your_cluster_name` -> Connect. See the image below:
+- change the `host` in `application.conf` to the **Public** address in Capella -> Cluster -> `your_cluster_name` -> Connect. See the image below:
   ![capella_host_address](./connect_wan.png)
 
 Note that for simplicity, trust certificate checking has been disabled as part of the tutorial by setting this in the `SecurityConfig`. If you want to learn more, see the [security options](https://docs.couchbase.com/scala-sdk/current/ref/client-settings.html#security-options) as part of the SDK client settings.
@@ -84,9 +77,7 @@ At this point the application is ready, and you can run it via your IDE or from 
 sbt run
 ```
 
-> Note: When using Option 2: Couchbase Server, then Couchbase Server 7 must be installed and running on localhost (http://127.0.0.1:8091) prior to running the Scala application.
-
-The application will keep running until you provide a line of input, after which it will shut down the web servers.
+The application will keep running until you provide a line of input (by hitting "Enter", after which it will shut down the web servers.
 
 You can launch your browser and go to each web server's Swagger start page:
 
