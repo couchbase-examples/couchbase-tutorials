@@ -14,7 +14,6 @@ technology:
   - index
   - query
 tags:
-  - Ruby
   - Rails
   - REST API
 sdk_language:
