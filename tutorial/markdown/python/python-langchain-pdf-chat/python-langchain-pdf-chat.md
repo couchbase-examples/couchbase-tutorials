@@ -168,7 +168,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
     }
   },
   "sourceType": "gocbcore",
-  "sourceName": "pdf-docs",
+  "sourceName": "pdf-chat",
   "sourceParams": {},
   "planParams": {
     "maxPartitionsPerPIndex": 64,
@@ -222,7 +222,7 @@ On the left sidebar, you'll find an option to upload a PDF document you want to 
 
 ![Main Screen Default View](main_screen_default_view.png)
 
-In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF (Couchbase Logo <img src="image.ico" alt="couchbase" width="14" /> ) , and one without the PDF context (Bot Logo - 🤖). This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content.
+In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF (Couchbase Logo - <img src="image.ico" alt="couchbase" width="16" style="display: inline;" /> ) , and one without the PDF context (Bot Logo - 🤖). This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content.
 
 ![Main Screen With Message View](main_screen_message_view.png)
 
