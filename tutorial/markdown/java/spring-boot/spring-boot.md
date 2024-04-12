@@ -2,10 +2,10 @@
 # frontmatter
 path: "/tutorial-quickstart-java-springboot"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Start with Java and Spring Boot
+title: Quickstart in Couchbase with Java and Spring Boot
 short_title: Java and Spring Boot
 description:
-  - Learn how to configure Spring Data with Couchbase
+  - Learn how to configure Spring Boot with Couchbase
   - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
   - Build a simple REST APIs that stores user profiles on a Couchbase cluster
 content_type: quickstart
@@ -87,7 +87,7 @@ git clone https://github.com/couchbase-examples/java-springboot-quickstart.git
 mvn package
 ```
 
-> Note: Maven packages auto restore when building the project in IntelliJ IDEA or Eclipse depending on IDE configuration.
+> Note: Maven automatically restores packages when building the project. in IntelliJ IDEA or Eclipse depending on IDE configuration.
 
 ### Database Server Configuration
 
@@ -95,11 +95,11 @@ mvn package
 
   - `getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
 
-  - `getCouchbaseBucket(Cluster cluster)`: This bean creates a Couchbase bucket within the cluster if it doesn't already exist and returns the Bucket object associated with the specified bucket name.
+  - `getCouchbaseBucket(Cluster cluster)`: This bean retrieves a Couchbase bucket from a cluster, ensuring it exists and is ready within a timeout, throwing exceptions if not found or if connection times out.
 
 ### Application Properties
 
-You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.
+You need to configure the connection details to your Couchbase Server in the `application.properties` file located in the `src/main/resources` directory.
 
 In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
 
@@ -144,7 +144,7 @@ docker build -t java-springboot-quickstart .
 Run the Docker image
 
 ```sh
-docker run -d --name springboot-container -p 9440:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
+docker run -d --name springboot-container -p 8080:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
 ```
 
 Note: The `application.properties` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
@@ -387,7 +387,7 @@ These workflows illustrate how each HTTP method interacts with the `AirlineServi
 
 ## Custom SQL++ Queries
 
-1. Get all airlines by country
+### 1. Get all airlines by country
 
 ```java
 
@@ -411,7 +411,7 @@ In the query, we are using the `country` parameter to filter the results by coun
 
 Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
 
-2. Get all airlines by destination airport
+### 2. Get all airlines by destination airport
 
 ```java
  @Override
@@ -437,11 +437,11 @@ Once the query is executed, the `AirlineController` constructs an HTTP response 
 
 ## Running The Tests
 
+This command will execute all the test cases in your project.
+
 ```sh
 mvn test
 ```
-
-This command will execute all the test cases in your project.
 
 ### Run Individual Tests:
 
@@ -467,9 +467,9 @@ mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.RouteIntegration
 
 ## Project Setup Notes
 
-This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/). The HealthCheckController is provided as a santity check and is used in unit tests.
+This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/).
 
-A full list of packages are referenced in the pom.xml file.
+A full list of packages are referenced in the `pom.xml` file.
 
 ## Contributing
 
