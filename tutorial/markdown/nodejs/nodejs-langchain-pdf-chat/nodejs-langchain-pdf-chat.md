@@ -2,11 +2,11 @@
 # frontmatter
 path: "/tutorial-nodejs-langchain-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase Nodejs SDK and Langchain
+title: Build PDF Chat App With Couchbase Nodejs SDK and LangChain
 short_title: Build PDF Chat App
 description:
-  - Construct a PDF Chat App with Langchain, Couchbase Node.js SDK, Couchbase Vector Search, and Next.js.
-  - Learn to upload PDFs into Couchbase Vector Store with Langchain.
+  - Construct a PDF Chat App with LangChain, Couchbase Node.js SDK, Couchbase Vector Search, and Next.js.
+  - Learn to upload PDFs into Couchbase Vector Store with LangChain.
   - Discover how to use RAG’s for context-based Q&A’s from PDFs with LLMs.
 content_type: tutorial
 filter: sdk
@@ -15,7 +15,7 @@ technology:
   - kv
 tags:
   - Next.js
-  - Langchain
+  - LangChain
   - OpenAI
 sdk_language:
   - nodejs
@@ -29,7 +29,7 @@ Welcome to this comprehensive guide on constructing an AI-enhanced Chat Applicat
 This tutorial will demonstrate how to -
 
 - Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search
-- Chunk PDFs into Vectors with [Langchain.js](https://js.langchain.com/) and use [Couchbase Vector Store](https://js.langchain.com/docs/integrations/vectorstores/couchbase) to store the vectors into couchbase
+- Chunk PDFs into Vectors with [LangChain.js](https://js.langchain.com/) and use [Couchbase Vector Store](https://js.langchain.com/docs/integrations/vectorstores/couchbase) to store the vectors into couchbase
 - Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and LLM
 - Craft an elegant UI with Next.js. All these components come together to create a seamless, AI-powered chat experience.
 
@@ -255,7 +255,7 @@ When a user asks a question or provides a prompt:
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
 - Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseVectorStore](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class, abstracting away the complexities of vector similarity calculations.
 
-### Langchain.js
+### LangChain.js
 
 LangChain is a powerful library that simplifies the process of building applications with [large language models](https://en.wikipedia.org/wiki/Large_language_model) (LLMs) and vector stores like Couchbase.
 
@@ -265,7 +265,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
 - **Embedding generation**: LangChain integrates with [various embedding models](https://js.langchain.com/docs/integrations/text_embedding), such as OpenAI's embeddings, to convert the text chunks into embeddings.
 - **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
-- **Chains**: Langchain provides various [chains](https://js.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
+- **Chains**: LangChain provides various [chains](https://js.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain integrates with the [_StreamingTextResponse_](https://js.langchain.com/docs/expression_language/streaming) class, allowing the app to stream the generated answer to the client in real-time.
 
 By combining Vector Search with Couchbase, RAG, and LangChain; the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models. This approach provides users with a powerful and intuitive way to explore and interact with large PDF files.
@@ -394,12 +394,12 @@ const rawDocs = await loader.load();
 
 ### Split Documents
 
-This Langchain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter):
+This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter):
 
 - chunkSize: 1000: This parameter specifies that each chunk should contain approximately 1000 characters.
 - chunkOverlap: 200: This parameter ensures that there is an overlap of 200 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
 
-At the end _splitDocuments_ method splits the large document into smaller Langchain documents based on above defined parameters.
+At the end _splitDocuments_ method splits the large document into smaller LangChain documents based on above defined parameters.
 
 ```typescript
 const textSplitter = new RecursiveCharacterTextSplitter({
@@ -449,7 +449,7 @@ const couchbaseConfig: CouchbaseVectorStoreArgs = {
 
 ### Create Vector Store From Documents
 
-With everything ready for initializing Vector store, we create it using [_CouchbaseVectorStore.fromDocuments_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) function in Langchain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
+With everything ready for initializing Vector store, we create it using [_CouchbaseVectorStore.fromDocuments_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) function in LangChain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
 
 ```typescript
 await CouchbaseVectorStore.fromDocuments(docs, embeddings, couchbaseConfig);
@@ -482,7 +482,7 @@ This API at `/app/api/chat/route.ts` is used when user asks a question from the 
 
 The user will type a message and the message will be sent to the chat API. The current message and other history messages are segregated.
 
-All the message history is formatted using _formatVercelMessages_ Function. This function takes a _VercelChatMessage_ object and converts it into a [HumanMessage](https://api.js.langchain.com/classes/langchain_core_messages.HumanMessage.html) or [AIMessage](https://api.js.langchain.com/classes/langchain_core_messages.AIMessage.html) object, which are classes from the Langchain library used to represent [conversation messages](https://js.langchain.com/docs/expression_language/how_to/with_history).
+All the message history is formatted using _formatVercelMessages_ Function. This function takes a _VercelChatMessage_ object and converts it into a [HumanMessage](https://api.js.langchain.com/classes/langchain_core_messages.HumanMessage.html) or [AIMessage](https://api.js.langchain.com/classes/langchain_core_messages.AIMessage.html) object, which are classes from the LangChain library used to represent [conversation messages](https://js.langchain.com/docs/expression_language/how_to/with_history).
 
 At the end we get all the previous messages in chat formatted form and current question (message) from user
 
@@ -516,9 +516,9 @@ const currentMessageContent = messages[messages.length - 1].content;
 
 We require OpenAI's embedding model and [LLM model](https://js.langchain.com/docs/integrations/llms/openai).
 
-OpenAI Embeddings are vector representations of text generated by OpenAI's language models. In this API, the [_OpenAIEmbeddings_](https://js.langchain.com/docs/integrations/text_embedding/openai) class from the Langchain library is used to generate embeddings for the documents stored in the Couchbase Vector Store.
+OpenAI Embeddings are vector representations of text generated by OpenAI's language models. In this API, the [_OpenAIEmbeddings_](https://js.langchain.com/docs/integrations/text_embedding/openai) class from the LangChain library is used to generate embeddings for the documents stored in the Couchbase Vector Store.
 
-The [_ChatOpenAI_](https://js.langchain.com/docs/integrations/chat/openai) class from the Langchain library is used as the language model for generating responses. It is an interface to OpenAI's chat models, which are capable of understanding and generating human-like conversations.
+The [_ChatOpenAI_](https://js.langchain.com/docs/integrations/chat/openai) class from the LangChain library is used as the language model for generating responses. It is an interface to OpenAI's chat models, which are capable of understanding and generating human-like conversations.
 
 ```typescript
 const model = new ChatOpenAI({});
@@ -569,17 +569,17 @@ const retriever = couchbaseVectorStore.asRetriever({
 });
 ```
 
-### Langchain Expression Language (LCEL)
+### LangChain Expression Language (LCEL)
 
-We will now utilize the power of Langchain Chains using the [Langchain Expression Language](https://js.langchain.com/docs/expression_language/) (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
+We will now utilize the power of LangChain Chains using the [LangChain Expression Language](https://js.langchain.com/docs/expression_language/) (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
 
-LCEL is a domain-specific language that provides several key advantages when working with Langchain:
+LCEL is a domain-specific language that provides several key advantages when working with LangChain:
 
-- Composability: It allows you to easily combine different Langchain components like retrievers, language models, and output parsers into complex workflows.
+- Composability: It allows you to easily combine different LangChain components like retrievers, language models, and output parsers into complex workflows.
 - Readability: The syntax is concise and expressive, making it easy to understand the flow of operations within a chain or sequence.
 - Reusability: You can define reusable sub-chains or components that can be incorporated into larger chains, promoting code reuse and modularity.
 
-In summary, LCEL streamlines the process of building sophisticated natural language processing applications by providing a composable, readable, reusable, extensible, type-safe, and abstracted way to define and orchestrate Langchain components into complex workflows.
+In summary, LCEL streamlines the process of building sophisticated natural language processing applications by providing a composable, readable, reusable, extensible, type-safe, and abstracted way to define and orchestrate LangChain components into complex workflows.
 
 We will be using LCEL chains in next few sections and will see how LCEL optimizes our whole workflow.
 
@@ -587,7 +587,7 @@ We will be using LCEL chains in next few sections and will see how LCEL optimize
 
 The _historyAwarePrompt_ is used to generate a query for the vector store based on the conversation history and the current user message.
 
-The _historyAwarePrompt_ is a [_ChatPromptTemplate_](https://js.langchain.com/docs/modules/model_io/concepts#chatprompttemplate) from the Langchain library.
+The _historyAwarePrompt_ is a [_ChatPromptTemplate_](https://js.langchain.com/docs/modules/model_io/concepts#chatprompttemplate) from the LangChain library.
 It is defined to include the conversation history, the current user message, and a prompt asking for a concise vector store search query.
 
 ```typescript
@@ -603,7 +603,7 @@ const historyAwarePrompt = ChatPromptTemplate.fromMessages([
 
 ### History Aware Chain
 
-The _historyAwareRetrieverChain_ is created using the [_createHistoryAwareRetriever_](https://api.js.langchain.com/functions/langchain_chains_history_aware_retriever.createHistoryAwareRetriever.html) function from the Langchain library. It takes the _historyAwarePrompt_, the language model (ChatOpenAI instance), and the vector store retriever as input.
+The _historyAwareRetrieverChain_ is created using the [_createHistoryAwareRetriever_](https://api.js.langchain.com/functions/langchain_chains_history_aware_retriever.createHistoryAwareRetriever.html) function from the LangChain library. It takes the _historyAwarePrompt_, the language model (ChatOpenAI instance), and the vector store retriever as input.
 
 The _historyAwareRetrieverChain_ is responsible for generating a query based on the conversation history and retrieving relevant documents from the vector store.
 
@@ -617,7 +617,7 @@ const historyAwareRetrieverChain = await createHistoryAwareRetriever({
 
 ### Document Chain
 
-The documentChain is created using the [_createStuffDocumentsChain_](https://api.js.langchain.com/functions/langchain_chains_combine_documents.createStuffDocumentsChain.html) function from the Langchain library. It takes the language model (ChatOpenAI instance) and a prompt (answerPrompt) as input.
+The documentChain is created using the [_createStuffDocumentsChain_](https://api.js.langchain.com/functions/langchain_chains_combine_documents.createStuffDocumentsChain.html) function from the LangChain library. It takes the language model (ChatOpenAI instance) and a prompt (answerPrompt) as input.
 
 The answerPrompt is a _ChatPromptTemplate_ that includes instructions for the language model to generate an answer based on the provided context (retrieved documents) and the user's question.
 
@@ -648,7 +648,7 @@ const documentChain = await createStuffDocumentsChain({
 
 The _conversationalRetrievalChain_ combines the _historyAwareRetrieverChain_ and the _documentChain_.
 
-- The _conversationalRetrievalChain_ is created using the [_createRetrievalChain_](https://api.js.langchain.com/functions/langchain_chains_retrieval.createRetrievalChain.html) function from the Langchain library.
+- The _conversationalRetrievalChain_ is created using the [_createRetrievalChain_](https://api.js.langchain.com/functions/langchain_chains_retrieval.createRetrievalChain.html) function from the LangChain library.
 - It takes the _historyAwareRetrieverChain_ and the _documentChain_ as input.
 - This chain combines the retrieval and question-answering steps into a single workflow.
 
