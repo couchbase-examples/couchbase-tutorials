@@ -51,7 +51,7 @@ git clone https://github.com/couchbase-examples/rag-demo.git
 
 ### Install Dependencies
 
-Any dependencies should be installed through `pip`, the default package manager for Python. You may use some [virtual environment](https://docs.python.org/3/tutorial/venv.html) as well.
+Any dependencies should be installed through `pip`, the default package manager for Python. You may use [virtual environment](https://docs.python.org/3/tutorial/venv.html) as well.
 
 ```shell
 python -m pip install -r requirements.txt
