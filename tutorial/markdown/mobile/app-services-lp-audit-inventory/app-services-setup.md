@@ -19,7 +19,10 @@ tags:
 sdk_language:
   - kotlin
   - objective-c
+  - swift 
   - android-java
+  - dart 
+  - csharp
 length: 45 Mins
 ---
 
@@ -50,62 +53,66 @@ In this step of the learning path, we will be using Couchbase Capella and App Se
 ### Fetching App Source Code
 
 #### Clone Source Code
+* This setup is used in several learning paths.
 
-* If you haven't already cloned the repo from the previous steps, clone the `Learn Couchbase Lite with Kotlin and Jetpack Compose` repository from GitHub.  We will need to use several files in the capella folder found in the root directory of the repo.
+* For Kotlin developers - If you haven't already cloned the repo from the previous steps, clone the `Learn Couchbase Lite with Kotlin and Jetpack Compose` repository from GitHub.  We will need to use several files in the capella folder found in the root directory of the repo.
 
 ```bash
 git clone https://github.com/couchbase-examples/android-kotlin-cbl-learning-path.git
+```
+
+* For Flutter developers - If you haven't already cloned the repo from the previous steps, clone the `Learn Couchbase Lite with Dart and Flutter` repository from GitHub.  We will need to use several files in the capella folder found in the root directory of the repo.
+
+```bash
+git clone https://github.com/couchbase-examples/flutter_cbl_learning_path.git
 ```
 
 ## Review Setup Couchbase Capella Projects, Clusters, and Buckets 
 
 ### Couchbase Capella Projects and Clusters
 
-When signing up with a Capella Trial you should already have a project setup called Trial - Project and a cluster created for you called Trial - Cluster.  If you log in and the `DEPLOY TRIAL CLUSTER` window appears, you need the click the Deploy Cluster button to deploy a trial clister.
-
-![Create Bucket - No Buckets](1-capella-trial-cluster.png '#width=600px')
-
-Once your cluster is deployed, click on the `Clusters` link on the left navigation panel and then select the `Trial - Cluster` by clicking on it.  
+When signing up with a Capella Trial you should already have a project setup called Trial - Project and a cluster created for you called Trial - Cluster.  
 
 ## Create Bucket Workflow
 
 Couchbase uses Buckets to store JSON documents.  We need a bucket to store not only our JSON documents we want to sync, but also the App Services configuration files.  Follow the steps below to create a bucket. 
 
-* Click on the `Buckets` link on the top navigation bar.  By default the Capella comes with a default bucket called travel sample, but we won't be using that bucket.  Click the `+ Create Bucket` link in the right hand corner to start the `Create Bucket` wizard.
+* Click on the `Settings` tab on the main navigation bar.
+
+* Click on the `Buckets` link on the left navigation panel under Configuration.  By default the Capella comes with a default bucket called travel sample, but we won't be using that bucket.  Click the `+ Create Bucket` link in the right hand corner.
 
 * In the `Bucket Name` field enter the name `projects` and click the Next button.
 
 * In the `Memory Per Server Node (MiB)` field enter the value `1024` and click the Next button.
 
-* On the `Settings` tab just leave the default settings and click the `Create Bucket` button.
-
 * This step is completed when you are returned to the Bucket listing screen and you see your new projects bucket listed.
 
-![Create Bucket workflow,1500](create-bucket-workflow.gif)
 
 ## Create App Services 
 
-* Click on the `App Services` link on the left navigation panel.  This will open the App Services page.
+* Click on the `App Services` tab on the top navigation menu.  This will open the App Services page.
 
 * Click the `Create App Service` button. 
 
 * Scroll down to the the `Try App Services Now` button and click on it
 
-* Click the `App Services` link again on the left navigation panel.
+* Wait for the App Service to deploy.
 
-* Wait for the App Service to deploy
+* To get back to your home page click the Capella logo in the upper left hand corner of the screen.
+ 
+ * Click on the `Trial - Cluster` database under the listing of Databases available.
 
-![Create App Services workflow,1500](create-app-services.gif)
+ * The home tab should appear and the your Trial App Services status should be listed on the screen as `Deploying`.
+
+![App Services Deploying,1500](app-service-deploying.png)
 
 ## Create App Services Endpoint
 
-Next we will create an App Services endpoint.  This is the endpoint that will be used to sync data between the mobile app and the Couchbase Capella database.
+Once your App Service is deployed, we will create an App Services endpoint.  This is the endpoint that will be used to sync data between the mobile app and the Couchbase Capella database.
 
-* Click the `App Services` link on the left navigation panel.  This will open the App Services page.
+* Click the `Trial - App Services` link under your App Services is ready section on the main home page. 
 
-* Click on the `Trial - App Services` you created in the previous step.
-
-* Click the `+ Create App Endpoint` button.
+* Click the `Create App Endpoint` button.
 
 * In the `App Endpoint Name` field enter `projects`
 
@@ -115,40 +122,20 @@ Next we will create an App Services endpoint.  This is the endpoint that will be
 
 * A new option will appear for importing clode.  Click the `Import Code` button.
 
-* Navigate to the directory you stored the code and find the Capella folder.  Select the import.js file.
+* Navigate to the directory you stored the code in for the tutorial that you are working on and find the Capella folder.  Select the import.js file.
 
 * Click the Create App Endpoint button
-
-![Create App Services Endpoint workflow,1500](app-services-create-endpoint.gif)
 
 ## Configure App Services Projects Endpoint and Security
 
 #### Mobile App Users 
 
-App Services offers authentication via OpenID Connect (OIDC) along with Anonymous and Basic Authentication.  For sake of simplicity we wil use Basic Authentication in this demo.  Our mobile app already defines the usernames and passwords and assigns them to a team in the <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/MockAuthenticationService.kt#L36">MockAuthenticationService</a> class.
+App Services offers authentication via OpenID Connect (OIDC) along with Anonymous and Basic Authentication.  For sake of simplicity we wil use Basic Authentication in this demo.  Our mobile app already defines the usernames and passwords and assigns them to a team.  
 
-```kotlin
-init {
-  //create mock users for testing the application
-  //in a real app this would be provided by some kind of OAuth2 Service, etc
-  _mockUsers["demo@example.com"] = User("demo@example.com", "P@ssw0rd12", "team1")
-  _mockUsers["demo1@example.com"] = User("demo1@example.com", "P@ssw0rd12", "team1")
-  _mockUsers["demo2@example.com"] = User("demo2@example.com", "P@ssw0rd12", "team2")
-  _mockUsers["demo3@example.com"] = User("demo3@example.com", "P@ssw0rd12", "team2")
-  _mockUsers["demo4@example.com"] = User("demo4@example.com", "P@ssw0rd12", "team3")
-  _mockUsers["demo5@example.com"] = User("demo5@example.com", "P@ssw0rd12", "team3")
-  _mockUsers["demo6@example.com"] = User("demo6@example.com", "P@ssw0rd12", "team4")
-  _mockUsers["demo7@example.com"] = User("demo7@example.com", "P@ssw0rd12", "team4")
-  _mockUsers["demo8@example.com"] = User("demo8@example.com", "P@ssw0rd12", "team5")
-  _mockUsers["demo9@example.com"] = User("demo9@example.com", "P@ssw0rd12", "team5")
-  _mockUsers["demo10@example.com"] = User("demo10@example.com", "P@ssw0rd12", "team6")
-  _mockUsers["demo11@example.com"] = User("demo11@example.com", "P@ssw0rd12", "team6")
-  _mockUsers["demo12@example.com"] = User("demo12@example.com", "P@ssw0rd12", "team7")
-  _mockUsers["demo13@example.com"] = User("demo13@example.com", "P@ssw0rd12", "team8")
-  _mockUsers["demo14@example.com"] = User("demo14@example.com", "P@ssw0rd12", "team9")
-  _mockUsers["demo15@example.com"] = User("demo15@example.com", "P@ssw0rd12", "team10")
-}
-```
+For `Kotlin` developers - this is done in the <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/MockAuthenticationService.kt#L36">MockAuthenticationService</a> class.
+
+For `Dart/Flutter` developers - this is done in the <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/router/service/auth_service.dart#L67">auth_service.dart</a> class.
+
 
 > **NOTE**: For the mobile app to function properly with app services, we must also create these same users in App Services using the same username and password and assigning them to the proper team as shown above.  We also must setup these teams and map them to channels using App Roles.
 
@@ -158,7 +145,7 @@ The newly created projects endpoint needs to be configured before we can setup s
 
 * Click on the `projects` endpoint from the App Endpoints list.
 
-* Click on the `Access Control` tab.  This will open the `Access Control and Data Validation` page.
+* The Security tab should open by default with the Access and Validation option selected from the left navigation menu.
 
 * Click on the `Import From File` button. 
 
@@ -166,9 +153,9 @@ The newly created projects endpoint needs to be configured before we can setup s
 
 * Scroll to the buttom and click the `Save` button.
 
-* Click the `Resume App Endpoint` button located in the upper right hand corner.
+* A warning window will appear, click the Ok button.
 
-![App Services - Setup Sync, 1500](app-services-sync.gif)
+* Click the `Resume App Endpoint` button located below the navigation tabs on the screen.
 
 
 #### Review How App Roles are Setup using sync.js
@@ -225,15 +212,13 @@ function sync(doc, oldDoc) {
 
 Now that we understand that App Roles are used to map a team to a channel, we need to create the roles.  
 
-* Once the endpoint starts, click the `App Roles` tab.
+* Once the endpoint starts, click `App Roles` from the navigation menu on the left.
 
 * Click on the `+ Create App Role` button in the right hand corner.
 
 * In the `App Role Name` field enter `team1`
 
-* In the `Add your channel...` field enter `channel.team1`
-
-* Click the `+` button to add the channel to the role.
+* In the `Admin Chanels` field enter `channel.team1`
 
 * Click the Create App Role button.
 
@@ -244,14 +229,11 @@ Now that we understand that App Roles are used to map a team to a channel, we ne
 > **NOTE**: Currently the Create App Role team overlay window remembers the previously used channel name, so you need to make sure you remove the previously used channel before adding a new one.
 <br>
 
-![App Services - Setup App Roles, 1500](app-services-add-app-roles.gif)
-
-
 ### App Services - Configure App Users 
 
 To configure App Users that we will be used by our mobile app to talk to App Services, follow the directions below.
 
-* Click on the `App Users` tab.
+* Click on `App Users` from the navigation menu on the left.
 
 * Click the `+ Create App User` button in the right hand corner.
 
@@ -259,23 +241,24 @@ To configure App Users that we will be used by our mobile app to talk to App Ser
 
 * In the `Password` field enter the password `P@ssw0rd12`.  
 
-* Scroll to the App Role section and select `team1` from the `Admin App Roles(optional)` dropdown.
+* Scroll to the App Role section and select `team1` from the `App Roles` dropdown.
 
-* Click the Create App User button.
+* Click the `Create App User` button.
 
-* Repeat these steps for demo1@example.com - demo5@example.com adding them to the appropriate teams.  You can reference <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/MockAuthenticationService.kt#L36">MockAuthenticationService</a> for a listing of username, passwords, and team assignments. 
+* Repeat these steps for demo1@example.com - demo5@example.com adding them to the appropriate teams.  
 
-> **NOTE**: Note the data sync demo only uses users assigned from team1 - team3, but the rest of the mobile app has users assigned up to team10.  Optionally you want you can add all the users listed in the MockAuthenticationService.kt file. 
+For Kotlin Developers, you can reference <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/android-kotlin-cbl-learning-path/blob/main/src/app/src/main/java/com/couchbase/learningpath/services/MockAuthenticationService.kt#L36">MockAuthenticationService</a> for a listing of username, passwords, and team assignments. 
 
-![App Services - Setup App Roles, 1500](app-services-add-user.gif)
+For Dart/Flutter Developers, you can reference <a target="_blank" rel="noopener noreferrer"  href="https://github.com/couchbase-examples/flutter_cbl_learning_path/blob/main/src/lib/features/router/service/auth_service.dart#L67">auth_service.dart</a> for a listing of username, passwords, and team assignments. 
+
+> **NOTE**: Note the data sync demo only uses users assigned from team1 - team3, but the rest of the mobile app has users assigned up to team10.  Optionally you want you can add all the users listed.
+
 
 ### Test App Services
 
 We can use our web browser to test App Services.  To test our App Services setup, make sure you are in one of the App Services -  App Endpoint section of Capella and do the following steps:
 
 * Click the Connect tab
-
-![Connection Tab](app-services-connection-tab.jpg '#width=800px')
 
 * Copy the URL in the Public Connections field.  This URL should look like something similar to 
   * wss://hostname.apps.cloud.couchbase.com:4984/projects
@@ -293,10 +276,7 @@ We can use our web browser to test App Services.  To test our App Services setup
 * You should see something similar to this:
 
 ```json
-{"db_name":"projects","update_seq":38,"committed_update_seq":38,
-"instance_start_time":1656975035787443,"compact_running":false,
-"purge_seq":0,"disk_format_version":0,
-"state":"Online","server_uuid":"xxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+{"db_name":"projects","update_seq":4,"committed_update_seq":4,"instance_start_time":1707427508198932,"compact_running":false,"purge_seq":0,"disk_format_version":0,"state":"Online","server_uuid":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
 ```
 > **NOTE**: Keep this URL handy because we will update the mobile app in the next step of the learning path to use this URL in replication. 
 
@@ -304,107 +284,48 @@ We can use our web browser to test App Services.  To test our App Services setup
 
 We need to import some data into Capella into the projects bucket that we can then use in the next step of the learning path with replication.  The follow steps will help you import the sample data provided in our repo into Capella.  
 
-* Click on the `Clusters` link located in the navigation menu on the left side.
+* Click on the `Linked Database` link located in the upper right corner of the navigation panel.
 
 * Click on the `Trial-Cluster` link under the list of Clusters.
 
-* Now click the `Tools` pull down menu and select `Import`.
+* Click on the `Data Tools` tab.
 
-* Click the `Import` button.
+* Now click on the `Import` from the navigation menu.
 
-* The `Import` Document wizard should appear.  
+* The default source of Load from your browser should be selected
 
-* `Bucket` step
+* Click the Upload link and browse to the location of the repo on your computer and go into the `capella` folder and select `sample-data.json`.
+
+* Under Choose your target
   * Click the `Choose a bucket` drop down list and select `projects` from the pop-up menu
-  * Click the `Next` button
 
-* `File` step
-  * Select `JSON` from the provided list of file formats 
-  * Under the `Format Type` list, select `List`  
-  * Under `Upload File` select `Using your browser`
-  * Click the `Choose a File` link
-  * Browse to the location of the repo on your computer and go into the `capella` folder and select `sample-data.json`.
-  * Click the `Next` button  
+* Under Preview Your Data step
+  * Select `Custom` from the `Choose How to Generate Key Name` list
+  * Click the `Edit` button
+  * Enter `"%projectId%"` into the `Pattern` field.  Don't for the the parathesis or this step will fail.
+  * Click the `Save` button
 
-* `Collections` step
-  * In the scope drop down list select `_default` 
-  * The collection should auto fill to `_default`
-  * Click the `Next` button 
+* You should be able to preview the data using the Raw File, Parsed Table, and DocIDs and Documents tabs.
 
-* `Key` step
-  * Select `Custom Generated` from the `Choose How to Generate Key Name` list
-  * Copy the `JSON` formatted text below and paste it into the `Test your key name expression` field.
-
-```json
-{
-	"name": "Santa Clare Warehouse 100",
-	"documentType": "project",
-	"modifiedOn": "1651533549000",
-	"createdBy": "demo@example.com",
-	"dueDate": "1704064749000",
-	"description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
-  sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris 
-  nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in 
-  reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla 
-  pariatur. Excepteur sint occaecat cupidatat non proident, 
-  sunt in culpa qui officia deserunt mollit anim id est laborum",
-	"warehouse":{
-		"warehouseId":"e1839e0b-57a0-472c-b29d-8d57e256ef32",
-		"name":"Santa Clara Warehouse",
-		"address1":"3250 Dr Olcott Street",
-		"address2":"",
-		"city":"Santa Clara",
-		"state":"CA",
-		"postalCode":"95054",
-		"salesTax":0.0913,
-		"latitude":32.3803024,
-		"longitude":-121.9674197,
-		"documentType":"warehouse",
-		"yearToDateBalance":0
-	},
-	"modifiedBy": "demo@example.com",
-	"team": "team1",
-	"createdOn": "1651533549000",
-	"projectId": "8b37f8e2-f8f7-4fe0-bb6d-58bbfde62841",
-	"isComplete": false
-}
-```
-  * Enter `"%projectId%"` into the `Key Name Generator Expression` field.  Don't for the the parathesis or this step will fail.
-  * Scroll down and validate you see the following text in the `Generated Key Name Expression per tested record` field
-    * `"8b37f8e2-f8f7-4fe0-bb6d-58bbfde62841"`
-  * Click the `Next` button.
-  
-* `Import Documents` step
-  * You can take the default settings
-  * Click the `Next` button
-
-* `Import` step  
-  * Confirm all the information on the screen
-  * Click the `Import` button
-  * **Note**: this process could take a few minutes
-
-![Capella - Import Data, 1500](capella-import-sample-data.gif)
+* Click the `Import` button
 
 ### Validate Import Test Data in Bucket 
 
 We can now validate that the documents were imported and picked up by App Services.  
 
-* While in the Trial - Cluster page, click the `Tools` pull down menu and select `Documents`
+* While in the `Data Tools` tab, click the `Documents` link from the navigation menu 
 
 * When the documents window appears, you should see a listing of documents.  
 
-* If you change the `limit` box to 100 you should be able to see the first 100 documents.
+* Change the bucket you are viewing to `projects` from the drop down list.
 
-* In the Content Sample section look for a document that has a name field and click on the `ID` link.
+* In the listing of documents look for a document and click on the `ID` link.
 
 * The document viewer moudel window should appear.  
 
 * Click on the `Meta` tab.
 
 * Scroll down to view the various metadata.  About half way through you should see an array called `channels` and a string should be set in this to the channel the document is assigned.  This means App Services has picked up the document and properly assigned it to a team!  
-
-![Capella - Data Validation, 1500](bucket-data-validation.gif)
 
 ## Learn More
 
