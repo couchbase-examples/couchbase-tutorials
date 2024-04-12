@@ -35,7 +35,7 @@ This tutorial will demonstrate how to -
 
 ## Prerequisites
 
-- [Python](https://www.python.org/downloads/) 3.11 or higher installed.
+- [Python](https://www.python.org/downloads/) 3.10 or higher installed.
 - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
 - Couchbase Cluster (Self Managed or Capella) with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
 
