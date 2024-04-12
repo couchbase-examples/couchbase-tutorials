@@ -28,9 +28,9 @@ Welcome to this comprehensive guide on constructing an AI-enhanced Chat Applicat
 
 This tutorial will demonstrate how to -
 
-- Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search
-- Chunk PDFs into Vectors with [LangChain](https://langchain.com/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into couchbase
-- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and LLM
+- Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search.
+- Chunk PDFs into Vectors with [LangChain](https://langchain.com/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into Couchbase.
+- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and LLM.
 - Craft an elegant UI with Streamlit. All these components come together to create a seamless, AI-powered chat experience.
 
 ## Prerequisites
@@ -83,17 +83,17 @@ We need to create the Search Index on the Full Text Service in Couchbase. For th
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
-  - Copy the index definition to a new file index.json
+  - Copy the index definition to a new file index.json.
   - Import the file in Capella using the instructions in the documentation.
   - Click on Create Index to create the index.
 
 - [Couchbase Server](https://docs.couchbase.com/server/current/search/import-search-index.html)
 
-  - Click on Search -> Add Index -> Import
-  - Copy the following Index definition in the Import screen
+  - Click on Search -> Add Index -> Import.
+  - Copy the following Index definition in the Import screen.
   - Click on Create Index to create the index.
 
-You may also create a vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html)
+You may also create a vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
 
 #### Index Definition
 
@@ -194,17 +194,17 @@ INDEX_NAME = "<name_of_fts_index_with_vector_support>"
 LOGIN_PASSWORD = "<password to access the streamlit app>"
 ```
 
-> [OpenAI](https://openai.com) API Key is required for usage in generating embedding and querying LLM
+> [OpenAI](https://openai.com) API Key is required for usage in generating embedding and querying LLM.
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
-> For this tutorial, `DB_BUCKET = pdf-chat`, `DB_SCOPE = _default`, `DB_COLLECTION = _default` and `INDEX_NAME = pdf_search`
+> For this tutorial, `DB_BUCKET = pdf-chat`, `DB_SCOPE = _default`, `DB_COLLECTION = _default` and `INDEX_NAME = pdf_search`.
 
 > Login_Password of Streamlit app is a basic password to access the app. You can set the password here and while using the app, password will be required to access the app.
 
 ### Running the Application
 
-After starting couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
+After starting Couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
 
 In the projects root directory, run the following command
 
@@ -219,9 +219,11 @@ The application will run on your local machine at http://localhost:8501.
 The page starts with a text box to enter your login password. This is the same password defined earlier in the [Setup Environment Config](#setup-environment-config) section. After submitting the password, the main application page will open.
 
 On the left sidebar, you'll find an option to upload a PDF document you want to use with this PDF Chat App. Depending on the size of the PDF, the upload process may take some time.
+
 ![Main Screen Default View](main_screen_default_view.png)
 
-In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF, and one without the PDF context. This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content.
+In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF (Couchbase Logo <img src="image.ico" alt="couchbase" width="14" /> ) , and one without the PDF context (Bot Logo - 🤖). This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content.
+
 ![Main Screen With Message View](main_screen_message_view.png)
 
 ## Concepts
@@ -289,13 +291,13 @@ On the Chat Area, the user can pose questions. These inquiries are processed by 
 
 ## Connecting to Couchbase
 
-The first step will be connecting to couchbase. Couchbase Vector Search is required for PDF Upload as well as during chat (For Retrieval). We will use the Couchbase Python SDK to connect to the Couchbase cluster. The connection is established in the `connect_to_couchbase` function.
+The first step will be connecting to Couchbase. Couchbase Vector Search is required for PDF Upload as well as during chat (For Retrieval). We will use the Couchbase Python SDK to connect to the Couchbase cluster. The connection is established in the `connect_to_couchbase` function.
 
-The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `secrets.toml`, and then proceed to connect to the couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
+The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `secrets.toml`, and then proceed to connect to the Couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
 
 ```python
 def connect_to_couchbase(connection_string, db_username, db_password):
-    """Connect to couchbase"""
+    """Connect to Couchbase"""
     from couchbase.cluster import Cluster
     from couchbase.auth import PasswordAuthenticator
     from couchbase.options import ClusterOptions
@@ -316,7 +318,7 @@ def connect_to_couchbase(connection_string, db_username, db_password):
 
 We will now initialize [OpenAI embeddings](https://python.langchain.com/docs/integrations/text_embedding/openai/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
 
-We will also initialize couchbase vector store with couchbase bucket info. Firstly we will connect to couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
+We will also initialize Couchbase vector store with Couchbase bucket info. Firstly we will connect to Couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
 
 We will define the bucket, scope, collection and index names from [Environment Variables](#setup-environment-config).
 
@@ -419,7 +421,7 @@ doc_pages = text_splitter.split_documents(docs)
 
 ### Add Documents to Vector Store
 
-We will utilize the vector store created at [Initialize OpenAI and Couchbase Vector Store](#initialize-openai-and-couchbase-vector-store). In this we will add the documents using add_documents method of couchbase vector store. This method will utilize the OpenAI embeddings to create embeddings(vectors) from text and add it to couchbase documents in the specified collection.
+We will utilize the vector store created at [Initialize OpenAI and Couchbase Vector Store](#initialize-openai-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the OpenAI embeddings to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
 
 ```python
 vector_store.add_documents(doc_pages)
@@ -445,7 +447,7 @@ We will be using LCEL chains in next few sections and will see how LCEL optimize
 
 ### Create Retriever Chain
 
-We also create the [retriever](https://python.langchain.com/docs/modules/data_connection/retrievers/vectorstore) of the couchbase vector store. This retriever will be used to retrieve the previously documents which are similar to current query.
+We also create the [retriever](https://python.langchain.com/docs/modules/data_connection/retrievers/vectorstore) of the couchbase vector store. This retriever will be used to retrieve the previously added documents which are similar to current query.
 
 ```python
 retriever = vector_store.as_retriever()
@@ -491,7 +493,7 @@ chain = (
 
 ### Chain without RAG
 
-We will repeat the same Process as above however this will not be context aware from RAG. Basically we will directly call LLM from the user question. Basically, every step is same just we will not use retriever.
+We will repeat the same process as above however this will not have the context from the vector store. Basically we will directly call LLM from the user question. Basically, every step is same just that we will not use retriever.
 
 ```python
 template_without_rag = """You are a helpful bot. Answer the question as truthfully as possible.
