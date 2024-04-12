@@ -316,7 +316,7 @@ def connect_to_couchbase(connection_string, db_username, db_password):
 
 We will now initialize [OpenAI embeddings](https://python.langchain.com/docs/integrations/text_embedding/openai/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
 
-We will also initialize couchbase vector store with couchbase bucket info. Firstly we will connect to couchbase cluster using[`connect_to_couchbase`](#connecting-to-couchbase) method.
+We will also initialize couchbase vector store with couchbase bucket info. Firstly we will connect to couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
 
 We will define the bucket, scope, collection and index names from [Environment Variables](#setup-environment-config).
 
