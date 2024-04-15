@@ -7,7 +7,7 @@ short_title: Java and Spring Boot
 description:
   - Learn how to configure Spring Boot with Couchbase
   - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
-  - Build a simple REST APIs that stores user profiles on a Couchbase cluster
+  - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
 technology:
@@ -26,42 +26,6 @@ length: 30 Mins
 -->
 
 <!-- TODO:  Figure out how to add width to image size in try it now links -->
-
-## Table of Contents
-
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Source Code](#source-code)
-  - [Install Dependencies](#install-dependencies)
-  - [Database Server Configuration](#database-server-configuration)
-  - [Application Properties](#application-properties)
-- [Running The Application](#running-the-application)
-  - [Directly on the machine](#directly-on-the-machine)
-  - [Docker](#docker)
-- [Data Model](#data-model)
-- [Airline Document Structure](#airline-document-structure)
-- [Let's Review the Code](#lets-review-the-code)
-  - [Code Organization](#code-organization)
-  - [Model](#model)
-  - [Controller](#controller)
-  - [Service](#service)
-  - [Repository](#repository)
-- [Mapping Workflow](#mapping-workflow)
-  - [GET Mapping Workflow](#get-mapping-workflow)
-  - [POST Mapping Workflow](#post-mapping-workflow)
-  - [PUT Mapping Workflow](#put-mapping-workflow)
-  - [DELETE Mapping Workflow](#delete-mapping-workflow)
-- [Custom SQL++ Queries](#custom-sql-queries)
-  - [Get all airlines by country](#get-all-airlines-by-country)
-  - [Get all airlines by destination airport](#get-all-airlines-by-destination-airport)
-- [Running The Tests](#running-the-tests)
-  - [Run Individual Tests](#run-individual-tests)
-- [Project Setup Notes](#project-setup-notes)
-- [Contributing](#contributing)
-- [Appendix](#appendix)
-  - [Extending API by Adding New Entity](#extending-api-by-adding-new-entity)
-  - [Running Self Managed Couchbase Cluster](#running-self-managed-couchbase-cluster)
-  - [Swagger Documentation](#swagger-documentation)
 
 ## Getting Started
 
@@ -166,7 +130,7 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 ## Airline Document Structure
 
-We will be setting up a REST API to manage some airline documents. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. 
+We will be setting up a REST API to manage some airline documents. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline.
 
 Our airline document will have a structure similar to the following example:
 
@@ -176,7 +140,7 @@ Our airline document will have a structure similar to the following example:
   "callsign": "Couchbase",
   "iata": "CB",
   "icao": "CBA",
-  "country": "United States",
+  "country": "United States"
 }
 ```
 
