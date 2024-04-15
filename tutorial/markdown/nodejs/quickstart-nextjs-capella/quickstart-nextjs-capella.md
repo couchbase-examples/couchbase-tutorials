@@ -4,15 +4,15 @@ path: "/tutorial-quickstart-nextjs-capella"
 title: Using Next.js with Couchbase NodeJS SDK
 short_title: Next.js with Node SDK
 description:
-  - Learn to build a basic server-side rendered webapp using Next.js and Couchbase
+  - Build a basic REST API using using Next.js and Couchbase Nodejs SDK
   - See how you can fetch data from Couchbase without exposing API routes
-  - Extend your application using Next.js API routes to handle Create, Update, and Delete operations
-content_type: tutorial
+  - Explore CRUD operations in action with Couchbase
+content_type: quickstart
 filter: sdk
 technology:
   - kv
-  - index
   - query
+  - index
 tags:
   - Next.js
 sdk_language:
