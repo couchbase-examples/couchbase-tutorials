@@ -5,7 +5,7 @@ path: "/tutorial-quickstart-scala-webservers"
 title: Quickstart in Couchbase with Scala
 short_title: Scala Quickstart
 description:
-  - Learn how to build a REST API using popular Scala web frameworks and Couchbase
+  - Learn how to build a REST API using Scala and Couchbase
   - Get experience with JSON data modeling in Couchbase, and the Scala SDK using case classes and the circe library
   - Write SQL++ queries that can filter data with parameters obtained from the REST API
 content_type: quickstart
@@ -34,7 +34,7 @@ length: 30 Mins
 
 To run this prebuilt project, you will need:
 
-- Scala 2, version 2.12 or higher installed
+- Scala 2, version 2.13.9 or higher installed
 - Code Editor installed (IntelliJ IDEA, Eclipse, or Visual Studio Code)
 - Set up Couchbase, using one of the two options below
 
@@ -53,7 +53,7 @@ git clone https://github.com/couchbase-examples/scala-quickstart
 
 ### Database and Web Server Configuration
 
-All configuration for communication with the database and the three web servers is stored in the `/src/main/resources/application.conf` file.  This includes the connection string, username, and password for Couchbase, and the port numbers for Play/Akka http/htt4ps.  
+All configuration for communication with the database and the three web servers is stored in the `/src/main/resources/application.conf` file.  This includes the connection string, username, and password for Couchbase, and the port number for the API server.  
 
 The default username for Couchbase server is assumed to be `Administrator` and the default password is assumed to be `password`.  If these are different in your environment you will need to change them before running the application.
 
@@ -66,7 +66,7 @@ To enable the tutorial code to establish a connection to Capella, you will need 
 - enable the flag `capella = true` in `application.conf`
 - add a bucket to Capella with the same `bucket-name` as the one defined in `application.conf`
 - make sure your `username` in `application.conf` is [configured for access](https://docs.couchbase.com/cloud/get-started/configure-cluster-access.html) to this bucket
-- change the `host` in `application.conf` to the **Wide Area Network** address in Capella -> Cluster -> `your_cluster_name` -> Connect. See the image below:
+- change the `host` in `application.conf` to the **Public Connection String** address in Capella -> Databases -> `your_database_name` -> Connect. See the image below:
   ![capella_host_address](./connect_wan.png)
 
 Note that for simplicity, trust certificate checking has been disabled as part of the tutorial by setting this in the `SecurityConfig`. If you want to learn more, see the [security options](https://docs.couchbase.com/scala-sdk/current/ref/client-settings.html#security-options) as part of the SDK client settings.
@@ -88,11 +88,7 @@ sbt run
 
 The application will keep running until you provide a line of input, after which it will shut down the web servers.
 
-You can launch your browser and go to each web server's Swagger start page:
-
-* [Akka HTTP server](http://localhost:8081/docs)
-* [http4s server](http://localhost:8082/docs)
-* [Play server](http://localhost:8083/docs)
+You can launch your browser and go to API server's [Swagger start page](http://locahost:8080/docs/).
 
 ## What We'll Cover
 
@@ -106,9 +102,9 @@ Simple REST APIs using the Scala Couchbase SDK with the following endpoints:
 
 ## Document Structure
 
-We will be setting up REST APIs with three of the commonly used frameworks with Scala: [Play](https://www.playframework.com/), [Akka http](https://github.com/akka/akka-http) and [http4s](https://http4s.org/). Endpoint descriptions and [Swagger documentation](https://swagger.io/) is created through the [tapir framework](https://tapir.softwaremill.com/).
+We will be hosting up REST APIs using embedded Netty webserver. Endpoint descriptions and [Swagger documentation](https://swagger.io/) is created through the [tapir framework](https://tapir.softwaremill.com/).
 
-The REST APIs will be used manage user profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
+The REST APIs will be used to manage user profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
 
 ```json
 {
@@ -277,14 +273,6 @@ Take notice of the SQL++ syntax and how it targets the `bucket`.`scope`.`collect
 
 > *from getProfiles method of Controllers/ProfileController.cs*
 
-### Running The Tests
-
-To run the standard unit and integration tests, use the following commands:
-
-```shell
-sbt test
-```
-
 ## Conclusion
 
-Setting up a basic REST API in Spring Boot with Couchbase is fairly simple.  This project when run with Couchbase Server 7 installed creates a bucket in Couchbase, an index for our parameterized [SQL++ (N1QL) query](https://docs.couchbase.com/scala-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+Setting up a basic REST API in Scala with Couchbase is fairly simple.  This project when run with Couchbase Server 7 installed creates a bucket in Couchbase, an index for our parameterized [SQL++ (N1QL) query](https://docs.couchbase.com/scala-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
