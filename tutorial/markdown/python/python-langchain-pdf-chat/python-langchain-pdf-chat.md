@@ -37,9 +37,11 @@ This tutorial will demonstrate how to -
 
 - [Python](https://www.python.org/downloads/) 3.10 or higher installed.
 - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
-- Couchbase Cluster (Self Managed or Capella) with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
+- Couchbase Cluster (Self Managed or Capella) version 7.6+ with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
 
 > Note that this tutorial is designed to work with the latest Python SDK version (4.2.0+) for Couchbase. It will not work with the older Python SDK versions.
+
+> Vector Search in Couchbase is only supported at Couchbase Version 7.6+. 
 
 ## Quick Start Guide:
 
