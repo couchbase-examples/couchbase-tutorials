@@ -4,7 +4,7 @@ path: "/tutorial-quickstart-java-springdata"
 title: Quickstart in Couchbase with Java and Spring Data
 short_title: Java and Spring Data
 description:
-  - Learn how to configure Spring Data with Couchbase
+  - Learn to build a REST API in Java using Spring Data and Couchbase
   - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart

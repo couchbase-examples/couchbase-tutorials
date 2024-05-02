@@ -5,7 +5,7 @@ path: "/tutorial-quickstart-java-springboot"
 title: Quickstart in Couchbase with Java and Spring Boot
 short_title: Java and Spring Boot
 description:
-  - Learn how to configure Spring Boot with Couchbase
+  - Learn to build a REST API in Java using Spring Boot and Couchbase
   - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
   - Explore CRUD operations in action with Couchbase
 content_type: quickstart
