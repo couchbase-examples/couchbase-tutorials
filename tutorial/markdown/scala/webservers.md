@@ -28,8 +28,6 @@ length: 30 Mins
 
 <!-- TODO:  Figure out how to add width to image size in try it now links -->
 
-[![Try it now!](https://da-demo-images.s3.amazonaws.com/runItNow_outline.png?couchbase-example=scala-quickstart-repo&source=github)](https://gitpod.io/#https://github.com/couchbase-examples/scala-quickstart)
-
 ## Prerequisites
 
 To run this prebuilt project, you will need:
@@ -48,7 +46,7 @@ To run this prebuilt project, you will need:
 ## Source Code
 
 ```shell
-git clone https://github.com/couchbase-examples/scala-quickstart
+git clone https://github.com/couchbase-examples/scala-quickstart.git
 ```
 
 ### Database and Web Server Configuration
@@ -61,19 +59,15 @@ The default username for Couchbase server is assumed to be `Administrator` and t
 
 This section is only needed when you've opted for using a Couchbase Capella cloud instance for following the tutorial.
 
-
 To enable the tutorial code to establish a connection to Capella, you will need to make a couple of changes:
-- enable the flag `capella = true` in `application.conf`
-- add a bucket to Capella with the same `bucket-name` as the one defined in `application.conf`
+- import `travel-sample` sample bucket with `airline` collection onto your Capella cluster
 - make sure your `username` in `application.conf` is [configured for access](https://docs.couchbase.com/cloud/get-started/configure-cluster-access.html) to this bucket
 - change the `host` in `application.conf` to the **Public Connection String** address in Capella -> Databases -> `your_database_name` -> Connect. See the image below:
   ![capella_host_address](./connect_wan.png)
 
-Note that for simplicity, trust certificate checking has been disabled as part of the tutorial by setting this in the `SecurityConfig`. If you want to learn more, see the [security options](https://docs.couchbase.com/scala-sdk/current/ref/client-settings.html#security-options) as part of the SDK client settings.
-
 Possible issues:
 - The Scala SDK does not support a bucket path as part of the `host` name in `application.conf`, use `bucket-name` instead
-- It is not supported to create a bucket in Capella through the SDK. If you get a `CouchbaseException: Failed to create bucket`,
+- It is not supported to create a bucket in Capella through the SDK. If you get a `Error: unable to find bucket <bucket-name>`,
   please make sure you've created the bucket through the Capella user interface, and the name lines up with `bucket-name` in `application.conf`
 
 ## Running The Application
@@ -94,160 +88,171 @@ You can launch your browser and go to API server's [Swagger start page](http://l
 
 Simple REST APIs using the Scala Couchbase SDK with the following endpoints:
 
-- [POST a Profile](#post-a-profile) – Create a new user profile
-- [GET a Profile by Key](#get-a-profile-by-key) – Get a specific profile
-- [PUT Profile](#put-profile) – Update a profile
-- [DELETE Profile](#delete-profile) – Delete a profile
-- [GET Profiles by Searching](#get-profiles-by-searching)  – Get all profiles matching first or last Name
+- [POST an airline](#post-an-airline) – Create a new airline record
+- [GET an airline by Key](#get-an-airline-by-key) – Get a specific airline
+- [PUT airline](#put-airline) – Update an airline
+- [DELETE airline](#delete-airline) – Delete an airline
+- [GET airlines by searching](#get-airlines-by-searching)  – Get all airlines matching provided name or code
 
 ## Document Structure
 
 We will be hosting up REST APIs using embedded Netty webserver. Endpoint descriptions and [Swagger documentation](https://swagger.io/) is created through the [tapir framework](https://tapir.softwaremill.com/).
 
-The REST APIs will be used to manage user profile documents. Our profile document will have an auto-generated UUID for its key, first and last name of the user, an email, and hashed password. For this demo we will store all profile information in just one document in a collection named `profile`:
+The REST APIs will be used to manage airline records. Our airline document will have an auto-generated UUID for its key,
+name of the airline as well as its country, callsign and both IATA and ICAO codes. For this demo we will store all airline information in 
+just one document in a collection named `airline`:
 
 ```json
 {
-  "pid": "b181551f-071a-4539-96a5-8a3fe8717faf",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@couchbase.com",
-  "saltedPassword": "$2a$10$tZ23pbQ1sCX4BknkDIN6NekNo1p/Xo.Vfsttm.USwWYbLAAspeWsC"
+  "id": "b181551f-071a-4539-96a5-8a3fe8717faf",
+  "name": "CouchAir",
+  "country": "zz",
+  "callsign": "BASE",
+  "iata": "CBA",
+  "icao": "CBAR"
 }
 ```
-
-As we can see, user's passwords will be encrypted in the database. This is achieved this through a [bcrypt Scala wrapper](https://github.com/t3hnar/scala-bcrypt).
 
 ## Let's Review the Code
 
 To begin clone the repo and open it up in the IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
 
-## POST a Profile
+## POST an Airline
 
 For CRUD operations we will use the [Key Value operations](https://docs.couchbase.com/scala-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) in order to save it to the database.
 
-If we look at the the `ProfileController` trait, found in the controllers folder and navigate to the postProfile function, then we can see the following type signature:
+If we look at the the `AirlineController` trait, found in the controllers folder and navigate to the postAirline function, then we can see the following type signature:
 
 ```scala
-def postProfile(profileInput: ProfileInput): F[Either[String, Profile]]
+def postAirline(airlineInput: AirlineInput): F[Either[String, Airline]]
 ```
 
-The abstract definitions in `ProfileController` (and `CouchbaseConnection`) are generalized over some effect `F`, making it easier to switch between implementations such as `Future` and `IO`. This will help in defining our different REST APIs and also make it easier to test our code. 
+The abstract definitions in `AirlineController` (and `CouchbaseConnection`) are generalized over some effect `F`, making it easier to switch between implementations such as `Future` and `IO`. This will help in defining our different REST APIs and also make it easier to test our code. 
 
-Within the `F` type parameter, we can see that we return an `Either[String, Profile]]` representing an error string, or a successful result with the `Profile` case class.
+Within the `F` type parameter, we can see that we return an `Either[String, Airline]]` representing an error string, or a successful result with the `Airline` case class.
 
-The input for posting a `Profile` is a `ProfileInput`:
+The input for posting an `Airline` is an `AirlineInput`:
 
 ```scala
-final case class ProfileInput(
-    firstName: String,
-    lastName: String,
-    email: String,
-    password: String
-)
+final case class AirlineInput(
+                                     name: String,
+                                     country: String,
+                                     callsign: String,
+                                     iata: String,
+                                     icao: String
+                             )
 ```
 
-The implementation for `postProfile` in `CouchbaseProfileController` will salt the password and create a `UUID`, which are returned as part of the `Profile` datatype.
+The implementation for `postAirline` in `CouchbaseAirlineController` will transform the input object into airline model instance:
 ```scala
-final case class Profile(
-    pid: UUID,
-    firstName: String,
-    lastName: String,
-    email: String,
-    saltedPassword: String
-)
+final case class Airline(
+                                id: Int32,
+                                name: String,
+                                country: String,
+                                callsign: String,
+                                iata: String,
+                                icao: String
+                        )
 
-def fromProfileInput(profileInput: ProfileInput): Try[Profile] = {
-  profileInput match {
-    case ProfileInput(firstName, lastName, email, password) =>
-      for {
-        salted <- password.bcryptSafeBounded
-      } yield Profile(UUID.randomUUID(), firstName, lastName, email, salted)
+def fromAirlineInput(airlineInput: AirlineInput): Try[Airline] = {
+  airlineInput match {
+    case AirlineInput(name, country, callsign, iata, icao) => Airline(UUID.randomUUID(), name, country, callsign, iata, icao)
   }
 }
 ```
 
-Our `Profile` document is ready to be persisted to the database.  We create call to the `collection` using the local variable `profileCollection: Future[Collection]` and then call the `insert` method  and passing it the UUID from the `Profile` as the key. 
+Our `Airline` document is ready to be persisted to the database.  We create call to the `collection` using the local variable `airlineCollection: Future[Collection]` and then call the `insert` method  and passing it the UUID from the `Airline` as the key. 
 
-Note that the [Scala SDK has support for various types of JSON](https://docs.couchbase.com/scala-sdk/current/howtos/json.html) commonly used within the Scala community. Here we use the [circe](https://circe.github.io/circe/) JSON library to convert the `Profile` with `.asJson` and insert it. 
+Note that the [Scala SDK has support for various types of JSON](https://docs.couchbase.com/scala-sdk/current/howtos/json.html) commonly used within the Scala community. Here we use the [circe](https://circe.github.io/circe/) JSON library to convert the `Airline` with `.asJson` and insert it. 
 
 Once the document is inserted we then return the document saved and the result all as part of the same object back to the user.
 
 ```scala
-override def postProfile(profileInput: ProfileInput): Future[Either[String, Profile]] = {
+override def postAirline(airlineInput: AirlineInput): Future[Either[String, Airline]] = {
+  import io.circe.syntax._
   for {
-    pc <- profileCollection
-    profile <- Profile.fromProfileInput(profileInput) match {
+    ac <- airlineCollection
+    airline <- Airline.fromAirlineInput(airlineInput) match {
       case Failure(exception) => Future.successful(Left(exception.toString))
-      case Success(p) =>
-        pc.insert[io.circe.Json](p.pid.toString, p.asJson) map (_ => Right(p))
+      case Success(a) =>
+        ac.insert[io.circe.Json](a.id.toString, a.asJson) map (_ => Right(a))
     }
-  } yield profile
+  } yield airline
 }
 ```
+> *from controllers/CouchbaseAirlineController.scala*
 
-> *from controllers/CouchbaseProfileController.scala*
+## GET an Airline by Key
 
-## GET a Profile by Key
-
-Navigate to the `getProfile` function in the `CouchbaseProfileController` file in the controllers folder.  We only need the profile ID `pid` from the user to retrieve a particular profile document using a basic key-value operation which is passed in the method signature as a string.  Since we created the document with a unique key we can use that key to find the document in the scope and collection it is stored in.
+Navigate to the `getAirline` function in the `CouchbaseAirlineController` file in the controllers folder.  We only need 
+the airline `id` from the user to retrieve a particular airline document using a basic key-value operation which is 
+passed in the method signature as a string. Since we created the document with a unique key we can use that key to find 
+the document in the scope and collection it is stored in.
 
 ```scala
- override def getProfile(pid: UUID): Future[Either[String, Profile]] = {
+override def getAirline(id: UUID): Future[Either[String, Airline]] = {
   for {
-    pc <- profileCollection
-    res <- pc.get(pid.toString)
-  } yield res.contentAsCirceJson[Profile]
+    ac <- airlineCollection
+    res <- ac.get(id.toString).map(_.contentAsCirceJson[Airline]).
+            recover { case _: DocumentNotFoundException => Left(s"Could not retrieve Airline. ID: $id was not found.")}
+  } yield res
 }
 ```
 
-> *from getProfile function in controllers/CouchbaseProfileController.scala and using the implicit class in models/CirceGetResult.*
+> *from getAirline function in controllers/CouchbaseAirlineController.scala and using the implicit class in models/CirceGetResult.*
 
 
-## PUT Profile
+## PUT Airline
 
-Now let's navigate to the `putProfile` function of the `CouchbaseProfileController` class. The entire document gets replaced except for the document key and the `pid` field.  We create a call to the `collection` using the `upsert` method and then return the document saved and the result just as we did in the previous endpoint.
+Now let's navigate to the `putAirline` function of the `CouchbaseAirlineController` class. The entire document gets
+replaced except for the document key and the `id` field.  We create a call to the `collection` using the `upsert` method
+and then return the document saved and the result just as we did in the previous endpoint.
 
-The only difference in implementation with `postProfile`) is the following line:
+The only difference in implementation with `postAirline` is the following line:
 ```scala
-pc.upsert[io.circe.Json](p.pid.toString, p.asJson)
+ac.upsert[io.circe.Json](args.id.toString, p.asJson)
 ```
 
-> *from update method of controllers/CouchbaseProfileController.scala*
+> *from update method of controllers/CouchbaseAirlineController.scala*
 
-## DELETE Profile
+## DELETE Airline
 
-Navigate to the `deleteProfile` function in the `CouchbaseProfileController` class. We only need the `Key` or id from the user to remove a document using a basic key-value operation.
+Navigate to the `deleteAirline` function in the `CouchbaseAirlineController` class. We only need the `Key` or `id` from
+the user to remove a document using a basic key-value operation.
 
 ```scala
-pc.remove(pid.toString)
+ac.remove(id.toString)
 ```
 
-> *from deleteProfile method of controllers/CouchbaseProfileController.scala*
+> *from deleteAirline method of controllers/CouchbaseAirlineController.scala*
 
-## GET Profiles by Searching
+## GET Airlines by Searching
 
-[SQL++ (N1QL)](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents. We will use a SQL++ query to search for profiles with Skip, Limit, and Search options.
+[SQL++ (N1QL)](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents.
+We will use a SQL++ query to search for profiles with Skip, Limit, and Search options.
 
-Navigate to the `getProfiles` method in the `CouchbaseProfileController` class.  This endpoint is different from all of the others because it makes the SQL++ query rather than a key-value operation. This means more overhead because the query engine is involved. We did create an [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html) specific for this query, so it should be performant.
+Navigate to the `getAirlines` method in the `CouchbaseAirlineController` class. This endpoint is different from all
+the others because it makes the SQL++ query rather than a key-value operation. This means more overhead because the 
+query engine is involved. You may need to create an [index](https://docs.couchbase.com/server/current/learn/services-and-indexes/indexes/indexing-and-query-perf.html)
+specific for this query on fields `name`, `country`, `callsign`, `icao`, `iata`, so it would be performant.
 
-The individual `skip` (optional), `limit` (optional), and `search` values are obtained from their respective parameters. Then, we build our SQL++ query using the parameters that were passed in.
+The individual `skip` (optional), `limit` (optional), and `search` values are obtained from their respective parameters.
+Then, we build our SQL++ query using the parameters that were passed in.
 
 Finally, we pass that `query` to the `cluster.query` method and return the result.
 
 Take notice of the SQL++ syntax and how it targets the `bucket`.`scope`.`collection`.
 
 ```scala
-  override def profileListing(
-                               limit: Option[Int],
-                               skip: Option[Int],
-                               search: String
-                             ): Future[Either[String, List[Profile]]] = {
+  override def airlineListing(args: AirlineListingInput): Future[Either[String, List[Airline]]] = {
   val query = s"SELECT p.* FROM " +
-    s"`${quickstartConfig.couchbase.bucketName}`.`_default`.`${quickstartConfig.couchbase.collectionName}` p " +
-    s"WHERE lower(p.firstName) LIKE '%${search.toLowerCase}%' " +
-    s"OR lower(p.lastName) LIKE '%${search.toLowerCase}%'  " +
-    s"LIMIT " + limit.getOrElse(5) + " OFFSET " + skip.getOrElse(0)
+          s"`${quickstartConfig.couchbase.bucketName}`.`_default`.`${quickstartConfig.couchbase.collectionName}` a " +
+          s"WHERE lower(a.name) LIKE '%${args.search.toLowerCase}%' " +
+          s"OR lower(a.country) LIKE '%${args.search.toLowerCase}%'  " +
+          s"OR lower(a.callsign) LIKE '%${args.search.toLowerCase}%'  " +
+          s"OR lower(a.iata) LIKE '%${args.search.toLowerCase}%'  " +
+          s"OR lower(a.icao) LIKE '%${args.search.toLowerCase}%'  " +
+          s"LIMIT " + args.limit.getOrElse(5) + " OFFSET " + args.skip.getOrElse(0)
 
   import cats.implicits._
   for {
@@ -260,19 +265,14 @@ Take notice of the SQL++ syntax and how it targets the `bucket`.`scope`.`collect
         )
       )
     )
-    profiles <- Future.fromTry(
+    airlines <- Future.fromTry(
       rows
-        .rowsAs[io.circe.Json]
-        .map(_.map(json => json.as[Profile].left.map(_.getMessage())))
+              .rowsAs[io.circe.Json]
+              .map(_.map(json => json.as[Airline].left.map(_.getMessage())))
     )
-    accumulatedProfiles = profiles.toList.sequence
-  } yield accumulatedProfiles
+    accumulatedAirlines = airlines.toList.sequence
+  } yield accumulatedAirlines
 }
-
 ```
 
-> *from getProfiles method of Controllers/ProfileController.cs*
-
-## Conclusion
-
-Setting up a basic REST API in Scala with Couchbase is fairly simple.  This project when run with Couchbase Server 7 installed creates a bucket in Couchbase, an index for our parameterized [SQL++ (N1QL) query](https://docs.couchbase.com/scala-sdk/current/howtos/n1ql-queries-with-sdk.html), and showcases basic CRUD operations needed in most applications.
+> *from getAirlines method of controllers/CouchbaseAirlineController.scala*
