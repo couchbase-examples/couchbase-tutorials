@@ -36,7 +36,7 @@ To run this prebuilt project, you will need:
 
   - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-> Note that this tutorial is designed to work with the latest Next.js SDK (4.x) for Couchbase. It will not work with older versions of Next.js without adapting the code.
+> Note that this tutorial is designed to work with the latest [Node.js SDK (4.x)](https://docs.couchbase.com/nodejs-sdk/current/hello-world/overview.html) for Couchbase. It will not work with older versions of Next.js without adapting the code.
 
 - Ensure that the Nodejs version is [compatible](https://docs.couchbase.com/nodejs-sdk/current/project-docs/compatibility.html) with the Couchbase SDK.
 - Loading Travel Sample Bucket
