@@ -46,7 +46,7 @@ Playground works in three different modes:
 
 Try Couchbase Playground now by following the link below:
 
-- <a href="https://couchbase.live" target="_blank">Open Couchbase Playground</a> 
+- <a href="https://cloud.couchbase.com/playground" target="_blank">Open Couchbase Playground</a> 
 
 ## Local Installation
 
