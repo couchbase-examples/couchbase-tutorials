@@ -228,7 +228,7 @@ ac.remove(id.toString)
 
 ## GET Airlines by Searching
 
-[SQL++ (N1QL)](https://docs.couchbase.com/dotnet-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents.
+[SQL++ (N1QL)](https://docs.couchbase.com/scala-sdk/current/howtos/n1ql-queries-with-sdk.html) is a powerful query language based on SQL, but designed for structured and flexible JSON documents.
 We will use a SQL++ query to search for profiles with Skip, Limit, and Search options.
 
 Navigate to the `getAirlines` method in the `CouchbaseAirlineController` class. This endpoint is different from all
