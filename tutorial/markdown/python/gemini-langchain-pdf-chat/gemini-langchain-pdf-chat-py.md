@@ -273,7 +273,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [GoogleGenerativeAIEmbeddings](https://python.langchain.com/v0.2/docs/integrations/text_embedding/google_generative_ai/) embeddings, to convert the text chunks into embeddings.
+- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [GoogleGenerativeAIEmbeddings](https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai/) embeddings, to convert the text chunks into embeddings.
 - **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
@@ -407,29 +407,12 @@ def save_to_vector_store(uploaded_file, vector_store):
             docs = loader.load()
 ```
 
-### Split Documents
-
-This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/):
-
-- chunk_size: 1500: This parameter specifies that each chunk should contain approximately 1500 characters.
-- chunk_overlap: 150: This parameter ensures that there is an overlap of 150 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
-
-At the end split_documents method splits the large document into smaller LangChain documents based on above defined parameters.
-
-```python
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1500, chunk_overlap=150
-)
-
-doc_pages = text_splitter.split_documents(docs)
-```
-
 ### Add Documents to Vector Store
 
 We will utilize the vector store created at [Initialize Embeddings and Couchbase Vector Store](#initialize-embeddings-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the Google's generative AI embeddings to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
 
 ```python
-vector_store.add_documents(doc_pages)
+vector_store.add_documents(docs)
 ```
 
 ## Chat With PDF
@@ -473,11 +456,11 @@ prompt = ChatPromptTemplate.from_template(template)
 
 ### LLM Chain
 
-Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [Google AI](https://python.langchain.com/v0.2/docs/integrations/llms/google_ai/) LLM Model with gemini model. We can also set other parameters like model, API_KEY, temperature to be used for this model.
+Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [Google AI](https://python.langchain.com/docs/integrations/llms/google_ai/) LLM Model with gemini model. We can also set other parameters like model, API_KEY, temperature to be used for this model.
 
 ```python
 llm = GoogleGenerativeAI(
-    temperature=0.3,
+    temperature=0.1,
     model="models/gemini-1.5-pro",
 )
 ```
