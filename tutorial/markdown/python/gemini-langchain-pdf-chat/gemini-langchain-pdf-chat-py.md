@@ -49,7 +49,7 @@ This tutorial will demonstrate how to -
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbaselabs/rag-gemini-demo.git
+git clone https://github.com/couchbase-examples/rag-gemini-demo.git
 ```
 
 ### Install Dependencies
