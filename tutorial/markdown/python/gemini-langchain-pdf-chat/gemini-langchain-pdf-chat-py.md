@@ -508,10 +508,9 @@ chain_without_rag = (
 ### User Asks A Question
 
 This section creates an interactive chat interface where users can ask questions based on the uploaded PDF. The key steps are:
-
 1. Display a chat input box with the prompt "Ask a question based on the PDF".
-   When the user submits a question:
-2. Display the user's question in the chat interface
+2. When the user submits a question:
+   - Display the user's question in the chat interface
    - Add the user's question to the chat history.
    - Create a placeholder for streaming the assistant's response.
    - Use the chain.stream(question) method to generate the response from the RAG chain.
