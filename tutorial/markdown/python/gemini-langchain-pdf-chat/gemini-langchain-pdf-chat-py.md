@@ -7,7 +7,7 @@ short_title: PDF Chat App with Gemini
 description:
   - Construct a PDF Chat App with LangChain, Google Gemini, Couchbase Vector Search, and Streamlit.
   - Learn to upload PDFs into Couchbase Vector Store with LangChain and Gemini.
-  - Discover how to use RAG’s for context-based Q&A’s from PDFs with Gemini.
+  - Discover how to use RAG for context-based Q&A from PDFs using Gemini.
 content_type: tutorial
 filter: sdk
 technology:
