@@ -1,13 +1,13 @@
 ---
 # frontmatter
-path: "/tutorial-gemini-langchain-pdf-chat"
+path: "/tutorial-nvidia-nim-llama3-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Google Gemini and Couchbase Python SDK
-short_title: PDF Chat App with Gemini
+title: Build PDF Chat App With Nvidia NIM, LLama3 and Couchbase Python SDK
+short_title: PDF Chat App with Nvidia NIM
 description:
-  - Construct a PDF Chat App with LangChain, Google Gemini, Couchbase Vector Search, and Streamlit.
-  - Learn to upload PDFs into Couchbase Vector Store with LangChain and Gemini.
-  - Discover how to use RAG for context-based Q&A from PDFs using Gemini.
+  - Construct a PDF Chat App with LangChain, Nvidia NIM, Meta LLama3, Couchbase Vector Search, and Streamlit.
+  - Learn to upload PDFs into Couchbase Vector Store with LangChain and Nvidia Embeddings.
+  - Discover how to use RAG for context-based Q&A from PDFs using Nvidia NIM and Meta LLama3.
 content_type: tutorial
 filter: sdk
 technology:
@@ -16,7 +16,8 @@ technology:
 tags:
   - Streamlit
   - LangChain
-  - Google Gemini
+  - Nvidia NIM
+  - LLama3
 sdk_language:
   - python
 length: 45 Mins
@@ -24,32 +25,39 @@ length: 45 Mins
 
 ## Introduction
 
-Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you’ll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
+Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you'll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
 
 This tutorial will demonstrate how to -
 
 - Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search.
 - Chunk PDFs into Vectors with [LangChain](https://langchain.com/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into Couchbase.
-- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [Google AI](https://aistudio.google.com/) for generating Embeddings and LLM.
-- Craft an elegant UI with Streamlit. All these components come together to create a seamless, AI-powered chat experience.
+- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [NVidia NIM](https://www.nvidia.com/en-in/ai/) for generating Embeddings and LLM with model from [Meta's LLama series](https://llama.meta.com/llama3/).
+- Craft an elegant UI with [Streamlit](https://streamlit.io/). All these components come together to create a seamless, AI-powered chat experience.
 
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/) 3.10 or higher installed.
 - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
 - Couchbase Cluster (Self Managed or Capella) version 7.6+ with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
-- API Key for Google Gemini. You can get it from [Google AI Studio](https://aistudio.google.com/) or [Google Cloud](https://cloud.google.com)
+- API Key for Nvidia NIM. You can get it from [Nvidia NIM build website](https://build.nvidia.com/). It is more discussed in the [Method to get Nvidia NIM API Key](#method-to-get-nvidia-nim-api-key).
 
 > Note that this tutorial is designed to work with the latest Python SDK version (4.2.0+) for Couchbase. It will not work with the older Python SDK versions.
 
 > Vector Search in Couchbase is only supported at Couchbase Version 7.6+. 
+
+### Method to get Nvidia NIM API Key
+
+- Head over to https://build.nvidia.com/ which is the Nvidia NIM cloud website.
+- Search any model, like you may go to [LLama 3 Model](https://build.nvidia.com/meta/llama3-70b).
+- At the experience tab, there will be a chat window and a code window which is running. On the top right of code window, you will find an option to <strong> Get API Key </strong>
+- Fill in your details, register and get access to Nvidia's API Key to build stuff using their NIM architecture.
 
 ## Quick Start Guide:
 
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/rag-gemini-demo.git
+git clone https://github.com/couchbase-examples/nvidia-rag-demo.git
 ```
 
 ### Install Dependencies
@@ -100,7 +108,7 @@ You may also create a vector index using Search UI on both [Couchbase Capella](h
 
 #### Index Definition
 
-Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 768 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
+Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 1024 dimensions based on NV-Embed Model's output Dimnesions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
 
 ```json
 {
@@ -136,7 +144,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
               "dynamic": false,
               "fields": [
                 {
-                  "dims": 768,
+                  "dims": 1024,
                   "index": true,
                   "name": "embedding",
                   "similarity": "dot_product",
@@ -186,7 +194,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
 Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to secrets.toml and replace the placeholders with the actual values for your environment. All configuration for communication with the database is read from the environment variables.
 
 ```bash
-GOOGLE_API_KEY = "<google_ai_api_key>"
+NVIDIA_API_KEY = "<nvidia_nim_api_key>"
 DB_CONN_STR = "<connection_string_for_couchbase_cluster>"
 DB_USERNAME = "<username_for_couchbase_cluster>"
 DB_PASSWORD = "<password_for_couchbase_cluster>"
@@ -197,7 +205,7 @@ INDEX_NAME = "<name_of_fts_index_with_vector_support>"
 LOGIN_PASSWORD = "<password to access the streamlit app>"
 ```
 
-> [Google AI](https://aistudio.google.com) API Key is required for usage in generating embedding and querying LLM.
+> [Nvidia NIM](https://build.nvidia.com) API Key is required for usage in generating embedding and querying LLM.
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
@@ -225,7 +233,9 @@ On the left sidebar, you'll find an option to upload a PDF document you want to 
 
 ![Main Screen Default View](main_screen_default_view.png)
 
-In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF (Couchbase Logo - <img src="image.ico" alt="couchbase" width="16" style="display: inline;" /> ) , and one without the PDF context (Bot Logo - 🤖). This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content.
+In the main area, there's a chat screen where you can ask questions about the uploaded PDF document. You will receive two responses: one with context from the PDF (Couchbase Logo - <img src="image.ico" alt="couchbase" width="16" style="display: inline;" /> ) , and one without the PDF context (Bot Logo - 🤖). This demonstrates how the Retrieval Augmented Generation (RAG) model enhances the answers provided by the language model using the PDF content. 
+
+> In the below image, notice how the result with bot image is hallucinating with different results like Molten Lava and Magma Data Company where as with RAG result, we are getting much more to the point result.
 
 ![Main Screen With Message View](main_screen_message_view.png)
 
@@ -238,7 +248,7 @@ The PDF Chat application leverages two powerful concepts: [Retrieval-Augmented G
 RAG is like having two helpers:
 
 - **Retriever**: This helper looks through all the PDF documents to find the most relevant information based on your question or prompt.
-- **Generator**: This helper is like a large language model (e.g., GPT-4, Gemini) that can understand natural language and generate human-like responses.
+- **Generator**: This helper is like a large language model (e.g., GPT-4, Gemini, LLama3) that can understand natural language and generate human-like responses.
 
 Here's how RAG works:
 
@@ -256,7 +266,7 @@ The PDF Chat app uses LangChain to convert the text from the PDF documents into 
 
 When a user asks a question or provides a prompt:
 
-- The app converts the user's query into an embedding using LangChain's embedding models (e.g., Google's text-004-embeddings embeddings).
+- The app converts the user's query into an embedding using LangChain's embedding models (e.g., Nvidia's NV-Embed-QA embeddings).
 - [Couchbase's Vector Search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#vector-search) capability is utilized, which supports search indexes. A dedicated search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
 - The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
 - The nearest neighbor embeddings represent the most semantically similar passages or sections from the PDF documents compared to the user's query.
@@ -273,12 +283,25 @@ In the PDF Chat app, LangChain is used for several tasks:
 
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [GoogleGenerativeAIEmbeddings](https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai/) embeddings, to convert the text chunks into embeddings.
+- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [Nvidia QA Embedding Models](https://python.langchain.com/docs/integrations/text_embedding/nvidia_ai_endpoints/) embeddings, to convert the text chunks into embeddings.
 - **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
 
-By combining Vector Search with Couchbase, RAG, and LangChain; the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models. This approach provides users with a powerful and intuitive way to explore and interact with large PDF files.
+### Nvidia NIM
+
+[NVIDIA NIM](https://www.nvidia.com/en-in/ai/) is a set of easy-to-use inference microservices for accelerating the deployment of foundation models on any cloud or data center and helping to keep your data secure. This set of accelerated inference microservices allows organizations to run AI models anywhere - in the cloud, data center, workstations, and PCs. You may learn more about using [Nvidia NIM with Langchain here](https://blog.langchain.dev/nvidia-nim/)
+
+Here are some of its benefits: 
+
+- **Simplifying Development**: NIM simplifies the development of AI applications by providing developers with industry-standard APIs. These APIs are compatible with popular large language model (LLM) development frameworks, making it easy to integrate AI models into your application.
+- **Seamless Integration**: NIM containers seamlessly integrate with the Kubernetes (K8s) ecosystem and many others. This integration allows efficient orchestration and management of containerized AI applications, facilitating seamless AI inferencing at scale.
+- **Optimized Performance**: NVIDIA NIM leverages optimized inference engines from NVIDIA and the community, including TensorRT, TensorRT-LLM, Triton Inference Server, and more. These engines improve AI application performance and efficiency while delivering lower-latency, high-throughput inference
+- **Customizable and Secure**: Developers can easily customize NIM by deploying models fine-tuned to deliver the best accuracy for their specific use case. Moreover, NIM ensures the security and control of generative AI applications and data with prebuilt, cloud-native microservices.
+
+<br />
+
+By combining Vector Search with Couchbase, RAG, and LangChain; the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models. These LLMs run on Nvidia NIM infrastructure to provide simple and fast inferences. This approach provides users with a powerful and intuitive way to explore and interact with large PDF files.
 
 ## Let us Understand the Flow
 
@@ -319,17 +342,17 @@ def connect_to_couchbase(connection_string, db_username, db_password):
 
 ## Initialize Embeddings and Couchbase Vector Store
 
-We will now initialize [Google Generative AI Embeddings](https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
+We will now initialize [Nvidia Embed QA 4 Model](https://build.nvidia.com/nvidia/embed-qa-4) powered by [langchain integration](https://python.langchain.com/docs/integrations/text_embedding/nvidia_ai_endpoints/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
 
 We will also initialize Couchbase vector store with Couchbase bucket info. Firstly we will connect to Couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
 
 We will define the bucket, scope, collection and index names from [Environment Variables](#setup-environment-config).
 
 ```python
-# Use Google Generative AI Embeddings
-embedding = GoogleGenerativeAIEmbeddings(
-    model="models/text-embedding-004",
-)
+# Use Nvidia's embeddings model
+embedding = NVIDIAEmbeddings(
+    nvidia_api_key=os.getenv("NVIDIA_API_KEY"),
+    model="NV-Embed-QA")
 
 # Connect to Couchbase Vector Store
 cluster = connect_to_couchbase(DB_CONN_STR, DB_USERNAME, DB_PASSWORD)
@@ -409,7 +432,7 @@ def save_to_vector_store(uploaded_file, vector_store):
 
 ### Add Documents to Vector Store
 
-We will utilize the vector store created at [Initialize Embeddings and Couchbase Vector Store](#initialize-embeddings-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the Google's generative AI embeddings to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
+We will utilize the vector store created at [Initialize Embeddings and Couchbase Vector Store](#initialize-embeddings-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the Nvidia's Embed QA Model to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
 
 ```python
 vector_store.add_documents(docs)
@@ -456,13 +479,10 @@ prompt = ChatPromptTemplate.from_template(template)
 
 ### LLM Chain
 
-Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [Google AI](https://python.langchain.com/docs/integrations/llms/google_ai/) LLM Model with gemini model. We can also set other parameters like model, API_KEY, temperature to be used for this model.
+Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [Meta's LLama3](https://build.nvidia.com/meta/llama3-70b) LLM Model powered and inferenced using [Nvidia's NIM Infrastructure](https://python.langchain.com/docs/integrations/chat/nvidia_ai_endpoints/). We can also set other parameters like model, API_KEY, temperature to be used for this model.
 
 ```python
-llm = GoogleGenerativeAI(
-    temperature=0.1,
-    model="models/gemini-1.5-pro",
-)
+llm = ChatNVIDIA(temperature=0, model="meta/llama3-70b-instruct"
 ```
 
 ### Combining to a single chain
@@ -492,10 +512,7 @@ Question: {question}"""
 
 prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
 
-llm_without_rag = GoogleGenerativeAI(
-    temperature=0,
-    model="models/gemini-1.5-pro",
-)
+llm_without_rag = ChatNVIDIA(temperature=0, model="meta/llama3-70b-instruct")
 
 chain_without_rag = (
     {"question": RunnablePassthrough()}
