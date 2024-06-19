@@ -501,27 +501,6 @@ chain = (
 )
 ```
 
-### Chain without RAG
-
-We will repeat the same process as above however this will not have the context from the vector store. Basically we will directly call LLM from the user question. Basically, every step is same just that we will not use retriever.
-
-```python
-template_without_rag = """You are a helpful bot. Answer the question as truthfully as possible.
-
-Question: {question}"""
-
-prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
-
-llm_without_rag = ChatNVIDIA(temperature=0, model="meta/llama3-70b-instruct")
-
-chain_without_rag = (
-    {"question": RunnablePassthrough()}
-    | prompt_without_rag
-    | llm_without_rag
-    | StrOutputParser()
-)
-```
-
 ### User Asks A Question
 
 This section creates an interactive chat interface where users can ask questions based on the uploaded PDF. The key steps are:
@@ -567,29 +546,3 @@ if question := st.chat_input("Ask a question based on the PDF"):
     )
 ```
 
-### Stream Answer without context
-
-Similar to last section, we will get answer from LLM of the user question. Answers from here are also shown in the UI to showcase difference on how using RAG gives better and more context enabled results.
-
-```python
-# stream the response from the pure LLM
-
-# Add placeholder for streaming the response
-with st.chat_message("ai", avatar="🤖"):
-    message_placeholder_pure_llm = st.empty()
-
-pure_llm_response = ""
-
-for chunk in chain_without_rag.stream(question):
-    pure_llm_response += chunk
-    message_placeholder_pure_llm.markdown(pure_llm_response + "▌")
-
-message_placeholder_pure_llm.markdown(pure_llm_response)
-st.session_state.messages.append(
-    {
-        "role": "assistant",
-        "content": pure_llm_response,
-        "avatar": "🤖",
-    }
-)
-```
