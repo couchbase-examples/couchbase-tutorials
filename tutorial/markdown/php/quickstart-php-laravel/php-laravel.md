@@ -22,7 +22,7 @@ length: 30 Mins
 ---
 
 <!--
-  The name of this file does not need to be `tutorial-quickstart-java-springboot` because it is in the `tutorials/java/markdown` directory, so we can just call it `spring-boot`. The idea is that we can leave off `tutorial-quickstart` as a prefix.
+    The name of this file does not need to be `tutorial-quickstart-php-laravel` because it is in the `tutorials/php/markdown` directory, so we can just call it `php-laravel`. The idea is that we can leave off `tutorial-quickstart` as a prefix.
 -->
 
 <!-- TODO:  Figure out how to add width to image size in try it now links -->
@@ -34,97 +34,87 @@ length: 30 Mins
 To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
-  - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
-- Java SDK 17 or higher installed
-- Code Editor installed (IntelliJ IDEA, Eclipse, or Visual Studio Code)
-- Maven command line
+    - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
+- PHP installed
+- Code Editor installed (Visual Studio Code, PhpStorm, or Sublime Text)
+- Composer command line
 
 ### Source Code
 
 ```shell
-git clone https://github.com/couchbase-examples/java-springboot-quickstart.git
+git clone https://github.com/couchbase-examples/php-laravel-quickstart.git
 ```
 
 ### Install Dependencies
 
 ```shell
-mvn package
+composer install
 ```
 
-> Note: Maven automatically restores packages when building the project. in IntelliJ IDEA or Eclipse depending on IDE configuration.
+> Note: Composer automatically installs the required dependencies when building the project.
 
 ### Database Server Configuration
 
-- The `CouchbaseConfig` class is a Spring configuration class responsible for setting up the connection to a Couchbase database in a Spring Boot application. It defines two beans:
+The `CouchbaseServiceProvider` class is a Laravel service provider class responsible for setting up the connection to a Couchbase database in a Laravel application. It defines the following configurations:
 
-  - `getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
+ - `couchbase.cluster`: This configuration specifies the Couchbase cluster connection using the provided hostname, username, and password.
+ - `couchbase.bucket`: This configuration specifies the Couchbase bucket connection using the provided bucket name.
+ - `couchbase.airlineCollection`: This configuration specifies the airline collection in the Couchbase bucket.
+ - `couchbase.airportCollection`: This configuration specifies the airport collection in the Couchbase bucket.
+ - `couchbase.routeCollection`: This configuration specifies the route collection in the Couchbase bucket.
 
-  - `getCouchbaseBucket(Cluster cluster)`: This bean retrieves a Couchbase bucket from a cluster, ensuring it exists and is ready within a timeout, throwing exceptions if not found or if connection times out.
 
-### Application Properties
+### Application Environment
 
-You need to configure the connection details to your Couchbase Server in the `application.properties` file located in the `src/main/resources` directory.
+You need to configure the connection details to your Couchbase Server in the `.env` file located in the root directory of the project.
 
 In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
 
 The connection string should be in the following format:
 
-```properties
-spring.couchbase.bootstrap-hosts=couchbases://xyz.cloud.couchbase.com
-OR
-spring.couchbase.bootstrap-hosts=localhost
+```dotenv
+DB_CONN_STR=couchbases://xyz.cloud.couchbase.com
+DB_USERNAME=Administrator
+DB_PASSWORD=password
+DB_BUCKET=travel-sample
 ```
 
-The couchbases protocol is used for secure connections.
-
-```properties
-spring.couchbase.bootstrap-hosts=DB_CONN_STR
-spring.couchbase.bucket.user=DB_USERNAME
-spring.couchbase.bucket.password=DB_PASSWORD
-```
-
-For more information on the spring boot connection string, see [Common Application Properties](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html).
+For more information on the Laravel connection string, see the [Database Configuration](https://laravel.com/docs/8.x/database#configuration) documentation.
 
 ## Running The Application
 
 ### Directly on the machine
 
-At this point the application is ready, and you can run it via your IDE or from the terminal:
+At this point the application is ready, and you can run it via the command line:
 
 ```shell
-mvn spring-boot:run -e -X
+php artisan serve
 ```
 
-> Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `application.properties` file.
+> Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `.env` file.
 
 ### Docker
 
 Build the Docker image
 
 ```sh
-docker build -t java-springboot-quickstart .
+docker build -t php-laravel-quickstart .
 ```
 
 Run the Docker image
 
 ```sh
-docker run -d --name springboot-container -p 8080:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
+docker run -d --name laravel-container -p 8000:8000 php-laravel-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
 ```
 
-Note: The `application.properties` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
-If you choose not to pass the environment variables, you can update the `application.properties` file in the `src/main/resources` folder.
+Note: The `.env` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
+If you choose not to pass the environment variables, you can update the `.env` file in the root directory.
 
-Once the application is running, you can see the logs in the console. You should see the following log message indicating that the application has started successfully:
-
-![Spring Boot Application](./app-startup-spring-boot.png)
-
-Once the site is up and running you can launch your browser and go to the [Swagger Start Page](http://localhost:8080/swagger-ui/index.html) to test the APIs.
-
-![Swagger UI](./swagger-documentation-spring-boot.png)
+Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000).
 
 ## Data Model
 
-For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
+For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL queries to join the collections.
 
 ![Data Model](./travel_sample_data_model.png)
 
@@ -136,155 +126,131 @@ Our airline document will have a structure similar to the following example:
 
 ```json
 {
-  "name": "Couchbase Airways",
-  "callsign": "Couchbase",
-  "iata": "CB",
-  "icao": "CBA",
-  "country": "United States"
+    "name": "Couchbase Airways",
+    "callsign": "Couchbase",
+    "iata": "CB",
+    "icao": "CBA",
+    "country": "United States"
 }
 ```
 
 ## Let's Review the Code
 
-To begin open the repository in an IDE of your choice to learn about how to create, read, update and delete documents in your Couchbase Server.
+To begin, open the repository in an IDE of your choice to learn about how to create, read, update, and delete documents in your Couchbase Server.
 
 ### Code Organization
 
-- `src/test/java`: Contains integration tests.
-- `src/main/java/org/couchbase/quickstart/springboot/repositories`: Contains the repository implementation.
-- `src/main/java/org/couchbase/quickstart/springboot/models`: Contains the data model.
-- `src/main/java/org/couchbase/quickstart/springboot/controllers`: Contains the RESTful API controllers.
-- `src/main/java/org/couchbase/quickstart/springboot/services`: Contains the service classes.
+- `tests/Feature`: Contains integration tests.
+- `app/Http/Controllers`: Contains the controller classes.
+- `app/Models`: Contains the model classes.
+- `app/Services`: Contains the service classes.
+- `app/Repositories`: Contains the repository classes.
 
 ### Model
 
-`Airline.java`
-This class represents the data model for an airline. It contains fields such as ID, type, name, IATA code, ICAO code, callsign, and country. The class uses annotations for validation.
+`Airline.php`
+This class represents the data model for an airline. It contains fields such as ID, type, name, IATA code, ICAO code, callsign, and country.
 
 ### Controller
 
-`AirlineController.java`
+`AirlineController.php`
 This class defines the RESTful API endpoints for managing airlines. It handles HTTP requests for creating, updating, deleting, and retrieving airlines. It also provides endpoints for listing airlines by various criteria.
 
-An example of the pattern for the `GET` mapping is shown below.For the full code, see the [AirlineController.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/controllers/AirlineController.java).
+An example of the pattern for the `GET` mapping is shown below. For the full code, see the [AirlineController.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Http/Controllers/AirlineController.php).
 
-```java
-@RestController
-@RequestMapping("/api/v1/airline")
-@Slf4j
-public class AirlineController {
+```php
+namespace App\Http\Controllers;
 
-   private final AirlineService airlineService;
+use App\Models\Airline;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
-    public AirlineController(AirlineService airlineService) {
-        this.airlineService = airlineService;
-    }
-
-    // Error messages
-    private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
-    private static final String DOCUMENT_NOT_FOUND = "Document Not Found";
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Get an airline by ID")
-    @Description(value = "...")
-    public ResponseEntity<Airline> getAirline(@PathVariable String id) {
-        try {
-            Airline airline = airlineService.getAirlineById(id);
-            if (airline != null) {
-                return new ResponseEntity<>(airline, HttpStatus.OK);
-            } else {
-                log.error(DOCUMENT_NOT_FOUND + ": " + id);
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-        } catch (DocumentNotFoundException e) {
-            log.error(DOCUMENT_NOT_FOUND + ": " + id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            log.error(INTERNAL_SERVER_ERROR + ": " + e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+class AirlineController extends Controller
+{
+        public function getAirline($id)
+        {
+                try {
+                        $airline = Airline::find($id);
+                        if ($airline) {
+                                return response()->json($airline, Response::HTTP_OK);
+                        } else {
+                                return response()->json(null, Response::HTTP_NOT_FOUND);
+                        }
+                } catch (\Exception $e) {
+                        return response()->json($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+                }
         }
-    }
 }
-
 ```
 
 ### Service
 
-`AirlineServiceImpl.java`
-This class implements the AirlineService interface. It acts as an intermediary between the controller and repository, providing business logic for managing airlines.
+`AirlineService.php`
+This class implements the business logic for managing airlines. It acts as an intermediary between the controller and repository.
 
-An example of the pattern for AirlineService is shown below. For the full code, see the [AirlineServiceImpl.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/services/AirlineServiceImpl.java).
+An example of the pattern for `AirlineService` is shown below. For the full code, see the [AirlineService.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Services/AirlineService.php).
 
-```java
-public interface AirlineService {
+```php
+namespace App\Services;
 
-    Airline getAirlineById(String id);
+use App\Models\Airline;
+use App\Repositories\AirlineRepository;
 
-    ...
+class AirlineService
+{
+        private $airlineRepository;
+
+        public function __construct(AirlineRepository $airlineRepository)
+        {
+                $this->airlineRepository = $airlineRepository;
+        }
+
+        public function getAirlineById($id)
+        {
+                return $this->airlineRepository->findById($id);
+        }
 }
-
-@Service
-public class AirlineServiceImpl implements AirlineService {
-
-    private final AirlineRepository airlineRepository;
-
-    public AirlineServiceImpl(AirlineRepository airlineRepository) {
-        this.airlineRepository = airlineRepository;
-    }
-
-    @Override
-    public Airline getAirlineById(String id) {
-        return airlineRepository.findById(id);
-    }
-
-    ...
-}
-
 ```
 
 ### Repository
 
-`AirlineRepositoryImpl.java`
-This class implements the AirlineRepository interface. It interacts with the Couchbase database to perform CRUD operations on airline documents. It uses the Couchbase Java SDK to execute queries and operations.
+`AirlineRepository.php`
+This class interacts with the Couchbase database to perform CRUD operations on airline documents.
 
-An example of the pattern for AirlineRepository is shown below. For the full code, see the [AirlineRepositoryImpl.java](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/java/org/couchbase/quickstart/springboot/repositories/AirlineRepositoryImpl.java).
+An example of the pattern for `AirlineRepository` is shown below. For the full code, see the [AirlineRepository.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Repositories/AirlineRepository.php).
 
-```java
-public interface AirlineRepository {
+```php
+namespace App\Repositories;
 
-    Airline findById(String id);
+use App\Models\Airline;
+use Couchbase\Cluster;
+use Couchbase\Bucket;
+use Couchbase\ClusterOptions;
 
-    ...
+class AirlineRepository
+{
+        private $cluster;
+        private $bucket;
+
+        public function __construct()
+        {
+                $this->cluster = new Cluster('couchbase://localhost', ClusterOptions::buildDefault());
+                $this->bucket = $this->cluster->bucket('travel-sample');
+        }
+
+        public function findById($id)
+        {
+                $result = $this->bucket->get($id);
+                return Airline::fromArray($result->value);
+        }
 }
-
-@Repository
-public class AirlineRepositoryImpl implements AirlineRepository {
-
-    private final Cluster cluster;
-    private final Collection airlineCol;
-    private final CouchbaseConfig couchbaseConfig;
-
-    public AirlineRepositoryImpl(Cluster cluster, Bucket bucket, CouchbaseConfig couchbaseConfig) {
-        this.cluster = cluster;
-        this.airlineCol = bucket.scope("inventory").collection("airline");
-        this.couchbaseConfig = couchbaseConfig;
-    }
-
-    @Override
-    public Airline findById(String id) {
-        return airlineCol.get(id).contentAs(Airline.class);
-    }
-
-    ...
-}
-
 ```
 
 ## Mapping Workflow
 
 Mapping workflows describe how the HTTP methods (GET, POST, PUT, DELETE) interact with the `AirlineService` and the underlying database through the `AirlineRepository` to perform various operations on airline data.
 
-A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the following endpoints:
+A simple REST API using Laravel and the `Couchbase PHP SDK` with the following endpoints:
 
 - [Retrieve airlines by ID](#get-mapping-workflow).
 - [Create new airlines with essential information](#post-mapping-workflow).
@@ -295,12 +261,12 @@ A simple REST API using Spring Boot and the `Couchbase SDK version 3.x` with the
 
 ### GET Mapping Workflow
 
-`@GetMapping("/{id}")`
+`public function getAirline($id)`
 
-The GET mapping is triggered when a client sends an HTTP GET request to `/api/v1/airline/{id}` where `{id}` is the unique identifier of the airline.
+The GET mapping is triggered when a client sends an HTTP GET request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline.
 
 1. The `AirlineController` receives the request and extracts the `id` from the URL path.
-2. It then calls the `getAirlineById` method of the `AirlineService`, passing the extracted `id` as a parameter.This function internally calls [get()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#retrieving-documents) to retrieve the airline from the database.
+2. It then calls the `getAirlineById` method of the `AirlineService`, passing the extracted `id` as a parameter. This function internally calls the `findById` method of the `AirlineRepository` to retrieve the airline from the database.
 3. The `AirlineService` interacts with the database through the `AirlineRepository` to find the airline with the specified `id`.
 4. If the airline is found, the `AirlineService` returns it as a response.
 5. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the airline data in the response body as a JSON object.
@@ -308,13 +274,13 @@ The GET mapping is triggered when a client sends an HTTP GET request to `/api/v1
 
 ### POST Mapping Workflow
 
-`@PostMapping("/{id}")`
+`public function createAirline(Request $request)`
 
-The POST mapping is triggered when a client sends an HTTP POST request to `/api/v1/airline/{id}`, where `{id}` is typically a unique identifier generated by the server (not provided by the client).
+The POST mapping is triggered when a client sends an HTTP POST request to `/api/v1/airline`, where the airline data is included in the request body.
 
 1. The client includes the data of the new airline to be created in the request body as a JSON object.
-2. The `AirlineController` receives the request and extracts the `id` from the URL path, but this `id` is not used for creating the airline; it's often generated by the server.
-3. The `AirlineController` calls the `createAirline` method of the `AirlineService`, passing the airline data from the request body. This function internally calls [airlineCol.insert()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#insert) to insert the airline into the database.
+2. The `AirlineController` receives the request and retrieves the airline data from the request body.
+3. The `AirlineController` calls the `createAirline` method of the `AirlineService`, passing the airline data. This function internally calls the `save` method of the `AirlineRepository` to insert the airline into the database.
 4. The `AirlineService` is responsible for creating a new airline and saving it to the database using the `AirlineRepository`.
 5. If the airline is created successfully, the `AirlineService` returns the newly created airline.
 6. The `AirlineController` constructs an HTTP response with a status code of 201 Created and includes the created airline data in the response body as a JSON object.
@@ -322,13 +288,13 @@ The POST mapping is triggered when a client sends an HTTP POST request to `/api/
 
 ### PUT Mapping Workflow
 
-`@PutMapping("/{id}")`
+`public function updateAirline(Request $request, $id)`
 
 The PUT mapping is triggered when a client sends an HTTP PUT request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be updated.
 
 1. The client includes the updated data of the airline in the request body as a JSON object.
 2. The `AirlineController` receives the request, extracts the `id` from the URL path, and retrieves the updated airline data from the request body.
-3. The `AirlineController` calls the `updateAirline` method of the `AirlineService`, passing the `id` and updated airline data. This function internally calls [airlineCol.replace()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#replace) to replace the airline in the database.
+3. The `AirlineController` calls the `updateAirline` method of the `AirlineService`, passing the `id` and updated airline data. This function internally calls the `save` method of the `AirlineRepository` to update the airline in the database.
 4. The `AirlineService` is responsible for updating the airline in the database using the `AirlineRepository`.
 5. If the airline is updated successfully, the `AirlineService` returns the updated airline.
 6. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the updated airline data in the response body as a JSON object.
@@ -336,12 +302,12 @@ The PUT mapping is triggered when a client sends an HTTP PUT request to `/api/v1
 
 ### DELETE Mapping Workflow
 
-`@DeleteMapping("/{id}")`
+`public function deleteAirline($id)`
 
 The DELETE mapping is triggered when a client sends an HTTP DELETE request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be deleted.
 
 1. The `AirlineController` receives the request and extracts the `id` from the URL path.
-2. The `AirlineController` calls the `deleteAirline` method of the `AirlineService`, passing the `id` of the airline to be deleted. This function internally calls [airlineCol.remove()](https://docs.couchbase.com/java-sdk/current/howtos/kv-operations.html#removing) to remove the airline from the database.
+2. The `AirlineController` calls the `deleteAirline` method of the `AirlineService`, passing the `id` of the airline to be deleted. This function internally calls the `delete` method of the `AirlineRepository` to remove the airline from the database.
 3. The `AirlineService` is responsible for deleting the airline from the database using the `AirlineRepository`.
 4. If the airline is deleted successfully, the `AirlineService` performs the deletion operation without returning any response data.
 5. The `AirlineController` constructs an HTTP response with a status code of 204 No Content, indicating that the request was successful, but there is no content to return in the response body.
@@ -349,8 +315,38 @@ The DELETE mapping is triggered when a client sends an HTTP DELETE request to `/
 
 These workflows illustrate how each HTTP method interacts with the `AirlineService` and the underlying database through the `AirlineRepository` to perform various operations on airline data.
 
-## Custom SQL++ Queries
+## Custom SQL Queries
 
+### 1. Get all airlines by country
+
+```php
+public function findByCountry($country, $limit, $offset)
+{
+        $statement = "SELECT airline.id, airline.type, airline.name, airline.iata, airline.icao, airline.callsign, airline.country FROM `travel-sample`.`airline` WHERE country = $country LIMIT $limit OFFSET $offset";
+        $result = $this->cluster->query($statement);
+        $rows = $result->rows();
+        $airlines = [];
+        foreach ($rows as $row) {
+                $airlines[] = Airline::fromArray($row);
+        }
+        return $airlines;
+}
+```
+
+In the above example, we are using the `query` method of the Couchbase PHP SDK to execute the SQL query. We are using placeholders in the query string and passing the actual values as parameters to prevent SQL injection.
+
+Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
+
+### 2. Get all airlines by destination airport
+
+```php
+public function findByDestinationAirport($destinationAirport, $limit, $offset)
+{
+        $statement = "SELECT air.callsign, air.country, air.iata, air.icao, air.id, air.name, air.type " .
+                "FROM (SELECT DISTINCT META(airline).id AS airlineId " .
+                "      FROM `travel-sample`.`route` " .
+                "      JOIN `travel-sample`.`airline` " .
+                "      ON route.airlineid = META(airline).id " .
 ### 1. Get all airlines by country
 
 ```java
