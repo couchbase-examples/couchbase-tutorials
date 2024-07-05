@@ -1,13 +1,13 @@
 ---
 # frontmatter
-path: "/tutorial-python-langchain-pdf-chat"
+path: "/tutorial-gemini-langchain-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase Python SDK and LangChain
-short_title: Build PDF Chat App
+title: Build PDF Chat App With Google Gemini and Couchbase Python SDK
+short_title: PDF Chat App with Gemini
 description:
-  - Construct a PDF Chat App with LangChain, Couchbase Python SDK, Couchbase Vector Search, and Streamlit.
-  - Learn to upload PDFs into Couchbase Vector Store with LangChain.
-  - Discover how to use RAG’s for context-based Q&A’s from PDFs with LLMs.
+  - Construct a PDF Chat App with LangChain, Google Gemini, Couchbase Vector Search, and Streamlit.
+  - Learn to upload PDFs into Couchbase Vector Store with LangChain and Gemini.
+  - Discover how to use RAG for context-based Q&A from PDFs using Gemini.
 content_type: tutorial
 filter: sdk
 technology:
@@ -16,7 +16,7 @@ technology:
 tags:
   - Streamlit
   - LangChain
-  - OpenAI
+  - Google Gemini
 sdk_language:
   - python
 length: 45 Mins
@@ -30,7 +30,7 @@ This tutorial will demonstrate how to -
 
 - Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search.
 - Chunk PDFs into Vectors with [LangChain](https://langchain.com/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into Couchbase.
-- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and LLM.
+- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [Google AI](https://aistudio.google.com/) for generating Embeddings and LLM.
 - Craft an elegant UI with Streamlit. All these components come together to create a seamless, AI-powered chat experience.
 
 ## Prerequisites
@@ -38,6 +38,7 @@ This tutorial will demonstrate how to -
 - [Python](https://www.python.org/downloads/) 3.10 or higher installed.
 - Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
 - Couchbase Cluster (Self Managed or Capella) version 7.6+ with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
+- API Key for Google Gemini. You can get it from [Google AI Studio](https://aistudio.google.com/) or [Google Cloud](https://cloud.google.com)
 
 > Note that this tutorial is designed to work with the latest Python SDK version (4.2.0+) for Couchbase. It will not work with the older Python SDK versions.
 
@@ -48,7 +49,7 @@ This tutorial will demonstrate how to -
 ### Cloning Repo
 
 ```shell
-git clone https://github.com/couchbase-examples/rag-demo.git
+git clone https://github.com/couchbase-examples/rag-gemini-demo.git
 ```
 
 ### Install Dependencies
@@ -99,7 +100,7 @@ You may also create a vector index using Search UI on both [Couchbase Capella](h
 
 #### Index Definition
 
-Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 1536 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
+Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 768 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
 
 ```json
 {
@@ -135,7 +136,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
               "dynamic": false,
               "fields": [
                 {
-                  "dims": 1536,
+                  "dims": 768,
                   "index": true,
                   "name": "embedding",
                   "similarity": "dot_product",
@@ -185,7 +186,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
 Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to secrets.toml and replace the placeholders with the actual values for your environment. All configuration for communication with the database is read from the environment variables.
 
 ```bash
-OPENAI_API_KEY = "<open_ai_api_key>"
+GOOGLE_API_KEY = "<google_ai_api_key>"
 DB_CONN_STR = "<connection_string_for_couchbase_cluster>"
 DB_USERNAME = "<username_for_couchbase_cluster>"
 DB_PASSWORD = "<password_for_couchbase_cluster>"
@@ -196,7 +197,7 @@ INDEX_NAME = "<name_of_fts_index_with_vector_support>"
 LOGIN_PASSWORD = "<password to access the streamlit app>"
 ```
 
-> [OpenAI](https://openai.com) API Key is required for usage in generating embedding and querying LLM.
+> [Google AI](https://aistudio.google.com) API Key is required for usage in generating embedding and querying LLM.
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
@@ -255,7 +256,7 @@ The PDF Chat app uses LangChain to convert the text from the PDF documents into 
 
 When a user asks a question or provides a prompt:
 
-- The app converts the user's query into an embedding using LangChain's embedding models (e.g., OpenAI's embeddings).
+- The app converts the user's query into an embedding using LangChain's embedding models (e.g., Google's text-004-embeddings embeddings).
 - [Couchbase's Vector Search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#vector-search) capability is utilized, which supports search indexes. A dedicated search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
 - The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
 - The nearest neighbor embeddings represent the most semantically similar passages or sections from the PDF documents compared to the user's query.
@@ -272,7 +273,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as OpenAI's embeddings, to convert the text chunks into embeddings.
+- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [GoogleGenerativeAIEmbeddings](https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai/) embeddings, to convert the text chunks into embeddings.
 - **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
@@ -316,17 +317,19 @@ def connect_to_couchbase(connection_string, db_username, db_password):
     return cluster
 ```
 
-## Initialize OpenAI and Couchbase Vector Store
+## Initialize Embeddings and Couchbase Vector Store
 
-We will now initialize [OpenAI embeddings](https://python.langchain.com/docs/integrations/text_embedding/openai/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
+We will now initialize [Google Generative AI Embeddings](https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
 
 We will also initialize Couchbase vector store with Couchbase bucket info. Firstly we will connect to Couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
 
 We will define the bucket, scope, collection and index names from [Environment Variables](#setup-environment-config).
 
 ```python
-# Use OpenAI Embeddings
-embedding = OpenAIEmbeddings()
+# Use Google Generative AI Embeddings
+embedding = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+)
 
 # Connect to Couchbase Vector Store
 cluster = connect_to_couchbase(DB_CONN_STR, DB_USERNAME, DB_PASSWORD)
@@ -404,29 +407,12 @@ def save_to_vector_store(uploaded_file, vector_store):
             docs = loader.load()
 ```
 
-### Split Documents
-
-This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/):
-
-- chunk_size: 1500: This parameter specifies that each chunk should contain approximately 1500 characters.
-- chunk_overlap: 150: This parameter ensures that there is an overlap of 150 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
-
-At the end split_documents method splits the large document into smaller LangChain documents based on above defined parameters.
-
-```python
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1500, chunk_overlap=150
-)
-
-doc_pages = text_splitter.split_documents(docs)
-```
-
 ### Add Documents to Vector Store
 
-We will utilize the vector store created at [Initialize OpenAI and Couchbase Vector Store](#initialize-openai-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the OpenAI embeddings to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
+We will utilize the vector store created at [Initialize Embeddings and Couchbase Vector Store](#initialize-embeddings-and-couchbase-vector-store). In this we will add the documents using add_documents method of Couchbase vector store. This method will utilize the Google's generative AI embeddings to create embeddings(vectors) from text and add it to Couchbase documents in the specified collection.
 
 ```python
-vector_store.add_documents(doc_pages)
+vector_store.add_documents(docs)
 ```
 
 ## Chat With PDF
@@ -470,11 +456,13 @@ prompt = ChatPromptTemplate.from_template(template)
 
 ### LLM Chain
 
-Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [ChatOpenAI](https://python.langchain.com/docs/integrations/chat/openai/) LLM Model. We can also set other parameters like model, API_KEY, temperature to be used for this model.
+Large Language Models (LLMs) are a core component of LangChain. LangChain does not serve its own LLMs, but rather provides a standard interface for interacting with many LLMs. To be specific, this interface is one that takes as input a string and returns a string. We will use [Google AI](https://python.langchain.com/docs/integrations/llms/google_ai/) LLM Model with gemini model. We can also set other parameters like model, API_KEY, temperature to be used for this model.
 
 ```python
-# Use OpenAI GPT 4 as the LLM for the RAG
-llm = ChatOpenAI(temperature=0, model="gpt-4-1106-preview", streaming=True)
+llm = GoogleGenerativeAI(
+    temperature=0.1,
+    model="models/gemini-1.5-pro",
+)
 ```
 
 ### Combining to a single chain
@@ -504,7 +492,10 @@ Question: {question}"""
 
 prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
 
-llm_without_rag = ChatOpenAI(model="gpt-4-1106-preview")
+llm_without_rag = GoogleGenerativeAI(
+    temperature=0,
+    model="models/gemini-1.5-pro",
+)
 
 chain_without_rag = (
     {"question": RunnablePassthrough()}
@@ -517,10 +508,9 @@ chain_without_rag = (
 ### User Asks A Question
 
 This section creates an interactive chat interface where users can ask questions based on the uploaded PDF. The key steps are:
-
 1. Display a chat input box with the prompt "Ask a question based on the PDF".
-   When the user submits a question:
-2. Display the user's question in the chat interface
+2. When the user submits a question:
+   - Display the user's question in the chat interface
    - Add the user's question to the chat history.
    - Create a placeholder for streaming the assistant's response.
    - Use the chain.stream(question) method to generate the response from the RAG chain.

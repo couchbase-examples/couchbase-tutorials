@@ -21,7 +21,6 @@ length: 10 Mins
 ---
 
 - [Couchbase Capella](#couchbase-capella)
-- [Playground](#playground)
 - [Local Installation](#local-installation)
 - [Container Deployment](#container-deployment)
 - [Cloud Deployment](#cloud-deployment)
@@ -33,20 +32,6 @@ Couchbase Capella provides a free 30 day trial of Couchbase cluster, it is the e
 You can sign-up for Couchbase Capella following the link below:
 
 - [Deploy with Couchbase Capella](https://developer.couchbase.com/tutorial-capella-sign-up-ui-overview?learningPath=learn/capella)
-
-## Playground
-
-With Couchbase Playground, developers can get a temporary sandbox Couchbase cluster to experiment for free with no download or installation required for the developer. A web browser is all you need to experiment with various SDKs. Couchbase Playground also enables developers to 'Test-Drive' their Couchbase Capella trial instance with code samples from 9 SDK for many programming languages. Developers can even modify these code examples and run them against a Couchbase database, all from within the browser.
-
-Playground works in three different modes:
-
-- Zero-friction session-less mode
-- Short-lived sandbox session
-- Long-lived Capella session
-
-Try Couchbase Playground now by following the link below:
-
-- <a href="https://couchbase.live" target="_blank">Open Couchbase Playground</a> 
 
 ## Local Installation
 

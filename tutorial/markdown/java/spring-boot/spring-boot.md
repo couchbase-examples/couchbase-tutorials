@@ -2,12 +2,12 @@
 # frontmatter
 path: "/tutorial-quickstart-java-springboot"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Start with Java and Spring Boot
+title: Quickstart in Couchbase with Java and Spring Boot
 short_title: Java and Spring Boot
 description:
-  - Learn how to configure Spring Data with Couchbase
+  - Learn to build a REST API in Java using Spring Boot and Couchbase
   - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
-  - Build a simple REST APIs that stores user profiles on a Couchbase cluster
+  - Explore CRUD operations in action with Couchbase
 content_type: quickstart
 filter: sdk
 technology:
@@ -26,42 +26,6 @@ length: 30 Mins
 -->
 
 <!-- TODO:  Figure out how to add width to image size in try it now links -->
-
-## Table of Contents
-
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Source Code](#source-code)
-  - [Install Dependencies](#install-dependencies)
-  - [Database Server Configuration](#database-server-configuration)
-  - [Application Properties](#application-properties)
-- [Running The Application](#running-the-application)
-  - [Directly on the machine](#directly-on-the-machine)
-  - [Docker](#docker)
-- [Data Model](#data-model)
-- [Airline Document Structure](#airline-document-structure)
-- [Let's Review the Code](#lets-review-the-code)
-  - [Code Organization](#code-organization)
-  - [Model](#model)
-  - [Controller](#controller)
-  - [Service](#service)
-  - [Repository](#repository)
-- [Mapping Workflow](#mapping-workflow)
-  - [GET Mapping Workflow](#get-mapping-workflow)
-  - [POST Mapping Workflow](#post-mapping-workflow)
-  - [PUT Mapping Workflow](#put-mapping-workflow)
-  - [DELETE Mapping Workflow](#delete-mapping-workflow)
-- [Custom SQL++ Queries](#custom-sql-queries)
-  - [Get all airlines by country](#get-all-airlines-by-country)
-  - [Get all airlines by destination airport](#get-all-airlines-by-destination-airport)
-- [Running The Tests](#running-the-tests)
-  - [Run Individual Tests](#run-individual-tests)
-- [Project Setup Notes](#project-setup-notes)
-- [Contributing](#contributing)
-- [Appendix](#appendix)
-  - [Extending API by Adding New Entity](#extending-api-by-adding-new-entity)
-  - [Running Self Managed Couchbase Cluster](#running-self-managed-couchbase-cluster)
-  - [Swagger Documentation](#swagger-documentation)
 
 ## Getting Started
 
@@ -87,7 +51,7 @@ git clone https://github.com/couchbase-examples/java-springboot-quickstart.git
 mvn package
 ```
 
-> Note: Maven packages auto restore when building the project in IntelliJ IDEA or Eclipse depending on IDE configuration.
+> Note: Maven automatically restores packages when building the project. in IntelliJ IDEA or Eclipse depending on IDE configuration.
 
 ### Database Server Configuration
 
@@ -95,11 +59,11 @@ mvn package
 
   - `getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
 
-  - `getCouchbaseBucket(Cluster cluster)`: This bean creates a Couchbase bucket within the cluster if it doesn't already exist and returns the Bucket object associated with the specified bucket name.
+  - `getCouchbaseBucket(Cluster cluster)`: This bean retrieves a Couchbase bucket from a cluster, ensuring it exists and is ready within a timeout, throwing exceptions if not found or if connection times out.
 
 ### Application Properties
 
-You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.
+You need to configure the connection details to your Couchbase Server in the `application.properties` file located in the `src/main/resources` directory.
 
 In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
 
@@ -144,7 +108,7 @@ docker build -t java-springboot-quickstart .
 Run the Docker image
 
 ```sh
-docker run -d --name springboot-container -p 9440:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
+docker run -d --name springboot-container -p 8080:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
 ```
 
 Note: The `application.properties` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
@@ -166,7 +130,7 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 ## Airline Document Structure
 
-We will be setting up a REST API to manage some airline documents. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. 
+We will be setting up a REST API to manage some airline documents. The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline.
 
 Our airline document will have a structure similar to the following example:
 
@@ -176,7 +140,7 @@ Our airline document will have a structure similar to the following example:
   "callsign": "Couchbase",
   "iata": "CB",
   "icao": "CBA",
-  "country": "United States",
+  "country": "United States"
 }
 ```
 
@@ -387,7 +351,7 @@ These workflows illustrate how each HTTP method interacts with the `AirlineServi
 
 ## Custom SQL++ Queries
 
-1. Get all airlines by country
+### 1. Get all airlines by country
 
 ```java
 
@@ -411,7 +375,7 @@ In the query, we are using the `country` parameter to filter the results by coun
 
 Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
 
-2. Get all airlines by destination airport
+### 2. Get all airlines by destination airport
 
 ```java
  @Override
@@ -437,11 +401,11 @@ Once the query is executed, the `AirlineController` constructs an HTTP response 
 
 ## Running The Tests
 
+This command will execute all the test cases in your project.
+
 ```sh
 mvn test
 ```
-
-This command will execute all the test cases in your project.
 
 ### Run Individual Tests:
 
@@ -467,9 +431,9 @@ mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.RouteIntegration
 
 ## Project Setup Notes
 
-This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/). The HealthCheckController is provided as a santity check and is used in unit tests.
+This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/).
 
-A full list of packages are referenced in the pom.xml file.
+A full list of packages are referenced in the `pom.xml` file.
 
 ## Contributing
 

@@ -1,55 +1,24 @@
 ---
 # frontmatter
 path: "/tutorial-quickstart-java-springdata"
-title: Couchbase With Spring-Boot and Spring Data
-short_title: Spring Data
+title: Quickstart in Couchbase with Java and Spring Data
+short_title: Java and Spring Data
 description:
-  - Build a REST API with Couchbase and Spring Data
-  - Learn how to configure the Couchbase SDK
-content_type: tutorial
+  - Learn to build a REST API in Java using Spring Data and Couchbase
+  - Explore key-based operations and SQL++ querying using Spring Data Couchbase repositories
+  - Explore CRUD operations in action with Couchbase
+content_type: quickstart
 filter: sdk
 technology:
   - kv
   - query
 tags:
+  - REST API
   - Spring Data
 sdk_language:
   - java
 length: 30 Mins
 ---
-
-## Table of Contents
-
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Source Code](#source-code)
-  - [Install Dependencies](#install-dependencies)
-  - [Database Server Configuration](#database-server-configuration)
-  - [Application Properties](#application-properties)
-- [Running the Application](#running-the-application)
-  - [Directly on Machine](#directly-on-machine)
-  - [Using Docker](#using-docker)
-- [Data Model](#data-model)
-- [Airline Document Structure](#airline-document-structure)
-- [Let's Review the Code](#lets-review-the-code)
-  - [Code Organization](#code-organization)
-  - [Repository](#repository)
-  - [Model](#model)
-  - [Controller](#controller)
-  - [Service](#service)
-- [Mapping Workflow](#mapping-workflow)
-  - [GET Mapping Workflow](#get-mapping-workflow)
-  - [POST Mapping Workflow](#post-mapping-workflow)
-  - [PUT Mapping Workflow](#put-mapping-workflow)
-  - [DELETE Mapping Workflow](#delete-mapping-workflow)
-- [Custom SQL++ Queries](#custom-sql-queries)
-- [Running The Tests](#running-the-tests)
-- [Project Setup Notes](#project-setup-notes)
-- [Contributing](#contributing)
-- [Appendix](#appendix)
-  - [Extending API by Adding New Entity](#extending-api-by-adding-new-entity)
-  - [Running Self Managed Couchbase Cluster](#running-self-managed-couchbase-cluster)
-  - [Swagger Documentation](#swagger-documentation)
 
 ## Getting Started
 
@@ -77,30 +46,12 @@ git clone https://github.com/couchbase-examples/java-springdata-quickstart.git
 
 Gradle dependencies:
 
-```groovy
+```gradle
 implementation 'org.springframework.boot:spring-boot-starter-web'
 // spring data couchbase connector
 implementation 'org.springframework.boot:spring-boot-starter-data-couchbase'
 // swagger ui
 implementation 'org.springdoc:springdoc-openapi-ui:1.6.6'
-```
-
-Maven dependencies:
-
-```xml
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-data-couchbase</artifactId>
-</dependency>
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-web</artifactId>
-</dependency>
-<dependency>
-  <groupId>org.springdoc</groupId>
-  <artifactId>springdoc-openapi-ui</artifactId>
-  <version>1.6.6</version>
-</dependency>
 ```
 
 #### Useful Links
@@ -114,37 +65,84 @@ Spring Data couchbase connector can be configured by providing a `@Configuration
 The sample application provides a configuration bean that uses default couchbase login and password:
 
 ```java
+@Slf4j
 @Configuration
+@EnableCouchbaseRepositories
 public class CouchbaseConfiguration extends AbstractCouchbaseConfiguration {
+
+  @Value("#{systemEnvironment['DB_CONN_STR'] ?: '${spring.couchbase.bootstrap-hosts:localhost}'}")
+  private String host;
+
+  @Value("#{systemEnvironment['DB_USERNAME'] ?: '${spring.couchbase.bucket.user:Administrator}'}")
+  private String username;
+
+  @Value("#{systemEnvironment['DB_PASSWORD'] ?: '${spring.couchbase.bucket.password:password}'}")
+  private String password;
+
+  @Value("${spring.couchbase.bucket.name:travel-sample}")
+  private String bucketName;
 
   @Override
   public String getConnectionString() {
-    // capella
-    // return "couchbases://cb.xyz.cloud.couchbase.com";
-
-    // localhost
-    return "127.0.0.1"
+    return host;
   }
 
   @Override
   public String getUserName() {
-    return "Administrator";
+    return username;
   }
 
   @Override
   public String getPassword() {
-    return "password";
+    return password;
   }
 
   @Override
   public String getBucketName() {
-    return "springdata_quickstart";
+    return bucketName;
   }
 
-  ...
+  @Override
+  public String typeKey() {
+    return "type";
+  }
+
+  @Override
+  @Bean(destroyMethod = "disconnect")
+  public Cluster couchbaseCluster(ClusterEnvironment couchbaseClusterEnvironment) {
+    try {
+      log.debug("Connecting to Couchbase cluster at " + host);
+      return Cluster.connect(getConnectionString(), getUserName(), getPassword());
+    } catch (Exception e) {
+      log.error("Error connecting to Couchbase cluster", e);
+      throw e;
+    }
+  }
+
+  @Bean
+  public Bucket getCouchbaseBucket(Cluster cluster) {
+    try {
+      if (!cluster.buckets().getAllBuckets().containsKey(getBucketName())) {
+        log.error("Bucket with name {} does not exist. Creating it now", getBucketName());
+        throw new BucketNotFoundException(bucketName);
+      }
+      return cluster.bucket(getBucketName());
+    } catch (Exception e) {
+      log.error("Error getting bucket", e);
+      throw e;
+    }
+  }
+
+}
 ```
 
 > _from config/CouchbaseConfiguration.java_
+
+These methods are used to configure and retrieve a Couchbase Cluster and a specific Bucket within that cluster in a Spring application.
+
+- `couchbaseCluster(ClusterEnvironment couchbaseClusterEnvironment)`: This method configures and returns a Cluster instance using the provided ClusterEnvironment. It logs a debug message indicating the connection attempt to the Couchbase cluster. If an error occurs during the connection attempt, it logs an error message and rethrows the exception.
+
+- `getCouchbaseBucket(Cluster cluster)`: This method retrieves a specific Bucket from the given Cluster. It first checks if the bucket exists in the cluster by calling cluster.buckets().getAllBuckets().containsKey(getBucketName()). If the bucket does not exist, it logs an error message, throws a BucketNotFoundException, and stops the application startup. Otherwise, it returns the Bucket instance.
 
 This default configuration assumes that you have a locally running Couchbae server and uses standard administrative login and password for demonstration purpose.
 Applications deployed to production or staging environments should use less privileged credentials created using [Role-Based Access Control](https://docs.couchbase.com/go-sdk/current/concept-docs/rbac.html).
@@ -229,11 +227,11 @@ We will be setting up a REST API to manage some airline documents. Our airline d
   "callsign": "Couchbase",
   "iata": "CB",
   "icao": "CBA",
-  "country": "United States",
+  "country": "United States"
 }
 ```
 
- The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline. 
+The `name` field is the name of the airline. The `callsign` field is the callsign of the airline. The `iata` field is the IATA code of the airline. The `icao` field is the ICAO code of the airline. The `country` field is the country of the airline.
 
 ## Let's Review the Code
 
@@ -250,12 +248,20 @@ To begin clone the repo and open it up in the IDE of your choice to learn about 
 ### Repository
 
 `AirlineRepository.java`
-This interface extends the `CouchbaseRepository` interface and provides methods for CRUD operations. The `@N1qlPrimaryIndexed` annotation creates a primary index on the `airline` collection. The `@ViewIndexed` annotation creates a view index on the `airline` collection. The `@Query` annotation allows us to create custom N1QL queries. The `@ScanConsistency` annotation allows us to specify the scan consistency for the query. The `@Param` annotation allows us to specify parameters for the query.
+This interface extends the `CouchbaseRepository` interface and provides methods for CRUD operations.
+
+- `@Scope("..."):` Specifies the scope of the repository, which helps organize and manage documents within a Couchbase bucket.
+
+- `@Collection("..."):` Specifies the collection within the bucket where the documents are stored.
+
+- `@Repository:` Marks the interface as a repository component in the Spring application context.
+
+- `@ScanConsistency(query = QueryScanConsistency.REQUEST_PLUS)`: Specifies the scan consistency level for queries executed by methods in this repository, ensuring strong consistency for read operations.
 
 ### Model
 
 `Airline.java`
-This class represents an airline document. The `@Document` annotation indicates that this class is a Couchbase document. The `@Field` annotation indicates that the following fields are Couchbase document fields:  `name`, `callsign`, `iata`, `icao`, `country`.
+This class represents an airline document. The `@Document` annotation indicates that this class is a Couchbase document. The `@Field` annotation indicates that the following fields are Couchbase document fields: `name`, `callsign`, `iata`, `icao`, `country`.
 
 ### Controller
 
