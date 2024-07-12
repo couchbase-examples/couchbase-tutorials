@@ -119,6 +119,15 @@ If you choose not to pass the environment variables, you can update the `config/
 
 Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000).
 
+### Verifying the Application
+
+Once the application starts, you can see the details of the application on the logs.
+![Application Startup](./php-quickstart-app-startup.png)
+
+The application will run on port 8000 of your local machine (http://localhost:8000). You will find the Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API endpoints and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+
+![Swagger Documentation](./php-quickstart-swagger.png)
+
 ## Data Model
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL queries to join the collections.
