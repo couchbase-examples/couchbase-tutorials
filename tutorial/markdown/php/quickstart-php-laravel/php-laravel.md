@@ -62,21 +62,28 @@ The `CouchbaseServiceProvider` class is a Laravel service provider class respons
  - `couchbase.airlineCollection`: This configuration specifies the airline collection in the Couchbase bucket.
  - `couchbase.airportCollection`: This configuration specifies the airport collection in the Couchbase bucket.
  - `couchbase.routeCollection`: This configuration specifies the route collection in the Couchbase bucket.
+ - `couchbase.hotelCollection`: This configuration specifies the hotel collection in the Couchbase bucket.
 
 
 ### Application Environment
+You need to configure the connection details to your Couchbase Server in the `config/couchbase.php` file located in the root directory of the project.
 
-You need to configure the connection details to your Couchbase Server in the `.env` file located in the root directory of the project.
+In the `config/couchbase.php` file, update the following variables:
+- `DB_CONN_STR`: Replace with the connection string of your Couchbase cluster.
+- `DB_USERNAME`: Replace with the username of a Couchbase user with access to the bucket.
+- `DB_PASSWORD`: Replace with the password of the Couchbase user.
 
-In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
+Make sure to save the changes after updating the variables in the `config/couchbase.php` file.
 
 The connection string should be in the following format:
 
-```dotenv
-DB_CONN_STR=couchbases://xyz.cloud.couchbase.com
-DB_USERNAME=Administrator
-DB_PASSWORD=password
-DB_BUCKET=travel-sample
+```php
+return [
+    'host' => env('DB_CONN_STR', 'couchbase://127.0.0.1'),
+    'username' => env('DB_USERNAME', 'Administrator'),
+    'password' => env('DB_PASSWORD', 'password'),
+    'bucket' => env('DB_BUCKET', 'travel-sample'),
+];
 ```
 
 For more information on the Laravel connection string, see the [Database Configuration](https://laravel.com/docs/8.x/database#configuration) documentation.
@@ -91,7 +98,7 @@ At this point the application is ready, and you can run it via the command line:
 php artisan serve
 ```
 
-> Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `.env` file.
+> Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `config/couchbase.php` file.
 
 ### Docker
 
@@ -107,8 +114,8 @@ Run the Docker image
 docker run -d --name laravel-container -p 8000:8000 php-laravel-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
 ```
 
-Note: The `.env` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
-If you choose not to pass the environment variables, you can update the `.env` file in the root directory.
+Note: The `config/couchbase.php` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
+If you choose not to pass the environment variables, you can update the `config/couchbase.php` file in the root directory.
 
 Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000).
 
@@ -143,293 +150,163 @@ To begin, open the repository in an IDE of your choice to learn about how to cre
 - `tests/Feature`: Contains integration tests.
 - `app/Http/Controllers`: Contains the controller classes.
 - `app/Models`: Contains the model classes.
-- `app/Services`: Contains the service classes.
-- `app/Repositories`: Contains the repository classes.
-
-### Model
-
-`Airline.php`
-This class represents the data model for an airline. It contains fields such as ID, type, name, IATA code, ICAO code, callsign, and country.
 
-### Controller
+## API Endpoints Documentation
 
-`AirlineController.php`
-This class defines the RESTful API endpoints for managing airlines. It handles HTTP requests for creating, updating, deleting, and retrieving airlines. It also provides endpoints for listing airlines by various criteria.
+### 1. Get List of Airlines
 
-An example of the pattern for the `GET` mapping is shown below. For the full code, see the [AirlineController.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Http/Controllers/AirlineController.php).
-
-```php
-namespace App\Http\Controllers;
-
-use App\Models\Airline;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+**Endpoint:**
 
-class AirlineController extends Controller
-{
-        public function getAirline($id)
-        {
-                try {
-                        $airline = Airline::find($id);
-                        if ($airline) {
-                                return response()->json($airline, Response::HTTP_OK);
-                        } else {
-                                return response()->json(null, Response::HTTP_NOT_FOUND);
-                        }
-                } catch (\Exception $e) {
-                        return response()->json($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
-                }
-        }
-}
-```
+`GET /api/v1/airlines/list`
 
-### Service
+**Description:**
 
-`AirlineService.php`
-This class implements the business logic for managing airlines. It acts as an intermediary between the controller and repository.
+This endpoint retrieves a list of airlines from the database. Clients can optionally filter the results by country and paginate through the results using the `offset` and `limit` query parameters. This helps in managing large datasets by breaking them into smaller, manageable chunks.
 
-An example of the pattern for `AirlineService` is shown below. For the full code, see the [AirlineService.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Services/AirlineService.php).
+**Steps:**
 
-```php
-namespace App\Services;
+1. The client sends a GET request to the endpoint `/api/v1/airlines/list`.
+2. Optionally, the client includes query parameters:
+   - `offset` specifies the number of items to skip before starting to collect the result set.
+   - `limit` specifies the number of items to return.
+   - `country` filters the results to only include airlines from a specific country.
+3. The server processes the request and queries the database for airlines that match the given criteria.
+4. The server returns a list of airlines. If no airlines match the criteria, an appropriate error message is returned.
 
-use App\Models\Airline;
-use App\Repositories\AirlineRepository;
+---
 
-class AirlineService
-{
-        private $airlineRepository;
+### 2. Get Airline by ID
 
-        public function __construct(AirlineRepository $airlineRepository)
-        {
-                $this->airlineRepository = $airlineRepository;
-        }
+**Endpoint:**
 
-        public function getAirlineById($id)
-        {
-                return $this->airlineRepository->findById($id);
-        }
-}
-```
+`GET /api/v1/airlines/{id}`
 
-### Repository
+**Description:**
 
-`AirlineRepository.php`
-This class interacts with the Couchbase database to perform CRUD operations on airline documents.
+This endpoint retrieves detailed information about a specific airline by its ID. This is useful for getting the full profile of an airline, including its callsign, country, IATA code, ICAO code, and name.
 
-An example of the pattern for `AirlineRepository` is shown below. For the full code, see the [AirlineRepository.php](https://github.com/couchbase-examples/php-laravel-quickstart/blob/main/app/Repositories/AirlineRepository.php).
+**Steps:**
 
-```php
-namespace App\Repositories;
+1. The client sends a GET request to the endpoint `/api/v1/airlines/{id}`.
+2. The client includes the airline ID in the path of the request.
+3. The server searches the database for an airline with the specified ID.
+4. If the airline is found, the server returns the airline's details. If the airline is not found, an error message is returned.
 
-use App\Models\Airline;
-use Couchbase\Cluster;
-use Couchbase\Bucket;
-use Couchbase\ClusterOptions;
+---
 
-class AirlineRepository
-{
-        private $cluster;
-        private $bucket;
+### 3. Create a New Airline
 
-        public function __construct()
-        {
-                $this->cluster = new Cluster('couchbase://localhost', ClusterOptions::buildDefault());
-                $this->bucket = $this->cluster->bucket('travel-sample');
-        }
+**Endpoint:**
 
-        public function findById($id)
-        {
-                $result = $this->bucket->get($id);
-                return Airline::fromArray($result->value);
-        }
-}
-```
+`POST /api/v1/airlines/{id}`
 
-## Mapping Workflow
+**Description:**
 
-Mapping workflows describe how the HTTP methods (GET, POST, PUT, DELETE) interact with the `AirlineService` and the underlying database through the `AirlineRepository` to perform various operations on airline data.
+This endpoint allows the creation of a new airline with the specified ID. The client must provide all required airline details in the request body, such as callsign, country, IATA code, ICAO code, and name.
 
-A simple REST API using Laravel and the `Couchbase PHP SDK` with the following endpoints:
+**Steps:**
 
-- [Retrieve airlines by ID](#get-mapping-workflow).
-- [Create new airlines with essential information](#post-mapping-workflow).
-- [Update airline details](#put-mapping-workflow).
-- [Delete airlines](#delete-mapping-workflow).
-- [List all airlines with pagination](#get-mapping-workflow).
-- [List airlines by country and destination airport](#custom-sql-queries).
+1. The client sends a POST request to the endpoint `/api/v1/airlines/{id}`.
+2. The client includes the airline ID in the path and provides the airline details in the request body.
+3. The server validates the provided data to ensure all required fields are present and correctly formatted.
+4. If validation passes, the server saves the new airline in the database. If validation fails, an error message is returned.
 
-### GET Mapping Workflow
+---
 
-`public function getAirline($id)`
+### 4. Update an Existing Airline
 
-The GET mapping is triggered when a client sends an HTTP GET request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline.
+**Endpoint:**
 
-1. The `AirlineController` receives the request and extracts the `id` from the URL path.
-2. It then calls the `getAirlineById` method of the `AirlineService`, passing the extracted `id` as a parameter. This function internally calls the `findById` method of the `AirlineRepository` to retrieve the airline from the database.
-3. The `AirlineService` interacts with the database through the `AirlineRepository` to find the airline with the specified `id`.
-4. If the airline is found, the `AirlineService` returns it as a response.
-5. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the airline data in the response body as a JSON object.
-6. The response is sent back to the client with the airline data if found, or a 404 Not Found response if the airline does not exist.
+`PUT /api/v1/airlines/{id}`
 
-### POST Mapping Workflow
+**Description:**
 
-`public function createAirline(Request $request)`
+This endpoint updates an existing airline or creates a new one if it does not exist. The client must provide the necessary airline details in the request body. This allows updating airline information or adding new airlines to the database.
 
-The POST mapping is triggered when a client sends an HTTP POST request to `/api/v1/airline`, where the airline data is included in the request body.
+**Steps:**
 
-1. The client includes the data of the new airline to be created in the request body as a JSON object.
-2. The `AirlineController` receives the request and retrieves the airline data from the request body.
-3. The `AirlineController` calls the `createAirline` method of the `AirlineService`, passing the airline data. This function internally calls the `save` method of the `AirlineRepository` to insert the airline into the database.
-4. The `AirlineService` is responsible for creating a new airline and saving it to the database using the `AirlineRepository`.
-5. If the airline is created successfully, the `AirlineService` returns the newly created airline.
-6. The `AirlineController` constructs an HTTP response with a status code of 201 Created and includes the created airline data in the response body as a JSON object.
-7. The response is sent back to the client with the newly created airline data.
+1. The client sends a PUT request to the endpoint `/api/v1/airlines/{id}`.
+2. The client includes the airline ID in the path and provides the updated airline details in the request body.
+3. The server validates the provided data to ensure all required fields are present and correctly formatted.
+4. If the airline exists, the server updates the existing record with the new data. If the airline does not exist, the server creates a new airline with the provided details.
+5. The server returns a success message indicating whether the airline was updated or created. If validation fails, an error message is returned.
 
-### PUT Mapping Workflow
+---
 
-`public function updateAirline(Request $request, $id)`
+### 5. Delete an Airline
 
-The PUT mapping is triggered when a client sends an HTTP PUT request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be updated.
+**Endpoint:**
 
-1. The client includes the updated data of the airline in the request body as a JSON object.
-2. The `AirlineController` receives the request, extracts the `id` from the URL path, and retrieves the updated airline data from the request body.
-3. The `AirlineController` calls the `updateAirline` method of the `AirlineService`, passing the `id` and updated airline data. This function internally calls the `save` method of the `AirlineRepository` to update the airline in the database.
-4. The `AirlineService` is responsible for updating the airline in the database using the `AirlineRepository`.
-5. If the airline is updated successfully, the `AirlineService` returns the updated airline.
-6. The `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the updated airline data in the response body as a JSON object.
-7. The response is sent back to the client with the updated airline data if found, or a 404 Not Found response if the airline with the specified ID does not exist.
+`DELETE /api/v1/airlines/{id}`
 
-### DELETE Mapping Workflow
+**Description:**
 
-`public function deleteAirline($id)`
+This endpoint deletes a specific airline from the database by its ID. This is useful for removing outdated or incorrect airline records.
 
-The DELETE mapping is triggered when a client sends an HTTP DELETE request to `/api/v1/airline/{id}`, where `{id}` is the unique identifier of the airline to be deleted.
+**Steps:**
 
-1. The `AirlineController` receives the request and extracts the `id` from the URL path.
-2. The `AirlineController` calls the `deleteAirline` method of the `AirlineService`, passing the `id` of the airline to be deleted. This function internally calls the `delete` method of the `AirlineRepository` to remove the airline from the database.
-3. The `AirlineService` is responsible for deleting the airline from the database using the `AirlineRepository`.
-4. If the airline is deleted successfully, the `AirlineService` performs the deletion operation without returning any response data.
-5. The `AirlineController` constructs an HTTP response with a status code of 204 No Content, indicating that the request was successful, but there is no content to return in the response body.
-6. The response is sent back to the client to indicate the successful deletion of the airline.
+1. The client sends a DELETE request to the endpoint `/api/v1/airlines/{id}`.
+2. The client includes the airline ID in the path of the request.
+3. The server searches the database for an airline with the specified ID.
+4. If the airline is found, the server deletes the airline from the database. If the airline is not found, an error message is returned.
 
-These workflows illustrate how each HTTP method interacts with the `AirlineService` and the underlying database through the `AirlineRepository` to perform various operations on airline data.
+---
 
-## Custom SQL Queries
+### 6. Get Airlines Flying to a Destination Airport
 
-### 1. Get all airlines by country
+**Endpoint:**
 
-```php
-public function findByCountry($country, $limit, $offset)
-{
-        $statement = "SELECT airline.id, airline.type, airline.name, airline.iata, airline.icao, airline.callsign, airline.country FROM `travel-sample`.`airline` WHERE country = $country LIMIT $limit OFFSET $offset";
-        $result = $this->cluster->query($statement);
-        $rows = $result->rows();
-        $airlines = [];
-        foreach ($rows as $row) {
-                $airlines[] = Airline::fromArray($row);
-        }
-        return $airlines;
-}
-```
+`GET /api/v1/airlines/to-airport/{destinationAirportCode}`
 
-In the above example, we are using the `query` method of the Couchbase PHP SDK to execute the SQL query. We are using placeholders in the query string and passing the actual values as parameters to prevent SQL injection.
+**Description:**
 
-Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
+This endpoint retrieves a list of airlines that fly to a specific destination airport. This can be useful for travelers or systems that need to display available airlines for a particular route.
 
-### 2. Get all airlines by destination airport
+**Steps:**
 
-```php
-public function findByDestinationAirport($destinationAirport, $limit, $offset)
-{
-        $statement = "SELECT air.callsign, air.country, air.iata, air.icao, air.id, air.name, air.type " .
-                "FROM (SELECT DISTINCT META(airline).id AS airlineId " .
-                "      FROM `travel-sample`.`route` " .
-                "      JOIN `travel-sample`.`airline` " .
-                "      ON route.airlineid = META(airline).id " .
-### 1. Get all airlines by country
-
-```java
-
- @Override
-    public List<Airline> findByCountry(String country, int limit, int offset) {
-        String statement = "SELECT airline.id, airline.type, airline.name, airline.iata, airline.icao, airline.callsign, airline.country FROM `"
-                + couchbaseConfig.getBucketName() + "`.`inventory`.`airline` WHERE country = $1 LIMIT $2 OFFSET $3";
-        return cluster
-                .query(statement,
-                        QueryOptions.queryOptions().parameters(JsonArray.from(country, limit, offset))
-                                .scanConsistency(QueryScanConsistency.REQUEST_PLUS))
-                .rowsAs(Airline.class);
-  }
-```
-
-In the above example, we are using the `QueryOptions` class to set the `scanConsistency` to `REQUEST_PLUS` to ensure that the query returns the latest data. We are also using the `JsonObject` class to set the `country` parameter in the query. For more information on query options and scan consistency, you can refer to the [Query Options and Scan Consistency](https://docs.couchbase.com/java-sdk/current/howtos/n1ql-queries-with-sdk.html#scan-consistency) documentation.
-
-Finally, we are using the `rowsAs` method to return the query results as a list of `Airline` objects.
-
-In the query, we are using the `country` parameter to filter the results by country. We are also using the `limit` and `offset` parameters to limit the number of results returned and to implement pagination.
-
-Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
-
-### 2. Get all airlines by destination airport
-
-```java
- @Override
-    public List<Airline> findByDestinationAirport(String destinationAirport, int limit, int offset) {
-        String statement = "SELECT air.callsign, air.country, air.iata, air.icao, air.id, air.name, air.type " +
-                "FROM (SELECT DISTINCT META(airline).id AS airlineId " +
-                "      FROM `" + couchbaseConfig.getBucketName() + "`.`inventory`.`route` " +
-                "      JOIN `" + couchbaseConfig.getBucketName() + "`.`inventory`.`airline` " +
-                "      ON route.airlineid = META(airline).id " +
-                "      WHERE route.destinationairport = $1) AS subquery " +
-                "JOIN `" + couchbaseConfig.getBucketName() + "`.`inventory`.`airline` AS air " +
-                "ON META(air).id = subquery.airlineId LIMIT $2 OFFSET $3";
-
-        return ...
-  }
-```
-
-In the query, we are using the `destinationAirport` parameter to filter the results by destination airport. We are also using the `limit` and `offset` parameters to limit the number of results returned and to implement pagination.
-
-We are performing a `JOIN` operation between the `route` and `airline` documents to get the airlines that fly to the specified destination airport. We are using the `META` function to get the ID of the airline document.
-
-Once the query is executed, the `AirlineController` constructs an HTTP response with a status code of 200 OK and includes the list of airlines in the response body as a list of JSON objects.
+1. The client sends a GET request to the endpoint `/api/v1/airlines/to-airport/{destinationAirportCode}`.
+2. The client includes the destination airport code in the path of the request.
+3. Optionally, the client includes query parameters:
+   - `offset` specifies the number of items to skip before starting to collect the result set.
+   - `limit` specifies the number of items to return.
+4. The server processes the request and queries the database for airlines that fly to the specified airport.
+5. The server returns a list of airlines. If no airlines are found, an appropriate error message is returned.
 
 ## Running The Tests
 
 This command will execute all the test cases in your project.
 
 ```sh
-mvn test
+php artisan test
 ```
 
 ### Run Individual Tests:
 
 Additionally, you can run individual test classes or methods using the following commands:
 
-To run the tests for the AirlineIntegrationTest class:
-
+To run the tests for the AirlineTest class:
 ```sh
-mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.AirlineIntegrationTest
+php artisan test --filter AirlineTest
 ```
 
-To run the tests for the AirportIntegrationTest class:
+To run the tests for the AirportTest class:
 
 ```sh
-mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.AirportIntegrationTest
+php artisan test --filter AirportTest
 ```
 
-To run the tests for the RouteIntegrationTest class:
+To run the tests for the RouteTest class:
 
 ```sh
-mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.RouteIntegrationTest
+php artisan test --filter RouteTest
 ```
 
 ## Project Setup Notes
 
-This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/).
+This project was based on the standard [Laravel project](https://laravel.com/docs).
 
-A full list of packages are referenced in the `pom.xml` file.
+A full list of packages are referenced in the `composer.json` file.
+
 
 ## Contributing
 
@@ -439,20 +316,88 @@ Contributions are welcome! If you'd like to contribute to this project, please f
 
 ### Extending API by Adding New Entity
 
-If you would like to add another entity to the APIs, these are the steps to follow:
+If you would like to add another entity to the APIs, follow these steps:
 
-- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/java-sdk/current/howtos/provisioning-cluster-resources.html#collection-management) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
-- Define the routes in a new class in the `controllers` package similar to the existing routes like `AirportController.java`.
-- Define the service in a new class in the `services` package similar to the existing services like `AirportService.java`.
-- Define the repository in a new class in the `repositories` package similar to the existing repositories like `AirportRepository.java`.
-- For integration tests, create a new class in the `controllers` package similar to the existing tests like `AirportIntegrationTest.java`.
+- **Create the new entity (collection) in the Couchbase bucket:** You can create the collection using the [SDK](https://docs.couchbase.com/php-sdk/current/howtos/provisioning-cluster-resources.html#collection-management) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
+  
+- **Define the model:** Create a new model in the `app/Models` directory, similar to the existing `Airline` model. For example, you can create a file `Hotel.php`:
+  ```php
+  namespace App\Models;
+
+  use Illuminate\Database\Eloquent\Model;
+
+  class Hotel extends Model
+  {
+      protected $bucket;
+
+      protected $fillable = [
+          'name',
+          'address',
+          'city',
+          'country',
+          'stars'
+      ];
+
+      public function __construct(array $attributes = [])
+      {
+          parent::__construct($attributes);
+          $this->bucket = app('couchbase.bucket');
+      }
+
+      // Add methods for querying, saving, and deleting Hotel data
+  }
+  ```
+
+- **Define the controller:** Create a new controller in the `app/Http/Controllers` directory, similar to the existing `AirlineController`. For example, you can create a file `HotelController.php`:
+  ```php
+  namespace App\Http\Controllers;
+
+  use Illuminate\Http\Request;
+  use App\Models\Hotel;
+
+  class HotelController extends Controller
+  {
+      // Add methods for handling HTTP requests for the Hotel entity
+  }
+  ```
+
+- **Define the routes:** In the `routes/api.php` file, define the routes for the new entity similar to the existing routes for airlines:
+  ```php
+  Route::prefix('v1/hotels')->group(function () {
+      Route::get('list', 'HotelController@index');
+      Route::get('{id}', 'HotelController@show');
+      Route::post('{id}', 'HotelController@store');
+      Route::put('{id}', 'HotelController@update');
+      Route::delete('{id}', 'HotelController@destroy');
+  });
+  ```
+
+- **Integration tests:** Create a new test class in the `tests/Feature` directory, similar to the existing tests. For example, you can create a file `HotelIntegrationTest.php`:
+  ```php
+  namespace Tests\Feature;
+
+  use Tests\TestCase;
+
+  class HotelIntegrationTest extends TestCase
+  {
+      // Add test methods for the Hotel endpoints
+  }
+  ```
 
 ### Running Self Managed Couchbase Cluster
 
-If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
+If you are running this quickstart with a self-managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
-You need to update the connection string and the credentials in the [`src/main/resources/application.properties`](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/resources/application.properties) file.
+You need to update the connection string and the credentials in the `config/couchbase.php` file:
 
+```env
+DB_CONN_STR_=couchbase://<your-couchbase-server>
+DB_USERNAME=<your-username>
+DB_PASSWORD=<your-password>
+DB_BUCKET=travel-sample
+```
+
+Replace `<your-couchbase-server>`, `<your-username>`, and `<your-password>` with your actual Couchbase server details and credentials.
 > **NOTE:** Couchbase must be installed and running prior to running the Spring Boot app.
 
 ### Swagger Documentation
