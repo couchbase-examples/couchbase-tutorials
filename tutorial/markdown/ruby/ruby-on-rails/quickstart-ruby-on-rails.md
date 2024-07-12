@@ -120,13 +120,13 @@ If you prefer to run this quick start using Docker, we have provided the Dockerf
 
 ```sh
 cd src
-docker build -t couchbase-rails-quickstart .
+docker build -t ruby-on-rails-quickstart .
 ```
 
 - Run the Docker image
 
 ```sh
-docker run --env-file dev.env -p 3000:3000 couchbase-rails-quickstart
+docker run --env-file dev.env -p 3000:3000 ruby-on-rails-quickstart
 ```
 
 > Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
