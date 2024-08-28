@@ -255,7 +255,7 @@ This variable must have the API gateway endpoint of the ChatBedrockStack which c
 
 Once AWS is deployed, we will need to set up couchbase eventing function. This function will add embeddings to Couchbase Database whenever a document is added. Read more about the [Couchbase Eventing Service](https://docs.couchbase.com/server/current/eventing/eventing-overview.html).
 
-We will use import function feature of couchbase eventing. Go to eventing tab in the Web Console of Cluster. You will get an option to import function. Click on it and use upload from computer if any option is asked. There is file named eventingIngest.json present in the root folder of the project. Use this file in import. All the settings will be pre-applied. Click next.
+We will use import function feature of couchbase eventing. Go to eventing tab in the Web Console of Cluster. You will get an option to import function. Click on it and use upload from computer if any option is asked. There is file named `eventingIngest.json` present in the root folder of the project. Use this file in import. All the settings will be pre-applied. Click next.
 
 > We are using _default scope and _default collection for storing eventing temp files, you may use some other collection of your choice. 
 
