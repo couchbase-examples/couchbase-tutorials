@@ -204,7 +204,22 @@ INDEX_NAME=name_of_fts_index_with_vector_support
 
 ### Configuring AWS
 
-We need to set up our AWS Environment and run all the necessary services. 
+We need to set up our AWS Environment and run all the necessary services.
+
+#### Deploy Lambdas to ECR
+
+We will need to use Lambdas deployed as docker container in the [AWS Elastic Container Registry Service](https://aws.amazon.com/ecr/). We have two lambdas in the application at directory `src/lambads`. For Each of the lambdas a new ECR Repository needs to be created.
+
+Firstly build the docker image for the two of them using `docker build` in the respective folder
+
+```bash
+docker build -t <lambda name> .
+```
+
+Lambda name will be chat and ingest for the respective folders. 
+Then use [this guide from AWS](https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html) to understand how to push an image to ECR.
+
+Once it's pushed, we are ready for the next steps.
 
 #### Enable Bedrock
 
