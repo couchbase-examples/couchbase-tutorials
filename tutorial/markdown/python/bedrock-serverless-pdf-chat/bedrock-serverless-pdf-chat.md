@@ -2,13 +2,13 @@
 # frontmatter
 path: "/tutorial-bedrock-serverless-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase, AWS Bedrock using serverless arch
+title: Build PDF Chat App With Couchbase, AWS Bedrock using serverless architecture
 short_title: Build PDF Chat App
 description:
   - Construct a PDF Chat App with AWS Serverless Architecture and Couchbase Capella
-  - Learn to use Couchbase Vector Store, Langchain, Couchbase Eventing
+  - Learn to use Couchbase Vector Store, LangChain, Couchbase Eventing
   - Utilize multiple AWS features to get E2E Serverless Stack
-  - Discover how to use RAG’s for context-based Q&A’s from PDFs with LLM Service from AWS Bedrock.
+  - Discover how to use RAGs for context-based Q&As from PDFs with LLM Service from AWS Bedrock.
 content_type: tutorial
 filter: sdk
 technology:
@@ -353,7 +353,7 @@ In summary, LCEL streamlines the process of building sophisticated natural langu
 
 ![Backend Serverless Architecture](backend_serverless_arch.png)
 
-The whole architecture revolves around the point that embedding a PDF is not a constant task but only sometimes a person would require a new PDF to be inserted. Moreover, chatting is also fairly limited. This architecture ensures that everything keeps on running with minimal costs. Let's understand the flow.
+At its core, this system is designed to optimize resource usage by recognizing that PDF embedding is an intermittent task, not a constant one. By intelligently managing these occasional demands alongside on-demand chat interactions, we've created a solution that maintains high performance while minimizing operational costs. Let's understand the flow.
 
 ### Ingesting PDF Flow
 
@@ -377,11 +377,11 @@ Queue sends the files to the lambda. It's the duty of the lambda to make sure th
 
 #### E. Get Embeddings for Text
 
-Lambda calls AWS Bedrock service to get embedding of a particular text. Bedrock returns the result to Lambda. Here Langchain is used to generate embedding
+Lambda calls AWS Bedrock service to get embedding of a particular text. Bedrock returns the result to Lambda. Here LangChain is used to generate embedding.
 
 #### F. Send Embeddings To Couchbase
 
-Lambda uses Couchbase Python SDK to update the corresponding Couchbase Document. Embedding is added to the Document. Here Langchain's CouchbaseVectorStore is used to abstract multiple methods.
+Lambda uses Couchbase Python SDK to update the corresponding Couchbase Document. Embedding is added to the Document. Here LangChain's `CouchbaseVectorStore` is used to abstract multiple methods.
 
 ### Chat with PDF Flow
 
@@ -389,11 +389,11 @@ This flow is marked with Numbers. We will go through to each step to understand 
 
 #### 1. Ask Question
 
-User asks the question. The question is sent to the Chat API gateway endpoint. This proxy's the data to Chat Lambda which handles all the other interactions.
+User asks the question. The question is sent to the Chat API gateway endpoint. This proxies the data to Chat Lambda which handles all the other interactions.
 
 #### 2. Get Embeddings for Question
 
-Here again Langchain is used. Bedrock Service is used to fetch embeddings for the question. 
+Here again LangChain is used. Bedrock Service is used to fetch embeddings for the question. 
 
 #### 3. Similarity Search
 
@@ -401,7 +401,7 @@ Using Couchbase Vector Store, Similarity search is performed using the embedding
 
 #### 4. Ask Question from LLM
 
-The Question is asked to the LLM provided by AWS Bedrock (Llama3 here). The context which was received from similarity search is also appended to the question of which helps in returning answer context rich.
+The Question is asked to the LLM provided by AWS Bedrock (Llama3 here). The context which was received from similarity search is also appended to the question of which helps in returning context rich answer.
 
 ## Important Components
 
@@ -491,9 +491,9 @@ cluster = connect_to_couchbase(connection_string, username, password)
 embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image-v1")
 ```
 
-#### Use Langchain to get embeddings and store text
+#### Use LangChain to get embeddings and store text
 
-Langchain has a Couchbase Vector Store support. We use this vector store to abstract out all the internals of getting the embeddings and sending it back to couchbase.
+LangChain has a Couchbase Vector Store support. We use this vector store to abstract out all the internals of getting the embeddings and sending it back to couchbase.
 
 We will use `add_texts` method of CouchbaseVectorStore object to add text with appropriate embedding.
 
@@ -510,7 +510,7 @@ cb_vector_store.add_texts([sending_text], ids=[ids])
 
 ### Chat Lambda
 
-This lambda focusses on answering a single question asked by the user. When a question is asked, this lambda uses bedrock to get appropriate embeddings for the question. Then, these embeddings are used by couchbase vector store to do similarity search and get similar documents (Relevant Pages from the PDF) to help in answering. At the end, the question with the whole context is asked from the Bedrock's LLM and the answer is sent back to show to the UI.
+This lambda focusses on answering a single question asked by the user. When a question is asked, this lambda uses bedrock to get appropriate embeddings for the question. Then, these embeddings are used by couchbase vector store to perform similarity search and get similar documents (Relevant Pages from the PDF) to help in answering. At the end, the question with the whole context is asked from the Bedrock's LLM and the answer is sent back to show to the UI.
 
 #### Connect to Couchbase and get bedrock embeddings
 
@@ -524,7 +524,7 @@ embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image
 
 #### Create Vector Store Retriever
 
-Similar to last section, We will create an object for couchbase vector store as part of langchain. However, now as we need to use Couchbase Vector Search feature, the vector store needs to act as a retriever. Therefore, Couchbase Vector Store Retriever as part Langchain Chain Expression Language (LCEL) will be used ahead.
+Similar to last section, We will create an object for couchbase vector store as part of langchain. However, now as we need to use Couchbase Vector Search feature, the vector store needs to act as a retriever. Therefore, Couchbase Vector Store Retriever as part LangChain Chain Expression Language (LCEL) will be used ahead.
 
 ```python
 from langchain_couchbase.vectorstores import CouchbaseVectorStore
@@ -533,11 +533,11 @@ vector_store = get_vector_store(cluster, bucket_name, scope_name, collection_nam
 retriever = vector_store.as_retriever()
 ```
 
-#### Langchain Chain Essentials
+#### LangChain Chain Essentials
 
 After the vector store, we will now set up the question. Whenever we ask questions to LLM, it's a good practice to give some prompt to the LLM to answer more precisely. 
 
-We will also set up the LLM itself from AWS Bedrock as part of Langchain. We are using Meta Llama 3 70b Model here, but you may change based on your preference from bedrock.
+We will also set up the LLM itself from AWS Bedrock as part of LangChain. We are using Meta's Llama3 70b Model here, but you may change based on your preference from bedrock.
 
 ```python
 template = """You are a helpful bot. If you cannot answer based on the context provided, respond with a generic answer. Answer the question as truthfully as possible using the context below:
@@ -579,7 +579,7 @@ We are here using UI powered by streamlit which basically tries to use API gatew
 
 #### PDF Uploading
 
-Let's start with PDF ingestion part. We use streamlit file uploader to get PDF uploaded from system. We send the PDF to temp file and use Langchain's PyPDFLoader to process the PDF so that it becomes consistent with langchain format. 
+Let's start with PDF ingestion part. We use streamlit file uploader to get PDF uploaded from system. We send the PDF to temp file and use LangChain's PyPDFLoader to process the PDF so that it becomes consistent with LangChain format. 
 
 ```python
 from langchain.document_loaders import PyPDFLoader
@@ -602,7 +602,7 @@ if uploaded_file is not None:
 This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/):
 
 - chunk_size: 1000: This parameter specifies that each chunk should contain approximately 1000 characters.
-- chunk_overlap: 200: This parameter ensures that there is an overlap of 150 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
+- chunk_overlap: 200: This parameter ensures that there is an overlap of 200 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
 
 At the end split_documents method splits the large document into smaller LangChain documents based on above defined parameters.
 
@@ -639,6 +639,8 @@ else:
         cluster.bucket(DB_BUCKET).scope(DB_SCOPE).collection(DB_COLLECTION).upsert_multi(batch)
     st.success("PDF processed and stored successfully!")
 ```
+
+> Note: Alternatively, `CouchbaseVectorStore` can be used for document ingestion with embeddings, eliminating the need for serverless architecture. The eventing method described in this tutorial is preferable for existing documents or when a dedicated server isn't used.
 
 #### Ask Question
 
