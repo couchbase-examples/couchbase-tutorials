@@ -2,7 +2,7 @@
 # frontmatter
 path: "/tutorial-bedrock-serverless-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase, AWS Bedrock using serverless architecture
+title: Serverless PDF Chat App with Couchbase and AWS Bedrock
 short_title: Build PDF Chat App
 description:
   - Construct a PDF Chat App with AWS Serverless Architecture and Couchbase Capella
