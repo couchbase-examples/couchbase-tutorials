@@ -94,15 +94,13 @@ Couchbase uses Buckets to store JSON documents.  We need a bucket to store not o
 
 * Click the `Create App Service` button. 
 
-* Scroll down to the the `Try App Services Now` button and click on it
+* Enter a name for your app service.
 
-* Wait for the App Service to deploy.
+* Select your free tier operational cluster to link to your App Service.
 
-* To get back to your home page click the Capella logo in the upper left hand corner of the screen.
- 
- * Click on the `Trial - Cluster` database under the listing of Databases available.
+* Click on the `Create App Service` button on the bottom right.
 
- * The home tab should appear and the your Trial App Services status should be listed on the screen as `Deploying`.
+* Wait for the App Service to deploy, your Trial App Services should be listed on the screen as Deploying.
 
 ![App Services Deploying,1500](app-service-deploying.png)
 
@@ -110,21 +108,19 @@ Couchbase uses Buckets to store JSON documents.  We need a bucket to store not o
 
 Once your App Service is deployed, we will create an App Services endpoint.  This is the endpoint that will be used to sync data between the mobile app and the Couchbase Capella database.
 
-* Click the `Trial - App Services` link under your App Services is ready section on the main home page. 
+* Click the `Trial - App Service` link under your App Services listing. 
 
 * Click the `Create App Endpoint` button.
 
 * In the `App Endpoint Name` field enter `projects`
 
-*  Select the `projects` bucket you created from the `Select a Bucket` list.
+* Select the `projects` bucket you created from the `Select a Bucket` list.
 
-* Under `Import Filter` click the Enabled option from the selection menu.
+* In the scope list, select the `_default` scope.
 
-* A new option will appear for importing clode.  Click the `Import Code` button.
+* Go to the Linked Collections table and link the `_default` collection.
 
-* Navigate to the directory you stored the code in for the tutorial that you are working on and find the Capella folder.  Select the import.js file.
-
-* Click the Create App Endpoint button
+* Click on the `Create App Endpoint` button.
 
 ## Configure App Services Projects Endpoint and Security
 
@@ -147,13 +143,29 @@ The newly created projects endpoint needs to be configured before we can setup s
 
 * The Security tab should open by default with the Access and Validation option selected from the left navigation menu.
 
+* Click on the `_default` link.
+
 * Click on the `Import From File` button. 
 
 * Navigate to the directory you stored the code and find the Capella folder.  Select the `sync.js` file.
 
 * Scroll to the buttom and click the `Save` button.
 
-* A warning window will appear, click the Ok button.
+* Now go to the `settings` tab to import filter.
+
+* Click on the `Import Filter` from the left navigation menu and then Enable the Import Filter.
+
+* Click on the `Import From File` button.
+
+* Navigate to the directory you stored the code in for the tutorial that you are working on and find the Capella folder.  Select the import.js file.
+
+* Click on the `Save` button.
+
+* Now go to the `Delta Sync` tab on the left navigation menu to enable Delta sync.
+
+* Click on the `Save` button.
+
+* Now go back to the `Security` tab.
 
 * Click the `Resume App Endpoint` button located below the navigation tabs on the screen.
 
@@ -284,11 +296,7 @@ We can use our web browser to test App Services.  To test our App Services setup
 
 We need to import some data into Capella into the projects bucket that we can then use in the next step of the learning path with replication.  The follow steps will help you import the sample data provided in our repo into Capella.  
 
-* Click on the `Linked Database` link located in the upper right corner of the navigation panel.
-
-* Click on the `Trial-Cluster` link under the list of Clusters.
-
-* Click on the `Data Tools` tab.
+* Click on the `Linked Cluster` link located in the upper right corner of the navigation panel.
 
 * Now click on the `Import` from the navigation menu.
 
@@ -317,7 +325,7 @@ We can now validate that the documents were imported and picked up by App Servic
 
 * When the documents window appears, you should see a listing of documents.  
 
-* Change the bucket you are viewing to `projects` from the drop down list.
+* Change the bucket you are viewing to `projects` from the drop down list and the scope and collection to `_default`.
 
 * In the listing of documents look for a document and click on the `ID` link.
 
