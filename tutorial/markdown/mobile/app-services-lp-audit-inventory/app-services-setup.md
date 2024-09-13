@@ -102,8 +102,6 @@ Couchbase uses Buckets to store JSON documents.  We need a bucket to store not o
 
 * Wait for the App Service to deploy, your Trial App Services should be listed on the screen as Deploying.
 
-![App Services Deploying,1500](app-service-deploying.png)
-
 ## Create App Services Endpoint
 
 Once your App Service is deployed, we will create an App Services endpoint.  This is the endpoint that will be used to sync data between the mobile app and the Couchbase Capella database.
