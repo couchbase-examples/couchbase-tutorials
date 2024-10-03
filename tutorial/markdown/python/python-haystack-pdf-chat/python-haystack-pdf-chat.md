@@ -2,7 +2,7 @@
 # frontmatter
 path: "/tutorial-python-haystack-pdf-chat"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase Python SDK and Haystack
+title: Build PDF Chat App With Couchbase Python SDK, Haystack and OpenAI
 short_title: Build PDF Chat App
 description:
   - Construct a PDF Chat App with Haystack, Couchbase Python SDK, Couchbase Vector Search, and Streamlit.
@@ -266,7 +266,6 @@ In the PDF Chat app, Haystack is used for several tasks:
 
 - **Loading and processing PDF documents**: Haystack's [_PyPDFToDocument_](https://docs.haystack.deepset.ai/docs/pypdftodocument) component can convert PDF files into Haystack Document objects, which can hold various types of content, including text, metadata, and embeddings.
 - **Text splitting**: Haystack's [_DocumentSplitter_](https://docs.haystack.deepset.ai/docs/documentsplitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: Haystack integrates with various embedding models, such as [_SentenceTransformersTextEmbedder_](https://docs.haystack.deepset.ai/docs/sentencetransformerstextembedder) and [_SentenceTransformersDocumentEmbedder_](https://docs.haystack.deepset.ai/docs/sentencetransformersdocumentembedder) to convert text chunks into embeddings.
 - **Vector store integration**: Haystack provides a [CouchbaseDocumentStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Pipelines**: Haystack uses [Pipelines](https://docs.haystack.deepset.ai/docs/pipelines) to combine different components for various tasks. In this app, we have an indexing pipeline for processing and storing documents, and a RAG pipeline for retrieval and generation.
 - **Prompt Building**: Haystack's [PromptBuilder](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
@@ -293,6 +292,8 @@ The first step is connecting to Couchbase. Couchbase Vector Search is required f
 The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `secrets.toml`, and then proceed to connect to the Couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
 
 ```python
+from couchbase_haystack import CouchbaseDocumentStore, CouchbasePasswordAuthenticator, CouchbaseClusterOptions
+
 @st.cache_resource(show_spinner="Connecting to Vector Store")
 def get_document_store():
     """Return the Couchbase document store"""
@@ -361,15 +362,20 @@ The indexing pipeline is created to handle the entire process of ingesting PDFs 
 1. PyPDFToDocument: Converts PDF files to Haystack Document objects.
 2. DocumentCleaner: Cleans the extracted text from the PDF.
 3. DocumentSplitter: Splits the cleaned text into smaller chunks.
-4. SentenceTransformersDocumentEmbedder: Generates embeddings for the document chunks.
+4. OpenAIDocumentEmbedder: Generates embeddings for the document chunks.
 5. DocumentWriter: Writes the processed documents and their embeddings to the Couchbase vector store.
 
 ```python
+from haystack import Pipeline
+from haystack.components.converters import PyPDFToDocument
+from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
+from haystack.components.embedders import OpenAIDocumentEmbedder
+
 indexing_pipeline = Pipeline()
 indexing_pipeline.add_component("converter", PyPDFToDocument())
 indexing_pipeline.add_component("cleaner", DocumentCleaner())
 indexing_pipeline.add_component("splitter", DocumentSplitter(split_by="sentence", split_length=250, split_overlap=30))
-indexing_pipeline.add_component("embedder", SentenceTransformersDocumentEmbedder(model="sentence-transformers/all-MiniLM-L6-v2"))
+indexing_pipeline.add_component("embedder", OpenAIDocumentEmbedder())
 indexing_pipeline.add_component("writer", DocumentWriter(document_store=document_store))
 
 indexing_pipeline.connect("converter.documents", "cleaner.documents")
@@ -396,8 +402,12 @@ The OpenAIGenerator is a crucial component in our RAG pipeline, responsible for 
 By using the OpenAIGenerator, we leverage state-of-the-art natural language processing capabilities to provide accurate, context-aware answers to user queries about the uploaded PDF content.
 
 ```python
+from haystack.components.embedders import OpenAIDocumentEmbedder
+from couchbase_haystack import CouchbaseEmbeddingRetriever
+from haystack.components.builders import PromptBuilder, AnswerBuilder
+
 rag_pipeline = Pipeline()
-rag_pipeline.add_component("query_embedder", SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2"))
+rag_pipeline.add_component("query_embedder", OpenAIDocumentEmbedder())
 rag_pipeline.add_component("retriever", CouchbaseEmbeddingRetriever(document_store=document_store))
 rag_pipeline.add_component("prompt_builder", PromptBuilder(template="""
 You are a helpful bot. If you cannot answer based on the context provided, respond with a generic answer. Answer the question as truthfully as possible using the context below:
