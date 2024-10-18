@@ -25,8 +25,32 @@ length: 30 Mins
 
 [View Source](https://github.com/couchbase-examples/vector-search-cookbook/tree/main/mistralai/mistralai.ipynb)
 
+# Couchbase and Mistral AI integration example notebook
+Couchbase is a NoSQL distributed document database (JSON) with many of the best features of a relational DBMS: SQL, distributed ACID transactions, and much more. [Couchbase Capella™](https://cloud.couchbase.com/sign-up) is the easiest way to get started, but you can also download and run [Couchbase Server](http://couchbase.com/downloads) on-premises.
+
+Mistral AI is a research lab building the best open source models in the world. La Plateforme enables developers and enterprises to build new products and applications, powered by Mistral’s open source and commercial LLMs. 
+
+The [Mistral AI APIs](https://console.mistral.ai/) empower LLM applications via:
+
+- [Text generation](https://docs.mistral.ai/capabilities/completion/), enables streaming and provides the ability to display partial model results in real-time
+- [Code generation](https://docs.mistral.ai/capabilities/code_generation/), enpowers code generation tasks, including fill-in-the-middle and code completion
+- [Embeddings](https://docs.mistral.ai/capabilities/embeddings/), useful for RAG where it represents the meaning of text as a list of numbers
+- [Function calling](https://docs.mistral.ai/capabilities/function_calling/), enables Mistral models to connect to external tools
+- [Fine-tuning](https://docs.mistral.ai/capabilities/finetuning/), enables developers to create customized and specilized models
+- [JSON mode](https://docs.mistral.ai/capabilities/json_mode/), enables developers to set the response format to json_object
+- [Guardrailing](https://docs.mistral.ai/capabilities/guardrailing/), enables developers to enforce policies at the system level of Mistral models
+
+
 # Prerequisites
-In order to run this tutorial, you will need access to a collection on a Couchbase Cluster either through Couchbase Capella or by running it locally. 
+## Python3 and PIP
+Please consult with [pip installation documentation](https://pip.pypa.io/en/stable/installation/) to install pip.
+## Dependency Libraries
+This tutorial depends on `couchbase` and `mistralai` libraries. Run this shell command to install them:
+```shell
+pip install -r requirements.txt
+```
+## Couchbase Cluster
+In order to run this tutorial, you will need access to a collection on a Couchbase Cluster either through Couchbase Capella or by running it locally. Please provide your couchbase cluster connection information by running the code block below:
 
 
 ```python
@@ -85,7 +109,7 @@ collection = scope.collection(couchbase_collection)
 ```
 
 ## Creating Couchbase Vector Search Index
-In order to store Mistral embeddings onto a Couchbase Cluster, a vector search index needs to be created first. We included a sample index definition that will work with this tutorial. The definition can be used to create a vector index using Couchbase server web console, on more information on vector indexes, please read [Create a Vector Search Index with the Server Web Console](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html). 
+In order to store Mistral embeddings onto a Couchbase Cluster, a vector search index needs to be created first. We included a sample index definition that will work with this tutorial in the `fts_index.json` file. The definition can be used to create a vector index using Couchbase server web console, on more information on vector indexes, please read [Create a Vector Search Index with the Server Web Console](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html). 
 
 
 ```python
@@ -94,7 +118,7 @@ search_index = cluster.search_indexes().get_index(search_index_name)
 ```
 
 ## Mistral Connection
-A Mistral API key needs to be obtained and configured in the code before using the Mistral API. The key can be obtained in MistralAI personal cabinet, for more detailed instructions please consult with [Mistral documentation site](https://docs.mistral.ai/).
+A Mistral API key needs to be obtained and configured in the code before using the Mistral API. A trial key can be obtained for free in MistralAI personal cabinet. For more detailed instructions on obtaining a key please consult with [Mistral documentation site](https://docs.mistral.ai/).
 
 
 ```python
@@ -103,13 +127,14 @@ mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 ```
 
 ## Embedding Documents
-Mistral client can be used to generate vector embeddings for given text fragments. These embeddings represent the sentiment of corresponding fragments and can be stored in Couchbase for further retrieval.
+Mistral client can be used to generate vector embeddings for given text fragments. These embeddings represent the sentiment of corresponding fragments and can be stored in Couchbase for further retrieval. A custom embedding text can also be added into the embedding texts array by running this code block:
 
 
 ```python
 texts = [
     "Couchbase Server is a multipurpose, distributed database that fuses the strengths of relational databases such as SQL and ACID transactions with JSON’s versatility, with a foundation that is extremely fast and scalable.",
-    "It’s used across industries for things like user profiles, dynamic product catalogs, GenAI apps, vector search, high-speed caching, and much more."
+    "It’s used across industries for things like user profiles, dynamic product catalogs, GenAI apps, vector search, high-speed caching, and much more.",
+    input("custom embedding text")
 ]
 embeddings = mistral_client.embeddings.create(
     model="mistral-embed",
@@ -119,9 +144,6 @@ embeddings = mistral_client.embeddings.create(
 print("Output embeddings: " + str(len(embeddings.data)))
 ```
 
-    Output embeddings: 2
-
-
 The output `embeddings` is an EmbeddingResponse object with the embeddings and the token usage information:
 
 ```
@@ -129,6 +151,7 @@ EmbeddingResponse(
     id='eb4c2c739780415bb3af4e47580318cc', object='list', data=[
         Data(object='embedding', embedding=[-0.0165863037109375,...], index=0),
         Data(object='embedding', embedding=[-0.0234222412109375,...], index=1)],
+        Data(object='embedding', embedding=[-0.0466222735279375,...], index=2)],
     model='mistral-embed', usage=EmbeddingResponseUsage(prompt_tokens=15, total_tokens=15)
 )
 ```
