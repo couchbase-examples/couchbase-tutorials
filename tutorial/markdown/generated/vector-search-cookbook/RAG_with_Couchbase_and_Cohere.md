@@ -30,6 +30,31 @@ length: 60 Mins
 In this guide, we will walk you through building a powerful semantic search engine using Couchbase as the backend database and [Cohere](https://cohere.com/)
  as the AI-powered embedding and language model provider. Semantic search goes beyond simple keyword matching by understanding the context and meaning behind the words in a query, making it an essential tool for applications that require intelligent information retrieval. This tutorial is designed to be beginner-friendly, with clear, step-by-step instructions that will equip you with the knowledge to create a fully functional semantic search system from scratch.
 
+# How to run this tutorial
+
+This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/cohere/RAG_with_Couchbase_and_Cohere.ipynb).
+
+You can either download the notebook file and run it on [Google Colab](https://colab.research.google.com/) or run it on your system by setting up the Python environment.
+
+# Before you start
+
+## Get Credentials for Cohere
+
+Please follow the [instructions](https://cohere.com/generate) to generate the Cohere credentials.
+
+## Create and Deploy Your Free Tier Operational cluster on Capella
+
+To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with a environment where you can explore and learn about Capella with no time constraint.
+
+To know more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the following prerequisites need to be met.
+
+* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+* [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
 # Setting the Stage: Installing Necessary Libraries
 To build our semantic search engine, we need a robust set of tools. The libraries we install handle everything from connecting to databases to performing complex machine learning tasks.
 
@@ -209,14 +234,21 @@ setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
 
 
 
-# Load Index Definition
-The search index definition is loaded from a JSON file. This index defines how the data in Couchbase should be indexed for fast search and retrieval. Indexing is critical for optimizing search queries, especially when dealing with large datasets. The JSON file contains details about the index, such as its name, source type, and parameters.
+# Loading Couchbase Vector Search Index
+
+Semantic search requires an efficient way to retrieve relevant documents based on a user's query. This is where the Couchbase **Vector Search Index** comes into play. In this step, we load the Vector Search Index definition from a JSON file, which specifies how the index should be structured. This includes the fields to be indexed, the dimensions of the vectors, and other parameters that determine how the search engine processes queries based on vector similarity.
+
+For more information on creating a vector search index, please follow the [instructions](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html).
+
 
 
 ```python
-# index_definition_path = '/path_to_your_index_file/cohere_index.json'
+# If you are running this script locally (not in Google Colab), uncomment the following line
+# and provide the path to your index definition file.
 
-# Prompt user to upload to google drive
+# index_definition_path = '/path_to_your_index_file/cohere_index.json'  # Local setup: specify your file path here
+
+# If you are running in Google Colab, use the following code to upload the index definition file
 from google.colab import files
 print("Upload your index definition file")
 uploaded = files.upload()
@@ -235,9 +267,9 @@ except Exception as e:
     Saving cohere_index.json to cohere_index.json
 
 
-# Create or Update Search Index
-The script checks if the search index already exists in Couchbase. If it exists, the index is updated; if not, a new index is created. This step ensures that the data is properly indexed, allowing for efficient search operations later in the script. The index is associated with a specific bucket, scope, and collection in Couchbase, which organizes the data.
+# Creating or Updating Search Indexes
 
+With the index definition loaded, the next step is to create or update the **Vector Search Index** in Couchbase. This step is crucial because it optimizes our database for vector similarity search operations, allowing us to perform searches based on the semantic content of documents rather than just keywords. By creating or updating a Vector Search Index, we enable our search engine to handle complex queries that involve finding semantically similar documents using vector embeddings, which is essential for a robust semantic search engine.
 
 
 ```python
