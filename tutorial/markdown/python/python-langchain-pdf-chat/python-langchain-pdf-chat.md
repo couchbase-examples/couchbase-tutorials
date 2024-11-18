@@ -17,6 +17,7 @@ tags:
   - Streamlit
   - LangChain
   - OpenAI
+  - Artificial Intelligence
 sdk_language:
   - python
 length: 45 Mins

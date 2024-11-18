@@ -18,6 +18,7 @@ tags:
   - LangChain
   - Nvidia NIM
   - LLama3
+  - Artificial Intelligence
 sdk_language:
   - python
 length: 45 Mins

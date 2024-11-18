@@ -15,7 +15,7 @@ technology:
 tags:
   - Ragas
   - LangChain
-
+  - Artificial Intelligence
 sdk_language:
   - python
 length: 45 Mins
