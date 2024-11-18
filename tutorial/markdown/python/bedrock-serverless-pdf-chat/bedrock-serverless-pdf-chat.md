@@ -20,6 +20,7 @@ tags:
   - LangChain
   - LLama3
   - AWS
+  - Artificial Intelligence
 sdk_language:
   - python
 length: 60 Mins
