@@ -6,7 +6,7 @@ short_title: Mistral AI with Couchbase Vector Search
 description:
   - Learn how to generate embeddings using Mistral AI and store them in Couchbase.
   - This tutorial demonstrates how to use Couchbase's vector search capabilities with Mistral AI embeddings.
-  - You'll understand how to perform vector searches to find relevant documents based on similarity.
+  - You'll understand how to perform vector search to find relevant documents based on similarity.
 content_type: tutorial
 filter: sdk
 technology:
@@ -25,7 +25,8 @@ length: 30 Mins
 
 [View Source](https://github.com/couchbase-examples/vector-search-cookbook/tree/main/mistralai/mistralai.ipynb)
 
-# Couchbase and Mistral AI integration example notebook
+# Introduction
+
 Couchbase is a NoSQL distributed document database (JSON) with many of the best features of a relational DBMS: SQL, distributed ACID transactions, and much more. [Couchbase Capella™](https://cloud.couchbase.com/sign-up) is the easiest way to get started, but you can also download and run [Couchbase Server](http://couchbase.com/downloads) on-premises.
 
 Mistral AI is a research lab building the best open source models in the world. La Plateforme enables developers and enterprises to build new products and applications, powered by Mistral’s open source and commercial LLMs. 
@@ -41,16 +42,57 @@ The [Mistral AI APIs](https://console.mistral.ai/) empower LLM applications via:
 - [Guardrailing](https://docs.mistral.ai/capabilities/guardrailing/), enables developers to enforce policies at the system level of Mistral models
 
 
-# Prerequisites
-## Python3 and PIP
-Please consult with [pip installation documentation](https://pip.pypa.io/en/stable/installation/) to install pip.
-## Dependency Libraries
-This tutorial depends on `couchbase` and `mistralai` libraries. Run this shell command to install them:
-```shell
-pip install -r requirements.txt
+# How to run this tutorial
+
+This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/mistralai/mistralai.ipynb).
+
+You can either download the notebook file and run it on [Google Colab](https://colab.research.google.com/) or run it on your system by setting up the Python environment.
+
+# Before you start
+
+## Get Credentials for Mistral AI
+
+Please follow the [instructions](https://console.mistral.ai/api-keys/) to generate the Mistral AI credentials.
+
+## Create and Deploy Your Free Tier Operational cluster on Capella
+
+To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with a environment where you can explore and learn about Capella with no time constraint.
+
+To know more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+
+### Couchbase Capella Configuration
+
+When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the following prerequisites need to be met.
+
+* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+* [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
+
+# Install necessary libraries
+
+
+```python
+!pip install couchbase mistralai
 ```
-## Couchbase Cluster
-In order to run this tutorial, you will need access to a collection on a Couchbase Cluster either through Couchbase Capella or by running it locally. Please provide your couchbase cluster connection information by running the code block below:
+
+# Imports
+
+
+```python
+from pathlib import Path
+from datetime import timedelta
+from mistralai import Mistral
+from couchbase.auth import PasswordAuthenticator
+from couchbase.cluster import Cluster
+from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
+                               QueryOptions)
+import couchbase.search as search
+from couchbase.options import SearchOptions
+from couchbase.vector_search import VectorQuery, VectorSearch
+import uuid
+```
+
+# Prerequisites
+
 
 
 ```python
@@ -71,24 +113,7 @@ couchbase_collection = input("Couchbase collection:")
     Couchbase collection: mistralai
 
 
-## Imports
-
-
-```python
-from pathlib import Path
-from datetime import timedelta
-from mistralai import Mistral
-from couchbase.auth import PasswordAuthenticator
-from couchbase.cluster import Cluster
-from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
-                               QueryOptions)
-import couchbase.search as search
-from couchbase.options import SearchOptions
-from couchbase.vector_search import VectorQuery, VectorSearch
-import uuid
-```
-
-## Couchbase Connection
+# Couchbase Connection
 
 
 ```python
@@ -108,8 +133,8 @@ scope = bucket.scope(couchbase_scope)
 collection = scope.collection(couchbase_collection)
 ```
 
-## Creating Couchbase Vector Search Index
-In order to store Mistral embeddings onto a Couchbase Cluster, a vector search index needs to be created first. We included a sample index definition that will work with this tutorial in the `fts_index.json` file. The definition can be used to create a vector index using Couchbase server web console, on more information on vector indexes, please read [Create a Vector Search Index with the Server Web Console](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html). 
+# Creating Couchbase Vector Search Index
+In order to store Mistral embeddings onto a Couchbase Cluster, a vector search index needs to be created first. We included a sample index definition that will work with this tutorial in the `mistralai_index.json` file. The definition can be used to create a vector index using Couchbase server web console, on more information on vector indexes, please read [Create a Vector Search Index with the Server Web Console](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html). 
 
 
 ```python
@@ -117,8 +142,7 @@ search_index_name = couchbase_bucket + "._default.vector_test"
 search_index = cluster.search_indexes().get_index(search_index_name)
 ```
 
-## Mistral Connection
-A Mistral API key needs to be obtained and configured in the code before using the Mistral API. A trial key can be obtained for free in MistralAI personal cabinet. For more detailed instructions on obtaining a key please consult with [Mistral documentation site](https://docs.mistral.ai/).
+# Mistral Connection
 
 
 ```python
@@ -126,7 +150,7 @@ MISTRAL_API_KEY = getpass.getpass("Mistral API Key:")
 mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 ```
 
-## Embedding Documents
+# Embedding Documents
 Mistral client can be used to generate vector embeddings for given text fragments. These embeddings represent the sentiment of corresponding fragments and can be stored in Couchbase for further retrieval. A custom embedding text can also be added into the embedding texts array by running this code block:
 
 
@@ -156,7 +180,7 @@ EmbeddingResponse(
 )
 ```
 
-## Storing Embeddings in Couchbase
+# Storing Embeddings in Couchbase
 Each embedding needs to be stored as a couchbase document. According to provided search index, embedding vector values need to be stored in the `vector` field. The original text of the embedding can be stored in the same document:
 
 
@@ -170,7 +194,7 @@ for i in range(0, len(texts)):
     collection.upsert(doc["id"], doc)
 ```
 
-## Searching For Embeddings
+# Searching For Embeddings
 Stored in Couchbase embeddings later can be searched using the vector index to, for example, find text fragments that would be the most relevant to some user-entered prompt:
 
 
