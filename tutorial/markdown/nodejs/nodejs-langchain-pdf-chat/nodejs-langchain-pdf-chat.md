@@ -17,6 +17,7 @@ tags:
   - Next.js
   - LangChain
   - OpenAI
+  - Artificial Intelligence
 sdk_language:
   - nodejs
 length: 45 Mins

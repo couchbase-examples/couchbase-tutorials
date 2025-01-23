@@ -8,7 +8,7 @@ const sdk_languages = ['nodejs', 'scala', 'python', 'swift', 'csharp', 'objectiv
 
 const tags = ['Ottoman', 'Ktor', 'REST API', 'Express', 'Flask', 'TLS', 'Configuration', 'Next.js', 'iOS', 'Xcode', '.NET', 'Xamarin', 'Authentication', 'OpenID', 'Keycloak', 'Android', 'P2P', 'UIKit', 'Installation', 'Spring Boot', 'Spring Data', 'Transactions', 'SQL++ (N1QL)', 'Optimization', 'Community Edition', 'Docker', 'Data Modeling', 'Metadata', 'Best Practices', 'Data Ingestion', 'Kafka', 'Support', 'Customer', 'Prometheus', 'Monitoring', 'Observability', 'Metrics', 'Query Workbench', 'ASP.NET', 'linq', 'DBaaS', 'App Services', 'Flutter', 'Gin Gonic', 'FastAPI', 'Laravel', 'LangChain', 'OpenAI', 'Streamlit', 'Google Gemini', 'Nvidia NIM', 'LLama3', 'AWS', 'Artificial Intelligence', 'Cohere', 'Jina AI', 'Mistral AI', 'Ragas', 'Haystack', 'LangGraph', 'Amazon Bedrock', 'CrewAI']
 
-const technologies = ['connectors', 'kv', 'query', 'capella', 'server', 'index', 'mobile', 'fts', 'sync gateway', 'eventing', 'analytics', 'udf']
+const technologies = ['connectors', 'kv', 'query', 'capella', 'server', 'index', 'mobile', 'fts', 'sync gateway', 'eventing', 'analytics', 'udf', 'vector search']
 
 const content_types = ['quickstart', 'tutorial', 'learn']
 
