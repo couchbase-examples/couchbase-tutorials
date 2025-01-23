@@ -4,16 +4,18 @@ path: "/tutorial-java-langchain4j"
 title: Langchain4j Vector Storage
 short_title: Transactions w/ Java SDK
 description: 
-  - Learn how to configure and use couchbase vector search with langchain4j
+  - Learn how to configure and use couchbase vector search with LangChain4j
+  - Learn how to vectorize data with LangChain4j
+  - Learn how to retrieve vector data from Couchbase
 content_type: tutorial
 filter: sdk
 technology:
-  - langchain4j
+  - connectors
   - vector search
 tags:
-  - Vector Search
-  - Neural Networks
-  - Integrations
+  - LangChain
+  - Artificial Intelligence
+  - Data Ingestion
 sdk_language:
   - java
 length: 10 Mins
