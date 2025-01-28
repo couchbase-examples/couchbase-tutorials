@@ -1,8 +1,8 @@
 ---
 # frontmatter
 path: "/tutorial-java-langchain4j"
-title: Langchain4j Vector Storage
-short_title: Transactions w/ Java SDK
+title: Couchbase Vector Search using LangChain4j
+short_title: LangChain4j Vector Storage
 description: 
   - Learn how to configure and use couchbase vector search with LangChain4j
   - Learn how to vectorize data with LangChain4j
