@@ -14,7 +14,7 @@ technology:
   - kv
   - index
   - query
-  - search
+  - fts
 tags:
   - C++
   - C++ SDK
