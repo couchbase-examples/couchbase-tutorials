@@ -11,7 +11,7 @@ technology:
   - capella
   - query
 tags:
-  - streamlit
+  - Streamlit
 sdk_language:
   - python
 length: 30 Mins
