@@ -1,3 +1,23 @@
+---
+# frontmatter
+path: "/tutorial-couchbase-streamlit-connector"
+title: Couchbase Connector for Streamlit
+short_title: Couchbase Connector for Streamlit
+description:
+  - Learn how to integrate streamlit with Couchbase Capella
+content_type: tutorial
+filter: sdk
+technology:
+  - capella
+  - query
+tags:
+  - streamlit
+sdk_language:
+  - python
+length: 30 Mins
+---
+
+
 # Couchbase Connector for Streamlit
 
 ## 1. Introduction
