@@ -19,7 +19,7 @@ length: 30 Mins
 ---
 
 
-# Couchbase Connector for Streamlit
+# [Couchbase Connector for Streamlit](https://couchbase-st-tutorial.streamlit.app/)
 
 ## 1. Introduction
 This project provides a seamless integration between Streamlit and Couchbase, allowing developers to interact with Couchbase databases effortlessly. It enables users to fetch, insert, update, and delete data within Streamlit applications without needing to switch between different SDKs, enhancing the overall development experience.
@@ -32,6 +32,7 @@ pip install -r requirements.txt
 pip install plotly geopy numpy
 streamlit run src/Demo.py
 ```
+Or you can jave a look at it through this link [Demo App](https://couchbase-connector-demo-app.streamlit.app/)
 
 ## 2. Prerequisites
 ### System Requirements
