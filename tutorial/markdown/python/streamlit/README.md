@@ -36,18 +36,14 @@ Or you can jave a look at it through this link [Demo App](https://couchbase-conn
 
 ## 2. Prerequisites
 ### System Requirements
-- Python 3.10 or higher installed.
-- Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
-- Couchbase Capella account ([Docs](https://docs.couchbase.com/cloud/get-started/intro.html))
-- An operational cluster created in a project
+- Ensure you have **Python 3.10 or higher** (check [compatibility](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK), a **Couchbase Capella account** ([Docs](https://docs.couchbase.com/cloud/get-started/intro.html)), and an **operational cluster** created in a project.
 - Configured cluster access permissions and allowed IP addresses ([Docs](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites))
 - Connection string obtained from Couchbase Capella
 
 ### Installing Dependencies
 To install the required dependencies, run:
 ```sh
-git clone https://github.com/Couchbase-Ecosystem/couchbase_streamlit_connector.git
-pip install ./couchbase_streamlit_connector/
+pip install couchbase-streamlit-connector
 ```
 
 ## 3. Usage Guide
