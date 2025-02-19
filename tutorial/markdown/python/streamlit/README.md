@@ -127,3 +127,23 @@ st.write("Document 222 deleted")
 result = connection.query("SELECT * FROM `travel-sample`.`inventory`.`airline` LIMIT 5;")
 st.write(result)
 ```
+
+## 4. Appendix
+
+Here are some helpful resources for working with Couchbase and Streamlit:
+
+### **Couchbase Documentation**
+- [Couchbase Python SDK Compatibility](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat)  
+- [Getting Started with Couchbase Capella](https://docs.couchbase.com/cloud/get-started/intro.html)  
+- [Connecting to Couchbase Capella](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites)  
+- [N1QL Query Language Guide](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html)  
+- [Couchbase SDKs Overview](https://docs.couchbase.com/home/sdk.html)  
+
+### **Streamlit Documentation**
+- [Streamlit Secrets Management](https://docs.streamlit.io/develop/concepts/connections/secrets-management)  
+- [Using `st.connection`](https://docs.streamlit.io/develop/api-reference/connections)  
+- [Streamlit Components](https://docs.streamlit.io/develop/api-reference)  
+
+### **Additional Resources**
+- [Couchbase Sample Data](https://docs.couchbase.com/server/current/tools/cbimport-json.html)  
+- [Demo App](https://couchbase-connector-demo-app.streamlit.app/)  
