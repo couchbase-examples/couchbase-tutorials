@@ -24,12 +24,7 @@ length: 30 Mins
 ---
 
 <!-- [abstract] -->
-# Quickstart in Couchbase C++
-
-- Learn to build applications in with Couchbase C++ SDK.
-- See how you can fetch data from Couchbase using SQL++ queries
-- Explore CRUD operations in action with Couchbase
-- Learn about Search Indexes and execute search queries in C++
+# Quickstart for Couchbase in C++
 
 In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents, how to write simple parametrized SQL++ queries and how to create, and perform simple and complex text search using Search indexes.
 
@@ -38,7 +33,6 @@ In this tutorial, you will learn how to connect to a Couchbase Capella cluster t
 To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster or a self managed Couchbase cluster with [travel-sample](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) bucket loaded.
-  - To run this tutorial using a self managed Couchbase cluster, please refer to this [section](##Running-Self-Managed-Couchbase-Cluster).
 
 - [CMake](https://cmake.org/) 3.9 or higher installed
 - [C++17](https://en.cppreference.com/w/cpp/17) and a compatible compiler, [clang++](https://clang.llvm.org/) or [g++](https://gcc.gnu.org/)
@@ -115,12 +109,6 @@ At this point, we have installed the dependencies, loaded the travel-sample data
 Once you run the executable, your terminal should fill up with the results of the executed statements written in the main function of the `main.cpp` and should look something like this:
 ![image](./cli_output.png)
 
-### Running Self Managed Couchbase Cluster
-
-If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
-
-You need to update the connection string and the credentials in the `set_env_vars.sh` file in the source folder and run `source set_env_vars.sh` to set them.
-
 
 ### Running Tests
 
@@ -136,38 +124,9 @@ For this quickstart, we use one collection, `airline`  and `hotels` collection t
 You can find the schema for both these collections in the model folder.
 
 
-## Let Us Review the Code
+## Code Review
 
-To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
-
-### Code Layout
-
-```
-├── CMakeLists.txt
-├── README.md
-├── cmake
-│   └── CPM.cmake
-├── db.cpp
-├── db.h
-├── hotel_search_index.json
-├── images
-│   └── cli_output.png
-├── include
-├── main.cpp
-├── model
-│   ├── airline.json
-│   └── hotel.json
-├── operations.cpp
-├── operations.h
-├── runner.cpp
-├── set_env_vars.sh
-└── tests
-    ├── CMakeLists.txt
-    ├── test_doc.json
-    ├── test_index.json
-    ├── test_index2.json
-    └── tests.cpp
-```
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can explore about how to interact with Couchbase Server using the C++ SDK.
 
 We have separated out the SDK code and the main function. The `db.h` and `db.cpp` contain the declaration and the implementation of utility functions we will use to parse environment variables and create a connection to the cluster. `operations.h` and `operations.cpp` contain all the functions that perform operations on the db. Both `db.cpp` and `operations.cpp` are combined to make a static library. The tests are similarly separated out in the `tests` folder which utilise the library created earlier. The `main.cpp` is the executable which is also built by linking the library and contains code that demonstrates the usage of the functions we defined earlier to initeract with the db.
 
