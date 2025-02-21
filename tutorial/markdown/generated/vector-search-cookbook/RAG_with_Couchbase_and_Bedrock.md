@@ -73,25 +73,28 @@ The script starts by importing a series of libraries required for various tasks,
 
 
 ```python
+import getpass
 import json
 import logging
-import time
-import boto3
 import os
+import time
 from datetime import timedelta
-from dotenv import load_dotenv
 
+import boto3
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
-from couchbase.exceptions import CouchbaseException, InternalServerFailureException, QueryIndexAlreadyExistsException
+from couchbase.exceptions import (CouchbaseException,
+                                InternalServerFailureException,
+                                QueryIndexAlreadyExistsException,ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
-from langchain_aws import BedrockEmbeddings
-from langchain_aws import ChatBedrock
+from dotenv import load_dotenv
+from langchain_aws import BedrockEmbeddings, ChatBedrock
 from langchain_core.globals import set_llm_cache
-from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_couchbase.cache import CouchbaseCache
 from langchain_couchbase.vectorstores import CouchbaseVectorStore
@@ -114,7 +117,6 @@ The script also validates that all required inputs are provided, raising an erro
 
 
 ```python
-import getpass
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -164,20 +166,68 @@ except Exception as e:
     raise ConnectionError(f"Failed to connect to Couchbase: {str(e)}")
 ```
 
-    2024-12-12 03:10:13,958 - INFO - Successfully connected to Couchbase
+    2025-02-18 22:33:27,326 - INFO - Successfully connected to Couchbase
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: You will not be able to create a bucket on Capella
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
+
 
 
 ```python
 def setup_collection(cluster, bucket_name, scope_name, collection_name):
     try:
-        bucket = cluster.bucket(bucket_name)
+        # Check if bucket exists, create if it doesn't
+        try:
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
+        except Exception as e:
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
+
         bucket_manager = bucket.collections()
+
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
 
         # Check if collection exists, create if it doesn't
         collections = bucket_manager.get_all_scopes()
@@ -193,7 +243,9 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
         else:
             logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
 
+        # Wait for collection to be ready
         collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
 
         # Ensure primary index exists
         try:
@@ -213,23 +265,26 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
         return collection
     except Exception as e:
         raise RuntimeError(f"Error setting up collection: {str(e)}")
-
+    
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
+
 ```
 
-    2024-12-12 03:10:16,318 - INFO - Collection 'bedrock' already exists. Skipping creation.
-    2024-12-12 03:10:17,611 - INFO - Primary index present or created successfully.
-    2024-12-12 03:10:18,661 - INFO - All documents cleared from the collection.
-    2024-12-12 03:10:20,076 - INFO - Collection 'cache' already exists. Skipping creation.
-    2024-12-12 03:10:21,386 - INFO - Primary index present or created successfully.
-    2024-12-12 03:10:21,666 - INFO - All documents cleared from the collection.
+    2025-02-18 22:33:29,892 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-18 22:33:34,497 - INFO - Collection 'bedrock' already exists. Skipping creation.
+    2025-02-18 22:33:37,659 - INFO - Primary index present or created successfully.
+    2025-02-18 22:33:37,977 - INFO - All documents cleared from the collection.
+    2025-02-18 22:33:37,978 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-18 22:33:40,760 - INFO - Collection 'cache' already exists. Skipping creation.
+    2025-02-18 22:33:44,500 - INFO - Primary index present or created successfully.
+    2025-02-18 22:33:45,683 - INFO - All documents cleared from the collection.
 
 
 
 
 
-    <couchbase.collection.Collection at 0x13f9dd890>
+    <couchbase.collection.Collection at 0x7cb481672540>
 
 
 
@@ -237,7 +292,7 @@ setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
 
 Semantic search requires an efficient way to retrieve relevant documents based on a user's query. This is where the Couchbase **Vector Search Index** comes into play. In this step, we load the Vector Search Index definition from a JSON file, which specifies how the index should be structured. This includes the fields to be indexed, the dimensions of the vectors, and other parameters that determine how the search engine processes queries based on vector similarity.
 
-This AWS Bedrock vector search index configuration requires specific default settings to function properly. This tutorial uses the bucket named `vector-search-testing` with the scope `shared` and collection `bedrock`. The configuration is set up for vectors with exactly 1024 dimensions, using dot product similarity and optimized for recall. If you want to use a different bucket, scope, or collection, you will need to modify the index configuration accordingly.
+This AWS Bedrock vector search index configuration requires specific default settings to function properly. This tutorial uses the bucket named `vector-search-testing` with the scope `shared` and collection `bedrock`. The configuration is set up for vectors with exactly `1024 dimensions`, using dot product similarity and optimized for recall. If you want to use a different bucket, scope, or collection, you will need to modify the index configuration accordingly.
 
 For more information on creating a vector search index, please follow the [instructions](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html).
 
@@ -278,50 +333,15 @@ try:
 
 except QueryIndexAlreadyExistsException:
     logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
-
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
 except InternalServerFailureException as e:
-    error_message = str(e)
-    logging.error(f"InternalServerFailureException raised: {error_message}")
-
-    try:
-        # Accessing the response_body attribute from the context
-        error_context = e.context
-        response_body = error_context.response_body
-        if response_body:
-            error_details = json.loads(response_body)
-            error_message = error_details.get('error', '')
-
-            if "collection: 'bedrock' doesn't belong to scope: 'shared'" in error_message:
-                raise ValueError("Collection 'bedrock' does not belong to scope 'shared'. Please check the collection and scope names.")
-
-    except ValueError as ve:
-        logging.error(str(ve))
-        raise
-
-    except Exception as json_error:
-        logging.error(f"Failed to parse the error message: {json_error}")
-        raise RuntimeError(f"Internal server error while creating/updating search index: {error_message}")
+    logging.error(f"Internal server error: {str(e)}")
+    raise
 ```
 
-    2024-12-12 03:10:22,891 - INFO - Index 'vector_search_bedrock' found
-    2024-12-12 03:10:23,583 - INFO - Index 'vector_search_bedrock' already exists. Skipping creation/update.
-
-
-# Load the TREC Dataset
-To build a search engine, we need data to search through. We use the TREC dataset, a well-known benchmark in the field of information retrieval. This dataset contains a wide variety of text data that we'll use to train our search engine. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the data in the TREC dataset make it an excellent choice for testing and refining our search engine, ensuring that it can handle a wide range of queries effectively.
-
-The TREC dataset's rich content allows us to simulate real-world scenarios where users ask complex questions, enabling us to fine-tune our search engine's ability to understand and respond to various types of queries.
-
-
-```python
-try:
-    trec = load_dataset('trec', split='train[:1000]')
-    logging.info(f"Successfully loaded TREC dataset with {len(trec)} samples")
-except Exception as e:
-    raise ValueError(f"Error loading TREC dataset: {str(e)}")
-```
-
-    2024-12-12 03:10:28,959 - INFO - Successfully loaded TREC dataset with 1000 samples
+    2025-02-18 22:33:47,605 - INFO - Index 'vector_search_bedrock' found
+    2025-02-18 22:33:49,182 - INFO - Index 'vector_search_bedrock' already exists. Skipping creation/update.
 
 
 # Creating Amazon Bedrock Client and Embeddings
@@ -357,7 +377,7 @@ except Exception as e:
     raise ValueError(f"Error creating Bedrock embeddings client: {str(e)}")
 ```
 
-    2024-12-12 03:10:29,148 - INFO - Successfully created Bedrock embeddings client
+    2025-02-18 22:33:49,230 - INFO - Successfully created Bedrock embeddings client
 
 
 #  Setting Up the Couchbase Vector Store
@@ -379,25 +399,92 @@ except Exception as e:
     raise ValueError(f"Failed to create vector store: {str(e)}")
 ```
 
-    2024-12-12 03:10:32,885 - INFO - Successfully created vector store
+    2025-02-18 22:33:53,766 - INFO - Successfully created vector store
 
 
-# Saving Data to the Vector Store
-With the vector store set up, the next step is to populate it with data. We save the TREC dataset to the vector store in batches. This method is efficient and ensures that our search engine can handle large datasets without running into performance issues. By saving the data in this way, we prepare our search engine to quickly and accurately respond to user queries. This step is essential for making the dataset searchable, transforming raw data into a format that can be easily queried by our search engine.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
-Batch processing is particularly important when dealing with large datasets, as it prevents memory overload and ensures that the data is stored in a structured and retrievable manner. This approach not only optimizes performance but also ensures the scalability of our system.
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
 try:
-    batch_size = 50
-    vector_store.add_texts(
-        texts=trec['text'],
-        batch_size=batch_size,
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
     )
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
+
+    2025-02-18 22:34:01,706 - INFO - Successfully loaded the BBC News dataset with 2687 rows.
+
+
+    Loaded the BBC News dataset with 2687 rows
+
+
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
+
+
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of 50 articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 50 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+batch_size = 50
+
+# Automatic Batch Processing
+articles = [article for article in unique_news_articles if article and len(article) <= 50000]
+
+try:
+    vector_store.add_texts(
+        texts=articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully.")
+except Exception as e:
+    raise ValueError(f"Failed to save documents to vector store: {str(e)}")
+
+```
+
+    2025-02-18 22:45:27,289 - INFO - Document ingestion completed successfully.
+
 
 # Setting Up a Couchbase Cache
 To further optimize our system, we set up a Couchbase-based cache. A cache is a temporary storage layer that holds data that is frequently accessed, speeding up operations by reducing the need to repeatedly retrieve the same information from the database. In our setup, the cache will help us accelerate repetitive tasks, such as looking up similar documents. By implementing a cache, we enhance the overall performance of our search engine, ensuring that it can handle high query volumes and deliver results quickly.
@@ -420,7 +507,7 @@ except Exception as e:
     raise ValueError(f"Failed to create cache: {str(e)}")
 ```
 
-    2024-12-12 03:16:20,311 - INFO - Successfully created cache
+    2025-02-18 22:45:29,797 - INFO - Successfully created cache
 
 
 # Using Amazon Bedrock's Titan Text Express v1 Model
@@ -461,7 +548,7 @@ except Exception as e:
     raise
 ```
 
-    2024-12-12 03:16:20,326 - INFO - Successfully created Bedrock LLM client
+    2025-02-18 22:45:29,821 - INFO - Successfully created Bedrock LLM client
 
 
 # Perform Semantic Search
@@ -471,7 +558,7 @@ In the provided code, the search process begins by recording the start time, fol
 
 
 ```python
-query = "What caused the 1929 Great Depression?"
+query = "What were Luke Littler's key achievements and records in his recent PDC World Championship match?"
 
 try:
     # Perform the semantic search
@@ -483,9 +570,11 @@ try:
 
     # Display search results
     print(f"\nSemantic Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print("-" * 80)
 
     for doc, score in search_results:
         print(f"Score: {score:.4f}, Text: {doc.page_content}")
+        print("-" * 80)
 
 except CouchbaseException as e:
     raise RuntimeError(f"Error performing semantic search: {str(e)}")
@@ -493,21 +582,117 @@ except Exception as e:
     raise RuntimeError(f"Unexpected error: {str(e)}")
 ```
 
-    2024-12-12 03:16:21,649 - INFO - Semantic search completed in 1.32 seconds
+    2025-02-18 22:45:31,921 - INFO - Semantic search completed in 2.06 seconds
 
 
     
-    Semantic Search Results (completed in 1.32 seconds):
-    Score: 0.7606, Text: Why did the world enter a global depression in 1929 ?
-    Score: 0.5613, Text: When was `` the Great Depression '' ?
-    Score: 0.2063, Text: What were popular songs and types of songs in the 1920s ?
-    Score: 0.1765, Text: What historical event happened in Dogtown in 1899 ?
-    Score: 0.1585, Text: What astronomical phenomenon takes place in Jan. 1999 ?
-    Score: 0.1525, Text: What part did John Peter Zenger play in the deveopment of the newspaper in America ?
-    Score: 0.1414, Text: What are some of the significant historical events of the 1990s ?
-    Score: 0.1396, Text: How long should a person wash their hands before they are clean ?
-    Score: 0.1307, Text: What war did the Wanna-Go-Home Riots occur after ?
-    Score: 0.1291, Text: What is a Canada two-penny black ?
+    Semantic Search Results (completed in 2.06 seconds):
+    --------------------------------------------------------------------------------
+    Score: 0.6483, Text: Luke Littler has risen from 164th to fourth in the rankings in a year
+    
+    A tearful Luke Littler hit a tournament record 140.91 set average as he started his bid for the PDC World Championship title with a dramatic 3-1 win over Ryan Meikle. The 17-year-old made headlines around the world when he reached the tournament final in January, where he lost to Luke Humphries. Starting this campaign on Saturday, Littler was millimetres away from a nine-darter when he missed double 12 as he blew Meikle away in the fourth and final set of the second-round match. Littler was overcome with emotion at the end, cutting short his on-stage interview. "It was probably the toughest game I've ever played. I had to fight until the end," he said later in a news conference. "As soon as the question came on stage and then boom, the tears came. It was just a bit too much to speak on stage. "It is the worst game I have played. I have never felt anything like that tonight." Admitting to nerves during the match, he told Sky Sports: "Yes, probably the biggest time it's hit me. Coming into it I was fine, but as soon as [referee] George Noble said 'game on', I couldn't throw them." Littler started slowly against Meikle, who had two darts for the opening set, but he took the lead by twice hitting double 20. Meikle did not look overawed against his fellow Englishman and levelled, but Littler won the third set and exploded into life in the fourth. The tournament favourite hit four maximum 180s as he clinched three straight legs in 11, 10 and 11 darts for a record set average, and 100.85 overall. Meanwhile, two seeds crashed out on Saturday night – five-time world champion Raymond van Barneveld lost to Welshman Nick Kenny, while England's Ryan Joyce beat Danny Noppert. Australian Damon Heta was another to narrowly miss out on a nine-darter, just failing on double 12 when throwing for the match in a 3-1 win over Connor Scutt. Ninth seed Heta hit four 100-plus checkouts to come from a set down against Scutt in a match in which both men averaged more than 97.
+    
+    Littler was hugged by his parents after victory over Meikle
+    
+    Littler returned to Alexandra Palace to a boisterous reception from more than 3,000 spectators and delivered an astonishing display in the fourth set. He was on for a nine-darter after his opening two throws in both of the first two legs and completed the set in 32 darts - the minimum possible is 27. The teenager will next play after Christmas against European Championship winner Ritchie Edhouse, the 29th seed, or Ian White, and is seeded to meet Humphries in the semi-finals. Having entered last year's event ranked 164th, Littler is up to fourth in the world and will go to number two if he reaches the final again this time. He has won 10 titles in his debut professional year, including the Premier League and Grand Slam of Darts. After reaching the World Championship final as a debutant aged just 16, Littler's life has been transformed and interest in darts has rocketed. Google say he was the most searched-for athlete online in the UK during 2024. This Christmas, more than 100,000 children are expected to be opening Littler-branded magnetic dartboards as presents. His impact has helped double the number of junior academies and has prompted plans to expand the World Championship. Littler was named BBC Young Sports Personality of the Year on Tuesday and was runner-up to athlete Keely Hodgkinson for the main award.
+    
+    Nick Kenny will play world champion Luke Humphries in round three after Christmas
+    
+    Barneveld was shocked 3-1 by world number 76 Kenny, who was in tears after a famous victory. Kenny, 32, will face Humphries in round three after defeating the Dutchman, who won the BDO world title four times and the PDC crown in 2007. Van Barneveld, ranked 32nd, became the sixth seed to exit in the second round. His compatriot Noppert, the 13th seed, was stunned 3-1 by Joyce, who will face Ryan Searle or Matt Campbell next, with the winner of that tie potentially meeting Littler in the last 16. Elsewhere, 15th seed Chris Dobey booked his place in the third round with a 3-1 win over Alexander Merkx. Englishman Dobey concluded an afternoon session which started with a trio of 3-0 scorelines. Northern Ireland's Brendan Dolan beat Lok Yin Lee to set up a meeting with three-time champion Michael van Gerwen after Christmas. In the final two first-round matches of the 2025 competition, Wales' Rhys Griffin beat Karel Sedlacek of the Czech Republic before Asia number one Alexis Toylo cruised past Richard Veenstra.
+    --------------------------------------------------------------------------------
+    Score: 0.5686, Text: The Littler effect - how darts hit the bullseye
+    
+    Teenager Luke Littler began his bid to win the 2025 PDC World Darts Championship with a second-round win against Ryan Meikle. Here we assess Littler's impact after a remarkable rise which saw him named BBC Young Sports Personality of the Year and runner-up in the main award to athlete Keely Hodgkinson.
+    
+    One year ago, he was barely a household name in his own home. Now he is a sporting phenomenon. After emerging from obscurity aged 16 to reach the World Championship final, the life of Luke Littler and the sport he loves has been transformed. Viewing figures, ticket sales and social media interest have rocketed. Darts has hit the bullseye. This Christmas more than 100,000 children are expected to be opening Littler-branded magnetic dartboards as presents. His impact has helped double the number of junior academies, prompted plans to expand the World Championship and generated interest in darts from Saudi Arabian backers.
+    
+    Just months after taking his GCSE exams and ranked 164th in the world, Littler beat former champions Raymond van Barneveld and Rob Cross en route to the PDC World Championship final in January, before his run ended with a 7-4 loss to Luke Humphries. With his nickname 'The Nuke' on his purple and yellow shirt and the Alexandra Palace crowd belting out his walk-on song, Pitbull's tune Greenlight, he became an instant hit. Electric on the stage, calm off it. The down-to-earth teenager celebrated with a kebab and computer games. "We've been watching his progress since he was about seven. He was on our radar, but we never anticipated what would happen. The next thing we know 'Littlermania' is spreading everywhere," PDC president Barry Hearn told BBC Sport. A peak TV audience of 3.7 million people watched the final - easily Sky's biggest figure for a non-football sporting event. The teenager from Warrington in Cheshire was too young to legally drive or drink alcohol, but earned £200,000 for finishing second - part of £1m prize money in his first year as a professional - and an invitation to the elite Premier League competition. He turned 17 later in January but was he too young for the demanding event over 17 Thursday nights in 17 locations? He ended up winning the whole thing, and hit a nine-dart finish against Humphries in the final. From Bahrain to Wolverhampton, Littler claimed 10 titles in 2024 and is now eyeing the World Championship.
+    
+    As he progressed at the Ally Pally, the Manchester United fan was sent a good luck message by the club's former midfielder and ex-England captain David Beckham. In 12 months, Littler's Instagram followers have risen from 4,000 to 1.3m. Commercial backers include a clothing range, cereal firm and train company and he will appear in a reboot of the TV darts show Bullseye. Google say he was the most searched-for athlete online in the UK during 2024. On the back of his success, Littler darts, boards, cabinets, shirts are being snapped up in big numbers. "This Christmas the junior magnetic dartboard is selling out, we're talking over 100,000. They're 20 quid and a great introduction for young children," said Garry Plummer, the boss of sponsors Target Darts, who first signed a deal with Littler's family when he was aged 12. "All the toy shops want it, they all want him - 17, clean, doesn't drink, wonderful."
+    
+    Littler beat Luke Humphries to win the Premier League title in May
+    
+    The number of academies for children under the age of 16 has doubled in the last year, says Junior Darts Corporation chairman Steve Brown. There are 115 dedicated groups offering youngsters equipment, tournaments and a place to develop, with bases including Australia, Bulgaria, Greece, Norway, USA and Mongolia. "We've seen so many inquiries from around the world, it's been such a boom. It took us 14 years to get 1,600 members and within 12 months we have over 3,000, and waiting lists," said Brown. "When I played darts as a child, I was quite embarrassed to tell my friends what my hobby was. All these kids playing darts now are pretty popular at school. It's a bit rock 'n roll and recognised as a cool thing to do." Plans are being hatched to extend the World Championship by four days and increase the number of players from 96 to 128. That will boost the number of tickets available by 25,000 to 115,000 but Hearn reckons he could sell three times as many. He says Saudi Arabia wants to host a tournament, which is likely to happen if no-alcohol regulations are relaxed. "They will change their rules in the next 12 months probably for certain areas having alcohol, and we'll take darts there and have a party in Saudi," he said. "When I got involved in darts, the total prize money was something like £300,000 for the year. This year it will go to £20m. I expect in five years' time, we'll be playing for £40m."
+    
+    Former electrician Cross charged to the 2018 world title in his first full season, while Adrian Lewis and Michael van Gerwen were multiple victors in their 20s and 16-time champion Phil ‘The Power’ Taylor is widely considered the greatest of all time. Littler is currently fourth in the world rankings, although that is based on a two-year Order of Merit. There have been suggestions from others the spotlight on the teenager means world number one Humphries, 29, has been denied the coverage he deserves, but no darts player has made a mark at such a young age as Littler. "Luke Humphries is another fabulous player who is going to be around for years. Sport is a very brutal world. It is about winning and claiming the high ground. There will be envy around," Hearn said. "Luke Littler is the next Tiger Woods for darts so they better get used to it, and the only way to compete is to get better." World number 38 Martin Lukeman was awestruck as he described facing a peak Littler after being crushed 16-3 in the Grand Slam final, with the teenager winning 15 consecutive legs. "I can't compete with that, it was like Godly. He was relentless, he is so good it's ridiculous," he said. Lukeman can still see the benefits he brings, adding: "What he's done for the sport is brilliant. If it wasn't for him, our wages wouldn't be going up. There's more sponsors, more money coming in, all good." Hearn feels future competition may come from players even younger than Littler. "I watched a 10-year-old a few months ago who averaged 104.89 and checked out a 4-3 win with a 136 finish. They smell the money, the fame and put the hard work in," he said. How much better Littler can get is guesswork, although Plummer believes he wants to reach new heights. "He never says 'how good was I?' But I think he wants to break records and beat Phil Taylor's 16 World Championships and 16 World Matchplay titles," he said. "He's young enough to do it." A version of this article was originally published on 29 November.
+    • None Know a lot about Littler? Take our quiz
+    --------------------------------------------------------------------------------
+    Score: 0.5648, Text: Luke Littler is one of six contenders for the 2024 BBC Sports Personality of the Year award.
+    
+    Here BBC Sport takes a look at the darts player's year in five photos.
+    --------------------------------------------------------------------------------
+    Score: 0.5179, Text: Wright is the 17th seed at the World Championship
+    
+    Two-time champion Peter Wright won his opening game at the PDC World Championship, while Ryan Meikle edged out Fallon Sherrock to set up a match against teenage prodigy Luke Littler. Scotland's Wright, the 2020 and 2022 winner, has been out of form this year, but overcame Wesley Plaisier 3-1 in the second round at Alexandra Palace in London. "It was this crowd that got me through, they wanted me to win. I thank you all," said Wright. Meikle came from a set down to claim a 3-2 victory in his first-round match against Sherrock, who was the first woman to win matches at the tournament five years ago. The 28-year-old will now play on Saturday against Littler, who was named BBC Young Sports Personality of the Year and runner-up in the main award to athlete Keely Hodgkinson on Tuesday night. Littler, 17, will be competing on the Ally Pally stage for the first time since his rise to stardom when finishing runner-up in January's world final to Luke Humphries. Earlier on Tuesday, World Grand Prix champion Mike de Decker – the 24th seed - suffered a surprise defeat to Luke Woodhouse in the second round. He is the second seed to exit following 16th seed James Wade's defeat on Monday to Jermaine Wattimena, who meets Wright in round three. Kevin Doets recovered from a set down to win 3-1 against Noa-Lynn van Leuven, who was making history as the first transgender woman to compete in the tournament.
+    
+    Sherrock drew level at 2-2 but lost the final set to Meikle
+    
+    The 54-year-old Wright only averaged 89.63 to his opponent's 93.77, but did enough to progress. Sporting a purple mohawk and festive outfit, crowd favourite 'Snakebite' showed glimpses of his best to win the first set and survived eight set darts to go 2-0 ahead. He lost the next but Dutchman Plaisier missed two more set darts in the fourth and Wright seized his opportunity. "Wesley had his chances but he missed them and I took them," he said. "He's got his tour card and he's going to be a dangerous player next year for all the players playing against him." Sherrock, 30, fought back from 2-1 down to force a decider against her English compatriot Meikle. She then narrowly missed the bull to take out 170 in the fourth leg before left-hander Meikle held his nerve to hit double 18 for a 96 finish to seal a hard-fought success. "I felt under pressure from the start and to come through feels unbelievable," said Meikle. "It's an unbelievable prize to play Luke here on this stage. It's the biggest stage of them all. I'm so happy." World number 81 Jeffrey de Graaf, who was born in the Netherlands but now represents Sweden, looked in trouble against Rashad Sweeting before prevailing 3-1. Sweeting, who was making history as the first player from the Bahamas to compete in the tournament, took the first set, but De Graaf fought back to clinch a second-round meeting with two-time champion Gary Anderson Germany's Ricardo Pietreczko, ranked 34, beat China's Xiaochen Zong 3-1 and will face Gian van Veen next.
+    --------------------------------------------------------------------------------
+    Score: 0.5160, Text: Littler is Young Sports Personality of the Year
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser.
+    
+    Darts player Luke Littler has been named BBC Young Sports Personality of the Year 2024. The 17-year-old has enjoyed a breakthrough year after finishing runner-up at the 2024 PDC World Darts Championship in January. The Englishman, who has won 10 senior titles on the Professional Darts Corporation tour this year, is the first darts player to claim the award. "It shows how well I have done this year, not only for myself, but I have changed the sport of darts," Littler told BBC One. "I know the amount of academies that have been brought up in different locations, tickets selling out at Ally Pally in hours and the Premier League selling out - it just shows how much I have changed it."
+    
+    He was presented with the trophy by Harry Aikines-Aryeetey - a former sprinter who won the award in 2005 - and ex-rugby union player Jodie Ounsley, both of whom are stars of the BBC television show Gladiators. Skateboarder Sky Brown, 16, and Para-swimmer William Ellard, 18, were also shortlisted for the award. Littler became a household name at the start of 2024 by reaching the World Championship final aged just 16 years and 347 days. That achievement was just the start of a trophy-laden year, with Littler winning the Premier League Darts, Grand Slam and World Series of Darts Finals among his haul of titles. Littler has gone from 164th to fourth in the world rankings and earned more than £1m in prize money in 2024. The judging panel for Young Sports Personality of the Year included Paralympic gold medallist Sammi Kinghorn, Olympic silver medal-winning BMX freestyler Keiran Reilly, television presenter Qasa Alom and Radio 1 DJ Jeremiah Asiamah, as well as representatives from the Youth Sport Trust, Blue Peter and BBC Sport.
+    --------------------------------------------------------------------------------
+    Score: 0.4714, Text: Luke Littler trends higher than PM on Google in 2024
+    
+    Luke Littler shot to fame when he became the youngest player to reach the World Darts Championship final in January
+    
+    Dart sensation Luke Littler has said he "can't quite believe" he has trended higher than the prime minister and the King in Google's most searched for lists in 2024. The 17-year-old star was an unknown when he came to prominence as the youngest player to reach the World Darts Championship final in January. He has subsequently risen to fourth in the world rankings and his fame has led him to lie behind only Catherine, Princess of Wales, and US president elect Donald Trump as Google's most searched for person in the UK in 2024. He has also taken the top slot as the most searched for athlete on the search engine, which he said was "a proud moment" in what had been "an amazing year".
+    
+    A peak TV audience of 3.7m watched the then-16-year-old's appearance in the final. He lost by seven sets to four to world number one Luke Humphries, but earned £200,000 as the runner-up. He beat Michael van Gerwen later in the same month to win the Bahrain Darts Masters and secure his first Professional Darts Corporation (PDC) senior title. The event also saw he become the youngest person to make a nine-dart finish on live television, which is considered one of the sport's highest achievements and sees a player score the required 501 in the lowest number of darts possible.
+    
+    Luke Littler said the award was a "huge honour"
+    
+    In May, Littler won the 2024 Premier League Darts, his first major PDC title, and in November, Littler won the Grand Slam of Darts for his first major ranking title. The corporation's statistics showed that after each win, there was increased interest in Littler online, with even his first round exit on his World Grand Prix debut in October appearing in searches.
+    
+    Littler, who plays under the nickname of The Nuke, said it had been "an amazing year for me personally, and for the sport of darts as a whole". "To be recognised in two Year in Search lists is a huge honour," he said. "I can't quite believe I'm trending higher than both the prime minister and the King in the 'People' category—and in a year of such great sporting achievements, it's a proud moment for me to be the top trending athlete in 2024."
+    
+    Google's most searched people in UK in 2024 Google's most searched for athletes in UK in 2024
+    
+    Google's Year in Search lists, external were also impacted by the announced return of rock superstars Oasis for a 2025 tour. The Mancunian legends topped the list of most searched for musicians, ahead of Sabrina Carpenter, One Direction, Dave Grohl and Raye, while "how to get Oasis tickets" was second only to "how to vote in the UK" in the list of searched questions. Matt Cooke from the Google News Initiative said 2024 had been "a year of comebacks, curiosity, and community". "Whether it's fans reuniting for Oasis, young sports stars like Luke Littler making waves, or Brits voting in everything from elections to Eurovision, these searches show a nation full of passion and interest," he said. "It's amazing to see what captivated the UK, and it's always a privilege to highlight these moments in our Year in Search."
+    --------------------------------------------------------------------------------
+    Score: 0.3473, Text: Cross loses as record number of seeds out of Worlds
+    
+    Rob Cross has suffered three second-round exits in his eight World Championships
+    
+    Former champion Rob Cross became the latest high-profile casualty as a record-breaking 14th seed exited the PDC World Darts Championship in the second round. The number five seed was beaten 3-1 by close friend Scott Williams, who will face Germany's Ricardo Pietreczko in round three. Cross, who won the event on his debut in 2018, took the opening set but failed to reach anywhere near his best as he suffered his third second-round exit. He was joined by number six seed David Chisnall, who was beaten 3-2 in a sudden-death leg by Ricky Evans, who came into the tournament 46th in the PDC's Order of Merit. The 2021 semi-finalist won the opening set, but then found himself 2-1 down to an inspired Evans, who was cheered on relentlessly by the Alexandra Palace crowd. He forced the game into a deciding set and faced match dart but Evans missed bullseye by the width of the wire. Chisnall then missed his own match dart on double tops, before he made a miscalculation when attempting to checkout 139 at 5-4 down. No real harm was done with a sudden-death leg forced but he was unable to hold off Evans, who reaches the third round for the third time in the last five years. "It's not even what it is, again I've played a world-class darts player. I've played quite well and won," Evans told Sky Sports. "Look at this [the crowd], wow. I don't understand it, why are they cheering me on? "I don't get this reception in my household. Thank you very much. You've made a very fat guy very happy." Evans will face unseeded Welshman Robert Owen when the third round starts after the three-day Christmas break.
+    
+    World youth champion Gian van Veen had become the 12th seed to be knocked out when he lost 3-1 to Pietreczko. The 28th seed lost the opening set, having missed nine darts at double, but levelled. However, the Dutchman was unable to match Pietreczko, who closed out a comfortable win with a checkout percentage of 55.6%. Pietreczko said: "I am over the moon to win. It is very important for me to be in the third round after Christmas. I love the big stage." The 26th seed trailed 1-0 and 2-1, and both players went on to miss match darts, before Gurney won the final set 3-1 on legs.
+    
+    Jonny Clayton is into the third round of the PDC World Darts Championship for a sixth consecutive year
+    
+    In the afternoon session, Welsh number seven seed Jonny Clayton also needed sudden death to pull off a sensational final-set comeback against Mickey Mansell in. He was a leg away from defeat twice to his Northern Irish opponent, but came from behind to win the final set 6-5 in a sudden-death leg to win 3-2. Clayton, who will play Gurney in round three, lost the opening set of the match, but fought back to lead 2-1, before being pegged back again by 51-year-old Mansell, who then missed match darts on double tops in the deciding set. "I was very emotional. I've got to be honest, that meant a lot," said Clayton, who is in the favourable half of the draw following shock second-round exits for former world champions Michael Smith and Gary Anderson. "I had chances before and Mickey definitely had chances before. It wasn't great to play in, not the best - I wouldn't wish that on my worst enemy. "There is a lot of weight off my shoulders after that. I know there is another gear or two in the bank, but I'll be honest that meant a lot to me, it is a tester and will try and make me believe again." Clayton was 2-0 down in the fifth set after consecutive 136 and 154 checkouts from Mansell, but won three legs on the trot in 15, 12 and 10 darts to wrestle a 3-2 lead. He missed three darts for the match, before his unseeded opponent held and broke Clayton's throw to lead 4-3. Mansell missed a match dart at double 20, before Clayton won on double five after two missed checkouts. Elsewhere, Northern Ireland's Josh Rock booked his place in the third round against England's Chris Dobey with a 3-0 win over Wales' Rhys Griffin. Martin Lukeman, runner-up to Luke Littler at the Grand Slam of Darts last month, is out after a 3-1 loss to number 21 seed Andrew Gilding. The final day before the Christmas break started with Poland's number 31 seed Krzysztof Ratajski recording a 3-1 win over Alexis Toylo of the Philippines.
+    
+    All times are GMT and subject to change. Two fourth-round matches will also be played
+    --------------------------------------------------------------------------------
+    Score: 0.3134, Text: Michael van Gerwen has made just one major ranking event final in 2024
+    
+    Michael van Gerwen enjoyed a comfortable 3-0 victory over English debutant James Hurrell in his opening match of the PDC World Darts Championship. The three-time world champion has had a tough year by his standards, having fallen behind Luke Littler and Luke Humphries, so a relatively stress-free opening match at Alexandra Palace was just what was needed. Hurrell, 40, offered some resistance early on when taking the opening leg of the match, but he would win just two more as Van Gerwen proved far too strong. The third-seeded Dutchman averaged 94.85, took out two three-figure checkouts and hit 50% of his doubles - with six of his nine misses coming in one scrappy leg. Van Gerwen, 35, will now face either Brendan Dolan or Lok Yin Lee in the third round.
+    
+    "I think I played OK," Van Gerwen told Sky Sports after his match. "Of course, I was a bit nervous. Like everyone knows it's been a tough year for me. "Overall, it was a good performance. I was confident. I won the game, that's the main thing." Also on Friday night, Germany's Florian Hempel showed why he loves playing on the Alexandra Palace stage with a thrilling 3-1 victory in a high-quality contest against Jeffrey de Zwaan. Both men hit seven 180s in a match played at a fast and furious pace, but 34-year-old Hempel's superior doubles gave him a fourth straight first-round victory in the competition. Hempel moves on to a tie with 26th seed Daryl Gurney but it was a damaging loss for De Zwaan, 28, who came through a late qualifier in November and needed a good run here to keep his PDC tour card for next season. Mickey Mansell earned a second-round date with world number seven Jonny Clayton after a scrappy 3-1 win over Japan's Tomoya Goto, while Dylan Slevin came through an all-Irish tie against William O'Connor to progress to a meeting with Dimitri van den Bergh.
+    
+    Stephen Bunting is in the third round of the PDC World Darts Championship for a third consecutive year
+    
+    In the afternoon session, Stephen Bunting came from behind to beat Kai Gotthardt 3-1 and book his place in the third round. Englishman Bunting, ranked eighth in the world, dropped the first set and almost went 2-0 down in the match before staging an impressive recovery. Tournament debutant Gotthardt missed three darts at double eight to win the second set, allowing Bunting to take out double 10 to level the match before powering away to victory by winning the third and fourth sets without losing a leg. Victory for "The Bullet" sets up a last 32 meeting with the winner of Dirk van Duijvenbode's meeting with Madars Razma after Christmas. Should Bunting progress further, he is seeded to face world number one and defending world champion Luke Humphries in the quarter-finals on New Year's Day. Elsewhere in Friday afternoon's session, the Dutch duo of Alexander Merkx and Wessel Nijman advanced to the second round with wins over Stephen Burton and Cameron Carolissen respectively. England's Ian White was handed a walkover victory against Sandro Eric Sosing of the Philippines. Sosing withdrew from the competition on medical grounds and was taken to hospital following chest pains.
+    --------------------------------------------------------------------------------
+    Score: 0.2992, Text: Christian Kist was sealing his first televised nine-darter
+    
+    Christian Kist hit a nine-darter but lost his PDC World Championship first-round match to Madars Razma. The Dutchman became the first player to seal a perfect leg in the tournament since Michael Smith did so on the way to beating Michael van Gerwen in the 2023 final. Kist, the 2012 BDO world champion at Lakeside, collects £60,000 for the feat, with the same amount being awarded by sponsors to a charity and to one spectator inside Alexandra Palace in London. The 38-year-old's brilliant finish sealed the opening set, but his Latvian opponent bounced back to win 3-1. Darts is one of the few sports that can measure perfection; snooker has the 147 maximum break, golf has the hole-in-one, darts has the nine-dart finish. Kist scored two maximum 180s to leave a 141 checkout which he completed with a double 12, to the delight of more than 3,000 spectators. The English 12th seed, who has been troubled by wrist and back injuries, could next play Andrew Gilding in the third round - which begins on 27 December - should Gilding beat the winner of Martin Lukeman's match against qualifier Nitin Kumar. Aspinall faces a tough task to reach the last four again, with 2018 champion Rob Cross and 2024 runner-up Luke Littler both in his side of the draw.
+    
+    Kist - who was knocked out of last year's tournament by teenager Littler - will still earn a bigger cheque than he would have got for a routine run to the quarter-finals. His nine-darter was the 15th in the history of the championship and first since the greatest leg in darts history when Smith struck, moments after Van Gerwen just missed his attempt. Darts fan Kris, a railway worker from Sutton in south London, was the random spectator picked out to receive £60,000, with Prostate Cancer UK getting the same sum from tournament sponsors Paddy Power. "I'm speechless to be honest. I didn't expect it to happen to me," Kris said. "This was a birthday present so it makes it even better. My grandad got me tickets. It was just a normal day - I came here after work." Kist said: "Hitting the double 12 felt amazing. It was a lovely moment for everyone and I hope Kris enjoys the money. Maybe I will go on vacation next month." Earlier, Jim Williams was favourite against Paolo Nebrida but lost 3-2 in an epic lasting more than an hour. The Filipino took a surprise 2-1 lead and Williams only went ahead for the first time in the opening leg of the deciding set. The Welshman looked on course for victory but missed five match darts. UK Open semi-finalist Ricky Evans set up a second-round match against Dave Chisnall, checking out on 109 to edge past Gordon Mathers 3-2.
+    --------------------------------------------------------------------------------
+    Score: 0.2948, Text: Gary Anderson was the fifth seed to be beaten on Sunday
+    
+    Two-time champion Gary Anderson has been dumped out of the PDC World Championship on his 54th birthday by Jeffrey de Graaf. The Scot, winner in 2015 and 2016, lost 3-0 to the Swede in a second-round shock at Alexandra Palace in London. "Gary didn't really show up as he usually does. I'm very happy with the win," said De Graaf, 34, who had a 75% checkout success and began with an 11-dart finish. "It's a dream come true for me. He's been my idol since I was 14 years old." Anderson, ranked 14th, became the 11th seed to be knocked out from the 24 who have played so far, and the fifth to fall on Sunday.
+    
+    He came into the competition with the year's highest overall three-dart average of 99.66 but hit just three of his 20 checkout attempts to lose his opening match of the tournament for the first time. De Graaf will now meet Filipino qualifier Paolo Nebrida after he stunned England's Ross Smith, the 19th seed, in straight sets. Ritchie Edhouse, Dirk van Duijvenbode and Martin Schindler were the other seeds beaten on day eight. England's Callan Rydz, who hit a record first-round average of 107.06 on Thursday, followed up with a 3-0 win over 23rd seed Schindler on Sunday. The German missed double 12 for a nine-darter in the first set – the third player to do so in 24 hours after Luke Littler and Damon Heta – and ended up losing the leg. Rydz next meets Belgian Dimitri van den Bergh, who hit six 180s and averaged 96 in a 3-0 win over Irishman Dylan Slevin.
+    
+    England's Joe Cullen abruptly left his post-match news conference and accused the media of not showing him respect after his 3-0 win over Dutchman Wessel Nijman. Nijman, who has previously served a ban for breaching betting and anti-corruption rules, had been billed as favourite beforehand to beat 23rd seed Cullen. "Honestly, the media attention that Wessel's got, again this is not a reflection on him," Cullen said. "He seems like a fantastic kid, he's been caught up in a few things beforehand, but he's served his time and he's held his hands up, like a lot haven't. "I think the way I've been treated probably with the media and things like that - I know you guys have no control over the bookies - I've been shown no respect, so I won't be showing any respect to any of you guys tonight. "I'm going to go home. Cheers." Ian 'Diamond' White beat European champion and 29th seed Edhouse 3-1 and will face teenage star Littler in the next round. White, born in the same Cheshire town as the 17-year-old, acknowledged he would need to up his game in round three. Asked if he knew who was waiting for him, White joked: "Yeah, Runcorn's number two. I'm from Runcorn and I'm number one." Ryan Searle started Sunday afternoon's action off with a 10-dart leg and went on to beat Matt Campbell 3-0, while Latvian Madars Razma defeated 25th seed Van Duijvenbode 3-1. Seventh seed Jonny Clayton and 2018 champion Rob Cross are among the players in action on Monday as the second round concludes. The third round will start on Friday after a three-day break for Christmas.
+    --------------------------------------------------------------------------------
 
 
 # Retrieval-Augmented Generation (RAG) with Couchbase and LangChain
@@ -517,15 +702,6 @@ The language model, equipped with the context from the retrieved documents, gene
 
 
 ```python
-# Create retriever from vector store
-retriever = vector_store.as_retriever(
-    search_type="similarity", 
-    search_kwargs={"k": 4}
-)
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
 # Create RAG prompt template
 rag_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are a helpful assistant that answers questions based on the provided context."),
@@ -534,7 +710,7 @@ rag_prompt = ChatPromptTemplate.from_messages([
 
 # Create RAG chain
 rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    {"context": vector_store.as_retriever(), "question": RunnablePassthrough()}
     | rag_prompt
     | llm
     | StrOutputParser()
@@ -542,21 +718,32 @@ rag_chain = (
 logging.info("Successfully created RAG chain")
 ```
 
-    2024-12-12 03:16:21,655 - INFO - Successfully created RAG chain
+    2025-02-18 22:45:31,938 - INFO - Successfully created RAG chain
 
 
 
 ```python
 start_time = time.time()
-rag_response = rag_chain.invoke(query)
-rag_elapsed_time = time.time() - start_time
+# Turn off excessive Logging 
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
 
-print(f"RAG Response: {rag_response}")
-print(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+try:
+    rag_response = rag_chain.invoke(query)
+    rag_elapsed_time = time.time() - start_time
+    print(f"RAG Response: {rag_response}")
+    print(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
+except Exception as e:
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
-    RAG Response:  The stock market crash of 1929, which wiped out billions of dollars of investors' wealth, was a significant factor in the Great Depression.
-    RAG response generated in 4.39 seconds
+    RAG Response: 
+    Luke Littler hit a tournament record 140.91 set average as he started his bid for the PDC World Championship title with a dramatic 3-1 win over Ryan Meikle. The 17-year-old made headlines around the world when he reached the tournament final in January, where he lost to Luke Humphries. Starting this campaign on Saturday, Littler was millimetres away from a nine-darter when he missed double 12 as he blew Meikle away in the fourth and final set of the second-round match. Littler was overcome with emotion at the end
+    RAG response generated in 11.06 seconds
 
 
 # Using Couchbase as a caching mechanism
@@ -569,9 +756,9 @@ For subsequent requests with the same query, the system checks Couchbase first. 
 ```python
 try:
     queries = [
-        "Why do heavier objects travel downhill faster?",
-        "What caused the 1929 Great Depression?", # Repeated query
-        "Why do heavier objects travel downhill faster?",  # Repeated query
+        "What happened in the match between Fullham and Liverpool?",
+        "What were Luke Littler's key achievements and records in his recent PDC World Championship match?",
+        "What happened in the match between Fullham and Liverpool?", # Repeated query
     ]
 
     for i, query in enumerate(queries, 1):
@@ -583,20 +770,31 @@ try:
         print(f"Response: {response}")
         print(f"Time taken: {elapsed_time:.2f} seconds")
 
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
     
-    Query 1: Why do heavier objects travel downhill faster?
-    Response:  The force of gravity is the reason why heavier objects travel downhill faster. The force of gravity is stronger at higher altitudes, which means that objects with greater mass will experience a stronger gravitational pull and accelerate faster than lighter objects.
-    Time taken: 4.64 seconds
+    Query 1: What happened in the match between Fullham and Liverpool?
+    Response:  The match between Fullham and Liverpool ended in a 2-2 draw.
+    Time taken: 4.34 seconds
     
-    Query 2: What caused the 1929 Great Depression?
-    Response:  The stock market crash of 1929, which wiped out billions of dollars of investors' wealth, was a significant factor in the Great Depression.
-    Time taken: 1.62 seconds
+    Query 2: What were Luke Littler's key achievements and records in his recent PDC World Championship match?
+    Response: 
+    Luke Littler hit a tournament record 140.91 set average as he started his bid for the PDC World Championship title with a dramatic 3-1 win over Ryan Meikle. The 17-year-old made headlines around the world when he reached the tournament final in January, where he lost to Luke Humphries. Starting this campaign on Saturday, Littler was millimetres away from a nine-darter when he missed double 12 as he blew Meikle away in the fourth and final set of the second-round match. Littler was overcome with emotion at the end
+    Time taken: 2.45 seconds
     
-    Query 3: Why do heavier objects travel downhill faster?
-    Response:  The force of gravity is the reason why heavier objects travel downhill faster. The force of gravity is stronger at higher altitudes, which means that objects with greater mass will experience a stronger gravitational pull and accelerate faster than lighter objects.
-    Time taken: 1.73 seconds
+    Query 3: What happened in the match between Fullham and Liverpool?
+    Response:  The match between Fullham and Liverpool ended in a 2-2 draw.
+    Time taken: 2.05 seconds
+
+
+## Conclusion
+By following these steps, you'll have a fully functional semantic search engine that leverages the strengths of Couchbase and AWS Bedrock. This guide is designed not just to show you how to build the system, but also to explain why each step is necessary, giving you a deeper understanding of the principles behind semantic search and how to implement it effectively. Whether you're a newcomer to software development or an experienced developer looking to expand your skills, this guide will provide you with the knowledge and tools you need to create a powerful, AI-driven search engine.
+
 
