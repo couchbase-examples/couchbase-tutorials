@@ -32,6 +32,50 @@ By the end of this tutorial, you will have a working flight visualization tool a
 
 The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/).
 
+## Important Concepts
+
+### Understanding JSON and Document Databases
+Couchbase is a NoSQL document database that stores data in JSON format. This allows for flexible and scalable data modeling. JSON (JavaScript Object Notation) is a lightweight data format that is:
+- **Human-readable**: Easy to interpret and debug.
+- **Flexible**: Supports hierarchical structures.
+- **Efficient**: Quick to parse and generate.
+
+Example JSON document:
+```json
+{
+  "id": "user_123",
+  "name": "Alice Smith",
+  "email": "alice@example.com",
+  "age": 21,
+  "preferences": {
+    "theme": "dark",
+    "notifications": true
+  }
+}
+```
+Couchbase Uses JSON because:
+- **Flexible Schema**: No predefined structure, allowing easy adaptation to changing requirements.
+- **Efficient Querying**: Uses SQL-like N1QL queries for fast data retrieval.
+- **Scalability**: Distributed architecture supports large-scale applications.
+- **Natural Data Representation**: JSON structure aligns well with modern application objects.
+
+### Couchbase Data Model and Comparison to Relational Databases
+Unlike relational databases, Couchbase organizes data into a hierarchical structure:
+
+| Couchbase Concept  | Relational Equivalent  | Description  |
+|--------------------|-----------------------|-------------|
+| **Bucket**        | Database               | Top-level data storage container. |
+| **Scope**         | Schema                 | Logical namespace within a bucket. |
+| **Collection**    | Table                  | Group of related JSON documents. |
+| **Document**      | Row                    | Individual JSON record. |
+
+### Important Operation Notes  
+- **CRUD Operations**: Create, Read, Update, and Delete operations only work on the specific bucket, scope, and collection specified during connection setup.  
+- **Queries**: Can work across any bucket, scope, and collection in the cluster, regardless of the connection settings.  
+- **Access Control**: Both CRUD operations and queries are limited by the permissions assigned to the Couchbase user in the cluster. The **Username** and **Password** provided during connection setup must belong to a Couchbase user with the necessary cluster access permissions. 
+
+By understanding these key concepts, you'll be well-prepared to build and optimize applications using Couchbase and Streamlit.
+
 ## Dataset Overview
 The `travel-sample` dataset in Couchbase consists of multiple scopes and collections related to travel and transportation data. The primary scope used in this application is `inventory`, which contains five collections:
 
