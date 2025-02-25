@@ -30,7 +30,7 @@ This tutorial will guide you through building a fully functional Streamlit appli
 
 By the end of this tutorial, you will have a working flight visualization tool and a deeper understanding of how to integrate Couchbase with Streamlit for interactive data applications.
 
-The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/).
+The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/). The original code for this demo is available [here](https://github.com/couchbase-examples/streamlit-quickstart/blob/main/Demo.py).
 
 ## Important Concepts
 
