@@ -5,7 +5,7 @@ title: Couchbase Connector for Streamlit
 short_title: Couchbase Connector for Streamlit
 description:
   - Learn how to integrate streamlit with Couchbase Capella
-  - Example on CRUD and query operations
+  - Build demo streamlit application with travel-sample dataset
 content_type: tutorial
 filter: sdk
 technology:
