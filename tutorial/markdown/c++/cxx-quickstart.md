@@ -100,9 +100,10 @@ This will download and install all the dependencies required for the project to 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it by executing the following command from the build directory:
 
 ```sh
+cmake --build .
 ./cxx_quickstart
 ```
-
+> Note: Run this command from the build directory
 
 ### Verifying the Application
 
@@ -229,15 +230,12 @@ auto res = Delete(col, doc_id);
 ### Query
 We can use the `Query` function to execute any N1QL (SQL++) query on a scope.
 - Executes the N1QL query using the provided `scope.query(query, opts)`.
-- Returns the result of the query if successful. The result is returned as a `couchbase::query_results` object.
+- Returns the result of the query if successful. The result is added to a `std::vector<std::string>` object that contains the `id, country, avg_rating, title`.
 - We can pass `opts` parameter, which can be used to insert positonal parameters in the query.
 - If there is an error, it prints an error message and returns an empty result object.
 
 ```c++
 //operations.cpp
-auto [q_err, q_res] = scope.query(query, opts).get();
-
-//main.cpp
 std::string query{ R"(        
     SELECT META(h).id, h AS doc,
             AVG(r.ratings.Overall) AS avg_rating
@@ -248,12 +246,13 @@ std::string query{ R"(
     ORDER BY avg_rating DESC
     LIMIT 5;
 )" };
+auto [q_err, q_res] = scope.query(query, couchbase::query_options{}.positional_parameters(std::vector<std::string>{"United States", "United Kingdom"})).get();
 
-auto query_res = Query(scope, query, couchbase::query_options{}.positional_parameters(std::vector<std::string>{"United States", "United Kingdom"}));
-for (auto& row : query_res.rows_as()) {
-    std::cout  << row["id"].as<std::string>() << " " << row["doc"]["country"].as<std::string>() << std::endl;
-    std::cout << row["avg_rating"].as<double>() << " " << row["doc"]["title"].as<std::string>() <<  std::endl;
+//main.cpp
+for (auto& row : query_res) {
+  std::cout << row << std::endl;
 }
+
 ```
 
 ### Create Search Index
@@ -309,9 +308,13 @@ auto query = couchbase::conjunction_query{
 ...
 auto [err,res] = scope.search(index_name, couchbase::search_request(query), opts).get();
 
-//main.cpp
 for(auto &row:res.rows()){
-    rows_res.push_back(row.id());
+  auto fields = row.fields_as<couchbase::codec::tao_json_serializer>();
+  rows_res.push_back(fields["name"].as<std::string>());
 }
 return rows_res;
+
+//main.cpp
+auto filter_res = Filter(scope, index_name, 50, 1);
+std::cout << "Filter result contains:\t" << filter_res.size() << std::endl;
 ```
