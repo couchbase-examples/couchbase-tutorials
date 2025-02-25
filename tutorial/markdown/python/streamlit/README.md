@@ -647,8 +647,6 @@ This will launch the app in your browser, allowing you to interactively explore 
 
 Now that you've built your demo app, it's time to deploy it for free using **Streamlit Community Cloud**!
 
-### Steps to Deploy Your App
-
 ### Step 1: Push Your App to GitHub
 Ensure your app is stored in a GitHub repository with the following files:
 - `app.py` (your main script)
