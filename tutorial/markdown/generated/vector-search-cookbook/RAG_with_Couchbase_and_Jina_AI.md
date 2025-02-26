@@ -46,13 +46,13 @@ You can either download the notebook file and run it on [Google Colab](https://c
 
 To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with a environment where you can explore and learn about Capella with no time constraint.
 
-To know more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+To learn more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
 ### Couchbase Capella Configuration
 
 When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the following prerequisites need to be met.
 
-* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the required bucket (Read and Write) used in the application.
 * [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
 # Setting the Stage: Installing Necessary Libraries
@@ -60,35 +60,37 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-!pip install datasets langchain-couchbase langchain-community openai==0.27
+%pip install --quiet datasets langchain-couchbase langchain-community openai==0.27 python-dotenv
 ```
 
-    [Output too long, omitted for brevity]
+    Note: you may need to restart the kernel to use updated packages.
+
 
 # Importing Necessary Libraries
 The script starts by importing a series of libraries required for various tasks, including handling JSON, logging, time tracking, Couchbase connections, embedding generation, and dataset loading. These libraries provide essential functions for working with data, managing database connections, and processing machine learning models.
 
 
 ```python
+import getpass
 import json
 import logging
 import os
 import time
-import getpass
 from datetime import timedelta
-from uuid import uuid4
 
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import (CouchbaseException,
                                   InternalServerFailureException,
-                                  QueryIndexAlreadyExistsException)
+                                  QueryIndexAlreadyExistsException,
+                                  ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
+from dotenv import load_dotenv
 from langchain_community.chat_models import JinaChat
 from langchain_community.embeddings import JinaEmbeddings
-from langchain_core.documents import Document
 from langchain_core.globals import set_llm_cache
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -96,7 +98,6 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_couchbase.cache import CouchbaseCache
 from langchain_couchbase.vectorstores import CouchbaseVectorStore
-from tqdm import tqdm
 ```
 
 # Setup Logging
@@ -106,6 +107,10 @@ Logging is configured to track the progress of the script and capture any errors
 
 ```python
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',force=True)
+
+# Suppress all logs from specific loggers
+logging.getLogger('openai').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
 ```
 
 # Loading Sensitive Informnation
@@ -115,17 +120,20 @@ The script also validates that all required inputs are provided, raising an erro
 
 
 ```python
-JINA_API_KEY = getpass.getpass("JINA_API_KEY")
-JINACHAT_API_KEY = getpass.getpass("JINACHAT_API_KEY")
-CB_HOST = input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
-CB_USERNAME = input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
-CB_PASSWORD = getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
-CB_BUCKET_NAME = input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
-INDEX_NAME = input('Enter your Couchbase index name (default: vector_search_jina): ') or 'vector_search_jina'
+load_dotenv() 
 
-SCOPE_NAME = input('Enter your Couchbase scope name (default: shared): ') or 'shared'
-COLLECTION_NAME = input('Enter your Couchbase collection name (default: jina): ') or 'jina'
-CACHE_COLLECTION = input('Enter your Couchbase cache collection name (default: cache): ') or 'cache'
+JINA_API_KEY = os.getenv("JINA_API_KEY") or getpass.getpass("JINA_API_KEY")
+JINACHAT_API_KEY = os.getenv("JINACHAT_API_KEY") or getpass.getpass("JINACHAT_API_KEY") 
+
+CB_HOST = os.getenv("CB_HOST") or input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
+CB_USERNAME = os.getenv("CB_USERNAME") or input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
+CB_PASSWORD = os.getenv("CB_PASSWORD") or getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
+CB_BUCKET_NAME = os.getenv("CB_BUCKET_NAME") or input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
+INDEX_NAME = os.getenv("INDEX_NAME") or input('Enter your Couchbase index name (default: vector_search_jina): ') or 'vector_search_jina'
+
+SCOPE_NAME = os.getenv("SCOPE_NAME") or input('Enter your Couchbase scope name (default: shared): ') or 'shared'
+COLLECTION_NAME = os.getenv("COLLECTION_NAME") or input('Enter your Couchbase collection name (default: jina): ') or 'jina'
+CACHE_COLLECTION = os.getenv("CACHE_COLLECTION") or input('Enter your Couchbase cache collection name (default: cache): ') or 'cache'
 
 # Check if the variables are correctly loaded
 if not JINA_API_KEY:
@@ -133,18 +141,6 @@ if not JINA_API_KEY:
 if not JINACHAT_API_KEY:
     raise ValueError("JINACHAT_API_KEY environment variable is not set")
 ```
-
-    JINA_API_KEY··········
-    JINACHAT_API_KEY··········
-    Enter your Couchbase host (default: couchbase://localhost): couchbases://cb.hlcup4o4jmjr55yf.cloud.couchbase.com
-    Enter your Couchbase username (default: Administrator): vector-search-rag-demos
-    Enter your Couchbase password (default: password): ··········
-    Enter your Couchbase bucket name (default: vector-search-testing): 
-    Enter your Couchbase index name (default: vector_search_jina): 
-    Enter your Couchbase scope name (default: shared): 
-    Enter your Couchbase collection name (default: jina): 
-    Enter your Couchbase cache collection name (default: cache): 
-
 
 # Connecting to the Couchbase Cluster
 Connecting to a Couchbase cluster is the foundation of our project. Couchbase will serve as our primary data store, handling all the storage and retrieval operations required for our semantic search engine. By establishing this connection, we enable our application to interact with the database, allowing us to perform operations such as storing embeddings, querying data, and managing collections. This connection is the gateway through which all data will flow, so ensuring it's set up correctly is paramount.
@@ -163,20 +159,68 @@ except Exception as e:
     raise ConnectionError(f"Failed to connect to Couchbase: {str(e)}")
 ```
 
-    2024-08-30 07:01:33,604 - INFO - Successfully connected to Couchbase
+    2025-02-26 06:50:14,266 - INFO - Successfully connected to Couchbase
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: You will not be able to create a bucket on Capella
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
+
 
 
 ```python
 def setup_collection(cluster, bucket_name, scope_name, collection_name):
     try:
-        bucket = cluster.bucket(bucket_name)
+        # Check if bucket exists, create if it doesn't
+        try:
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
+        except Exception as e:
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
+
         bucket_manager = bucket.collections()
+
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
 
         # Check if collection exists, create if it doesn't
         collections = bucket_manager.get_all_scopes()
@@ -190,9 +234,11 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
             bucket_manager.create_collection(scope_name, collection_name)
             logging.info(f"Collection '{collection_name}' created successfully.")
         else:
-            logging.info(f"Collection '{collection_name}' already exists.Skipping creation.")
+            logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
 
+        # Wait for collection to be ready
         collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
 
         # Ensure primary index exists
         try:
@@ -212,29 +258,39 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
         return collection
     except Exception as e:
         raise RuntimeError(f"Error setting up collection: {str(e)}")
-
+    
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
+
 ```
 
-    2024-08-30 07:01:34,024 - INFO - Collection 'jina' already exists.Skipping creation.
-    2024-08-30 07:01:34,092 - INFO - Primary index present or created successfully.
-    2024-08-30 07:01:34,779 - INFO - All documents cleared from the collection.
-    2024-08-30 07:01:34,850 - INFO - Collection 'cache' already exists.Skipping creation.
-    2024-08-30 07:01:34,919 - INFO - Primary index present or created successfully.
-    2024-08-30 07:01:34,991 - INFO - All documents cleared from the collection.
+    2025-02-26 06:50:14,291 - INFO - Bucket 'vector-search-testing' does not exist. Creating it...
+    2025-02-26 06:50:14,856 - INFO - Bucket 'vector-search-testing' created successfully.
+    2025-02-26 06:50:14,860 - INFO - Scope 'shared' does not exist. Creating it...
+    2025-02-26 06:50:14,911 - INFO - Scope 'shared' created successfully.
+    2025-02-26 06:50:14,915 - INFO - Collection 'jina' does not exist. Creating it...
+    2025-02-26 06:50:15,005 - INFO - Collection 'jina' created successfully.
+    2025-02-26 06:50:18,904 - INFO - Primary index present or created successfully.
+    2025-02-26 06:50:27,749 - INFO - All documents cleared from the collection.
+    2025-02-26 06:50:27,750 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-26 06:50:27,753 - INFO - Collection 'cache' does not exist. Creating it...
+    2025-02-26 06:50:27,795 - INFO - Collection 'cache' created successfully.
+    2025-02-26 06:50:32,695 - INFO - Primary index present or created successfully.
+    2025-02-26 06:50:32,698 - INFO - All documents cleared from the collection.
 
 
 
 
 
-    <couchbase.collection.Collection at 0x7a3722ac3040>
+    <couchbase.collection.Collection at 0x7ed0f4e979b0>
 
 
 
 # Loading Couchbase Vector Search Index
 
 Semantic search requires an efficient way to retrieve relevant documents based on a user's query. This is where the Couchbase **Vector Search Index** comes into play. In this step, we load the Vector Search Index definition from a JSON file, which specifies how the index should be structured. This includes the fields to be indexed, the dimensions of the vectors, and other parameters that determine how the search engine processes queries based on vector similarity.
+
+This Jina vector search index configuration requires specific default settings to function properly. This tutorial uses the bucket named `vector-search-testing` with the scope `shared` and collection `jina`. The configuration is set up for vectors with exactly `1024 dimensions`, using dot product similarity and optimized for recall. If you want to use a different bucket, scope, or collection, you will need to modify the index configuration accordingly.
 
 For more information on creating a vector search index, please follow the [instructions](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html).
 
@@ -244,26 +300,36 @@ For more information on creating a vector search index, please follow the [instr
 # If you are running this script locally (not in Google Colab), uncomment the following line
 # and provide the path to your index definition file.
 
-# index_definition_path = '/path_to_your_index_file/jinaai_index.json'  # Local setup: specify your file path here
+# index_definition_path = '/path_to_your_index_file/jina_index.json'  # Local setup: specify your file path here
 
-# If you are running in Google Colab, use the following code to upload the index definition file
-from google.colab import files
-print("Upload your index definition file")
-uploaded = files.upload()
-index_definition_path = list(uploaded.keys())[0]
+# # Version for Google Colab
+# def load_index_definition_colab():
+#     from google.colab import files
+#     print("Upload your index definition file")
+#     uploaded = files.upload()
+#     index_definition_path = list(uploaded.keys())[0]
 
-try:
-    with open(index_definition_path, 'r') as file:
-        index_definition = json.load(file)
-except Exception as e:
-    raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+#     try:
+#         with open(index_definition_path, 'r') as file:
+#             index_definition = json.load(file)
+#         return index_definition
+#     except Exception as e:
+#         raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Version for Local Environment
+def load_index_definition_local(index_definition_path):
+    try:
+        with open(index_definition_path, 'r') as file:
+            index_definition = json.load(file)
+        return index_definition
+    except Exception as e:
+        raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Usage
+# Uncomment the appropriate line based on your environment
+# index_definition = load_index_definition_colab()
+index_definition = load_index_definition_local('jina_index.json')
 ```
-
-    Upload your index definition file
-
-
-    Saving jina_index.json to jina_index.json
-
 
 # Creating or Updating Search Indexes
 
@@ -292,88 +358,15 @@ try:
 
 except QueryIndexAlreadyExistsException:
     logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
-
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
 except InternalServerFailureException as e:
-    error_message = str(e)
-    logging.error(f"InternalServerFailureException raised: {error_message}")
-
-    try:
-        # Accessing the response_body attribute from the context
-        error_context = e.context
-        response_body = error_context.response_body
-        if response_body:
-            error_details = json.loads(response_body)
-            error_message = error_details.get('error', '')
-
-            if "collection: 'jina' doesn't belong to scope: 'shared'" in error_message:
-                raise ValueError("Collection 'jina' does not belong to scope 'shared'. Please check the collection and scope names.")
-
-    except ValueError as ve:
-        logging.error(str(ve))
-        raise
-
-    except Exception as json_error:
-        logging.error(f"Failed to parse the error message: {json_error}")
-        raise RuntimeError(f"Internal server error while creating/updating search index: {error_message}")
+    logging.error(f"Internal server error: {str(e)}")
+    raise
 ```
 
-    2024-08-30 07:01:51,411 - INFO - Index 'vector_search_jina' found
-    2024-08-30 07:01:51,689 - INFO - Index 'vector_search_jina' already exists. Skipping creation/update.
-
-
-# Load the TREC Dataset
-To build a search engine, we need data to search through. We use the TREC dataset, a well-known benchmark in the field of information retrieval. This dataset contains a wide variety of text data that we'll use to train our search engine. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the data in the TREC dataset make it an excellent choice for testing and refining our search engine, ensuring that it can handle a wide range of queries effectively.
-
-The TREC dataset's rich content allows us to simulate real-world scenarios where users ask complex questions, enabling us to fine-tune our search engine's ability to understand and respond to various types of queries.
-
-
-```python
-try:
-    trec = load_dataset('trec', split='train[:1000]')
-    logging.info(f"Successfully loaded TREC dataset with {len(trec)} samples")
-except Exception as e:
-    raise ValueError(f"Error loading TREC dataset: {str(e)}")
-```
-
-    /usr/local/lib/python3.10/dist-packages/huggingface_hub/utils/_token.py:89: UserWarning: 
-    The secret `HF_TOKEN` does not exist in your Colab secrets.
-    To authenticate with the Hugging Face Hub, create a token in your settings tab (https://huggingface.co/settings/tokens), set it as secret in your Google Colab and restart your session.
-    You will be able to reuse this secret in all of your notebooks.
-    Please note that authentication is recommended but still optional to access public models or datasets.
-      warnings.warn(
-
-
-
-    Downloading builder script:   0%|          | 0.00/5.09k [00:00<?, ?B/s]
-
-
-
-    Downloading readme:   0%|          | 0.00/10.6k [00:00<?, ?B/s]
-
-
-    The repository for trec contains custom code which must be executed to correctly load the dataset. You can inspect the repository content at https://hf.co/datasets/trec.
-    You can avoid this prompt in future by passing the argument `trust_remote_code=True`.
-    
-    Do you wish to run the custom code? [y/N] y
-
-
-
-    Downloading data:   0%|          | 0.00/336k [00:00<?, ?B/s]
-
-
-
-    Downloading data:   0%|          | 0.00/23.4k [00:00<?, ?B/s]
-
-
-
-    Generating train split:   0%|          | 0/5452 [00:00<?, ? examples/s]
-
-
-
-    Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]
-
-
-    2024-08-30 07:02:01,486 - INFO - Successfully loaded TREC dataset with 1000 samples
+    2025-02-26 06:50:32,761 - INFO - Creating new index 'vector_search_jina'...
+    2025-02-26 06:50:32,901 - INFO - Index 'vector_search_jina' successfully created/updated.
 
 
 # Creating Jina Embeddings
@@ -385,14 +378,14 @@ Embeddings are at the heart of semantic search. They are numerical representatio
 ```python
 try:
     embeddings = JinaEmbeddings(
-        jina_api_key=JINA_API_KEY, model_name="jina-embeddings-v2-base-en"
+        jina_api_key=JINA_API_KEY, model_name="jina-embeddings-v3"
     )
     logging.info("Successfully created JinaEmbeddings")
 except Exception as e:
     raise ValueError(f"Error creating JinaEmbeddings: {str(e)}")
 ```
 
-    2024-08-30 07:02:01,509 - INFO - Successfully created JinaEmbeddings
+    2025-02-26 06:50:32,907 - INFO - Successfully created JinaEmbeddings
 
 
 #  Setting Up the Couchbase Vector Store
@@ -415,29 +408,108 @@ except Exception as e:
 
 ```
 
-    2024-08-30 07:02:02,611 - INFO - Successfully created vector store
+    2025-02-26 06:50:32,960 - INFO - Successfully created vector store
 
 
-# Saving Data to the Vector Store
-With the vector store set up, the next step is to populate it with data. We save the TREC dataset to the vector store in batches. This method is efficient and ensures that our search engine can handle large datasets without running into performance issues. By saving the data in this way, we prepare our search engine to quickly and accurately respond to user queries. This step is essential for making the dataset searchable, transforming raw data into a format that can be easily queried by our search engine.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
-Batch processing is particularly important when dealing with large datasets, as it prevents memory overload and ensures that the data is stored in a structured and retrievable manner. This approach not only optimizes performance but also ensures the scalability of our system.
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
-batch_size = 50
 try:
-    for i in tqdm(range(0, len(trec['text']), batch_size), desc="Processing Batches"):
-        batch = trec['text'][i:i + batch_size]
-        documents = [Document(page_content=text) for text in batch]
-        uuids = [str(uuid4()) for _ in range(len(documents))]
-        vector_store.add_documents(documents=documents, ids=uuids)
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
+    )
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
-
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    Processing Batches: 100%|██████████| 20/20 [00:30<00:00,  1.54s/it]
+    2025-02-26 06:50:38,421 - INFO - Successfully loaded the BBC News dataset with 2687 rows.
+
+
+    Loaded the BBC News dataset with 2687 rows
+
+
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
+
+
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 50 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+# Calculate 60% of the dataset size and round to nearest integer
+dataset_size = len(unique_news_articles)
+subset_size = round(dataset_size * 0.6)
+
+# Filter articles by length and create subset
+filtered_articles = [article for article in unique_news_articles[:subset_size] 
+                    if article and len(article) <= 50000]
+
+# Process in batches
+batch_size = 50
+
+try:
+    vector_store.add_texts(
+        texts=filtered_articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully")
+    
+except CouchbaseException as e:
+    logging.error(f"Couchbase error during ingestion: {str(e)}")
+    raise RuntimeError(f"Error performing document ingestion: {str(e)}")
+except Exception as e:
+    if "Payment Required" in str(e):
+        logging.error("Payment required for Jina AI API. Please check your subscription status and API key.")
+        print("To resolve this error:")
+        print("1. Visit 'https://jina.ai/reader/#pricing' to review subscription options")
+        print("2. Ensure your API key is valid and has sufficient credits") 
+        print("3. Consider upgrading your subscription plan if needed")
+    else:
+        logging.error(f"Unexpected error during ingestion: {str(e)}")
+        raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+```
+
+    2025-02-26 06:51:45,345 - INFO - Document ingestion completed successfully
 
 
 # Setting Up a Couchbase Cache
@@ -461,7 +533,7 @@ except Exception as e:
     raise ValueError(f"Failed to create cache: {str(e)}")
 ```
 
-    2024-08-30 07:02:34,204 - INFO - Successfully created cache
+    2025-02-26 06:51:45,358 - INFO - Successfully created cache
 
 
 # Creating the Jina Language Model (LLM)
@@ -474,59 +546,162 @@ The language model's ability to understand context and generate coherent respons
 
 ```python
 try:
-    llm = JinaChat(temperature=0, jinachat_api_key=JINACHAT_API_KEY)
+    llm = JinaChat(temperature=0.1, jinachat_api_key=JINACHAT_API_KEY)
     logging.info("Successfully created JinaChat")
 except Exception as e:
     logging.error(f"Error creating JinaChat: {str(e)}. Please check your API key and network connection.")
     raise
 ```
 
-    2024-08-30 07:02:34,243 - INFO - Successfully created JinaChat
+    2025-02-26 06:51:45,411 - INFO - Successfully created JinaChat
 
 
-# Perform Semantic Search
-Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined. Common metrics include cosine similarity, Euclidean distance, or dot product, but other metrics can be implemented based on specific use cases. Different embedding models like BERT, Word2Vec, or GloVe can also be used depending on the application's needs, with the vectors generated by these models stored and searched within Couchbase itself.
+## Perform Semantic Search
+Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined.
 
 In the provided code, the search process begins by recording the start time, followed by executing the similarity_search_with_score method of the CouchbaseVectorStore. This method searches Couchbase for the most relevant documents based on the vector similarity to the query. The search results include the document content and a similarity score that reflects how closely each document aligns with the query in the defined semantic space. The time taken to perform this search is then calculated and logged, and the results are displayed, showing the most relevant documents along with their similarity scores. This approach leverages Couchbase as both a storage and retrieval engine for vector data, enabling efficient and scalable semantic searches. The integration of vector storage and search capabilities within Couchbase allows for sophisticated semantic search operations without relying on external services for vector storage or comparison.
 
+### Note on Retry Mechanism
+The search implementation includes a retry mechanism to handle rate limiting and API errors gracefully. If a rate limit error (HTTP 429) is encountered, the system will automatically retry the request up to 3 times with exponential backoff, waiting 2 seconds initially and doubling the wait time between each retry. This helps manage API usage limits while maintaining service reliability. For other types of errors, such as payment requirements or general failures, appropriate error messages and troubleshooting steps are provided to help diagnose and resolve the issue.
+
 
 ```python
-query = "What caused the 1929 Great Depression?"
+def perform_semantic_search(query, vector_store, max_retries=3, retry_delay=2):    
+    for attempt in range(max_retries):
+        try:
+            start_time = time.time()
+            search_results = vector_store.similarity_search_with_score(query, k=5)
+            search_elapsed_time = time.time() - start_time
+            
+            logging.info(f"Semantic search completed in {search_elapsed_time:.2f} seconds")
+            return search_results, search_elapsed_time
+            
+        except Exception as e:
+            error_str = str(e)
+            
+            # Check if it's a rate limit error (HTTP 429)
+            if "http_status: 429" in error_str or "query request rejected" in error_str:
+                logging.warning(f"Rate limit hit (attempt {attempt+1}/{max_retries}). Waiting {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+                
+                if attempt == max_retries - 1:
+                    logging.error("Maximum retry attempts reached. API rate limit exceeded.")
+                    raise RuntimeError("API rate limit exceeded. Please try again later or check your subscription.")
+            else:
+                # For other errors, don't retry
+                logging.error(f"Search error: {error_str}")
+                if "Payment Required" in error_str:
+                    raise RuntimeError("Payment required for Jina AI API. Please check your subscription status and API key.")
+                else:
+                    raise RuntimeError(f"Search failed: {error_str}")
 
 try:
-    # Perform the semantic search
-    start_time = time.time()
-    search_results = vector_store.similarity_search_with_score(query, k=10)
-    search_elapsed_time = time.time() - start_time
-
-    logging.info(f"Semantic search completed in {search_elapsed_time:.2f} seconds")
-
+    query = "What was manchester city manager pep guardiola's reaction to the team's current form?"
+    search_results, search_elapsed_time = perform_semantic_search(query, vector_store)
+    
     # Display search results
     print(f"\nSemantic Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print("-"*80)
     for doc, score in search_results:
-        print(f"Distance: {score:.4f}, Text: {doc.page_content}")
-
-except CouchbaseException as e:
-    raise RuntimeError(f"Error performing semantic search: {str(e)}")
-except Exception as e:
-    raise RuntimeError(f"Unexpected error: {str(e)}")
+        print(f"Score: {score:.4f}, Text: {doc.page_content}")
+        print("-"*80)
+        
+except RuntimeError as e:
+    print(f"Error: {str(e)}")
+    print("\nTroubleshooting steps:")
+    if "API rate limit" in str(e):
+        print("1. Wait a few minutes before trying again")
+        print("2. Reduce the frequency of your requests")
+        print("3. Consider upgrading your Jina AI plan for higher rate limits")
+    elif "Payment required" in str(e):
+        print("1. Visit 'https://jina.ai/reader/#pricing' to review subscription options")
+        print("2. Ensure your API key is valid and has sufficient credits")
+        print("3. Update your API key configuration")
+    else:
+        print("1. Check your network connection")
+        print("2. Verify your Couchbase and Jina configurations")
+        print("3. Review the vector store implementation for any bugs")
 ```
 
-    2024-08-30 07:02:34,947 - INFO - Semantic search completed in 0.69 seconds
+    2025-02-26 06:54:00,906 - INFO - Semantic search completed in 0.71 seconds
 
 
     
-    Semantic Search Results (completed in 0.69 seconds):
-    Distance: 194.3083, Text: Why did the world enter a global depression in 1929 ?
-    Distance: 176.8704, Text: When was `` the Great Depression '' ?
-    Distance: 163.8700, Text: What crop failure caused the Irish Famine ?
-    Distance: 161.0856, Text: What 's nature 's purpose for tornadoes ?
-    Distance: 160.2221, Text: What caused the Lynmouth floods ?
-    Distance: 160.0759, Text: What caused Harry Houdini 's death ?
-    Distance: 158.5242, Text: What were popular songs and types of songs in the 1920s ?
-    Distance: 157.3817, Text: Give a reason for American Indians oftentimes dropping out of school .
-    Distance: 157.1777, Text: Why is black the color of mourning in the West ?
-    Distance: 156.7614, Text: When was the San Francisco fire ?
+    Semantic Search Results (completed in 0.71 seconds):
+    --------------------------------------------------------------------------------
+    Score: 0.6797, Text: 'Self-doubt, errors & big changes' - inside the crisis at Man City
+    
+    Pep Guardiola has not been through a moment like this in his managerial career. Manchester City have lost nine matches in their past 12 - as many defeats as they had suffered in their previous 106 fixtures. At the end of October, City were still unbeaten at the top of the Premier League and favourites to win a fifth successive title. Now they are seventh, 12 points behind leaders Liverpool having played a game more. It has been an incredible fall from grace and left people trying to work out what has happened - and whether Guardiola can make it right. After discussing the situation with those who know him best, I have taken a closer look at the future - both short and long term - and how the current crisis at Man City is going to be solved.
+    
+    Pep Guardiola's Man City have lost nine of their past 12 matches
+    
+    Guardiola has also been giving it a lot of thought. He has not been sleeping very well, as he has said, and has not been himself at times when talking to the media. He has been talking to a lot of people about what is going on as he tries to work out the reasons for City's demise. Some reasons he knows, others he still doesn't. What people perhaps do not realise is Guardiola hugely doubts himself and always has. He will be thinking "I'm not going to be able to get us out of this" and needs the support of people close to him to push away those insecurities - and he has that. He is protected by his people who are very aware, like he is, that there are a lot of people that want City to fail. It has been a turbulent time for Guardiola. Remember those marks he had on his head after the 3-3 draw with Feyenoord in the Champions League? He always scratches his head, it is a gesture of nervousness. Normally nothing happens but on that day one of his nails was far too sharp so, after talking to the players in the changing room where he scratched his head because of his usual agitated gesturing, he went to the news conference. His right-hand man Manel Estiarte sent him photos in a message saying "what have you got on your head?", but by the time Guardiola returned to the coaching room there was hardly anything there again. He started that day with a cover on his nose after the same thing happened at the training ground the day before. Guardiola was having a footballing debate with Kyle Walker about positional stuff and marked his nose with that same nail. There was also that remarkable news conference after the Manchester derby when he said "I don't know what to do". That is partly true and partly not true. Ignore the fact Guardiola suggested he was "not good enough". He actually meant he was not good enough to resolve the situation with the group of players he has available and with all the other current difficulties. There are obviously logical explanations for the crisis and the first one has been talked about many times - the absence of injured midfielder Rodri. You know the game Jenga? When you take the wrong piece out, the whole tower collapses. That is what has happened here. It is normal for teams to have an over-reliance on one player if he is the best in the world in his position. And you cannot calculate the consequences of an injury that rules someone like Rodri out for the season. City are a team, like many modern ones, in which the holding midfielder is a key element to the construction. So, when you take Rodri out, it is difficult to hold it together. There were Plan Bs - John Stones, Manuel Akanji, even Nathan Ake - but injuries struck. The big injury list has been out of the ordinary and the busy calendar has also played a part in compounding the issues. However, one factor even Guardiola cannot explain is the big uncharacteristic errors in almost every game from international players. Why did Matheus Nunes make that challenge to give away the penalty against Manchester United? Jack Grealish is sent on at the end to keep the ball and cannot do that. There are errors from Walker and other defenders. These are some of the best players in the world. Of course the players' mindset is important, and confidence is diminishing. Wrong decisions get taken so there is almost panic on the pitch instead of calm. There are also players badly out of form who are having to play because of injuries. Walker is now unable to hide behind his pace, I'm not sure Kevin de Bruyne is ever getting back to the level he used to be at, Bernardo Silva and Ilkay Gundogan do not have time to rest, Grealish is not playing at his best. Some of these players were only meant to be playing one game a week but, because of injuries, have played 12 games in 40 days. It all has a domino effect. One consequence is that Erling Haaland isn't getting the service to score. But the Norwegian still remains City's top-scorer with 13. Defender Josko Gvardiol is next on the list with just four. The way their form has been analysed inside the City camp is there have only been three games where they deserved to lose (Liverpool, Bournemouth and Aston Villa). But of course it is time to change the dynamic.
+    
+    Guardiola has never protected his players so much. He has not criticised them and is not going to do so. They have won everything with him. Instead of doing more with them, he has tried doing less. He has sometimes given them more days off to clear their heads, so they can reset - two days this week for instance. Perhaps the time to change a team is when you are winning, but no-one was suggesting Man City were about to collapse when they were top and unbeaten after nine league games. Some people have asked how bad it has to get before City make a decision on Guardiola. The answer is that there is no decision to be made. Maybe if this was Real Madrid, Barcelona or Juventus, the pressure from outside would be massive and the argument would be made that Guardiola has to go. At City he has won the lot, so how can anyone say he is failing? Yes, this is a crisis. But given all their problems, City's renewed target is finishing in the top four. That is what is in all their heads now. The idea is to recover their essence by improving defensive concepts that are not there and re-establishing the intensity they are known for. Guardiola is planning to use the next two years of his contract, which is expected to be his last as a club manager, to prepare a new Manchester City. When he was at the end of his four years at Barcelona, he asked two managers what to do when you feel people are not responding to your instructions. Do you go or do the players go? Sir Alex Ferguson and Rafael Benitez both told him that the players need to go. Guardiola did not listen because of his emotional attachment to his players back then and he decided to leave the Camp Nou because he felt the cycle was over. He will still protect his players now but there is not the same emotional attachment - so it is the players who are going to leave this time. It is likely City will look to replace five or six regular starters. Guardiola knows it is the end of an era and the start of a new one. Changes will not be immediate and the majority of the work will be done in the summer. But they are open to any opportunities in January - and a holding midfielder is one thing they need. In the summer City might want to get Spain's Martin Zubimendi from Real Sociedad and they know 60m euros (£50m) will get him. He said no to Liverpool last summer even though everything was agreed, but he now wants to move on and the Premier League is the target. Even if they do not get Zubimendi, that is the calibre of footballer they are after. A new Manchester City is on its way - with changes driven by Guardiola, incoming sporting director Hugo Viana and the football department.
+    --------------------------------------------------------------------------------
+    Score: 0.6211, Text: Manchester City boss Pep Guardiola has won 18 trophies since he arrived at the club in 2016
+    
+    Manchester City boss Pep Guardiola says he is "fine" despite admitting his sleep and diet are being affected by the worst run of results in his entire managerial career. In an interview with former Italy international Luca Toni for Amazon Prime Sport before Wednesday's Champions League defeat by Juventus, Guardiola touched on the personal impact City's sudden downturn in form has had. Guardiola said his state of mind was "ugly", that his sleep was "worse" and he was eating lighter as his digestion had suffered. City go into Sunday's derby against Manchester United at Etihad Stadium having won just one of their past 10 games. The Juventus loss means there is a chance they may not even secure a play-off spot in the Champions League. Asked to elaborate on his comments to Toni, Guardiola said: "I'm fine. "In our jobs we always want to do our best or the best as possible. When that doesn't happen you are more uncomfortable than when the situation is going well, always that happened. "In good moments I am happier but when I get to the next game I am still concerned about what I have to do. There is no human being that makes an activity and it doesn't matter how they do." Guardiola said City have to defend better and "avoid making mistakes at both ends". To emphasise his point, Guardiola referred back to the third game of City's current run, against a Sporting side managed by Ruben Amorim, who will be in the United dugout at the weekend. City dominated the first half in Lisbon, led thanks to Phil Foden's early effort and looked to be cruising. Instead, they conceded three times in 11 minutes either side of half-time as Sporting eventually ran out 4-1 winners. "I would like to play the game like we played in Lisbon on Sunday, believe me," said Guardiola, who is facing the prospect of only having three fit defenders for the derby as Nathan Ake and Manuel Akanji try to overcome injury concerns. If there is solace for City, it comes from the knowledge United are not exactly flying. Their comeback Europa League victory against Viktoria Plzen on Thursday was their third win of Amorim's short reign so far but only one of those successes has come in the Premier League, where United have lost their past two games against Arsenal and Nottingham Forest. Nevertheless, Guardiola can see improvements already on the red side of the city. "It's already there," he said. "You see all the patterns, the movements, the runners and the pace. He will do a good job at United, I'm pretty sure of that."
+    
+    Guardiola says skipper Kyle Walker has been offered support by the club after the City defender highlighted the racial abuse he had received on social media in the wake of the Juventus trip. "It's unacceptable," he said. "Not because it's Kyle - for any human being. "Unfortunately it happens many times in the real world. It is not necessary to say he has the support of the entire club. It is completely unacceptable and we give our support to him."
+    --------------------------------------------------------------------------------
+    Score: 0.6007, Text: 'We have to find a way' - Guardiola vows to end relegation form
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. 'Worrying' and 'staggering' - Why do Manchester City keep conceding?
+    
+    Manchester City are currently in relegation form and there is little sign of it ending. Saturday's 2-1 defeat at Aston Villa left them joint bottom of the form table over the past eight games with just Southampton for company. Saints, at the foot of the Premier League, have the same number of points, four, as City over their past eight matches having won one, drawn one and lost six - the same record as the floundering champions. And if Southampton - who appointed Ivan Juric as their new manager on Saturday - get at least a point at Fulham on Sunday, City will be on the worst run in the division. Even Wolves, who sacked boss Gary O'Neil last Sunday and replaced him with Vitor Pereira, have earned double the number of points during the same period having played a game fewer. They are damning statistics for Pep Guardiola, even if he does have some mitigating circumstances with injuries to Ederson, Nathan Ake and Ruben Dias - who all missed the loss at Villa Park - and the long-term loss of midfield powerhouse Rodri. Guardiola was happy with Saturday's performance, despite defeat in Birmingham, but there is little solace to take at slipping further out of the title race. He may have needed to field a half-fit Manuel Akanji and John Stones at Villa Park but that does not account for City looking a shadow of their former selves. That does not justify the error Josko Gvardiol made to gift Jhon Duran a golden chance inside the first 20 seconds, or £100m man Jack Grealish again failing to have an impact on a game. There may be legitimate reasons for City's drop off, whether that be injuries, mental fatigue or just simply a team coming to the end of its lifecycle, but their form, which has plunged off a cliff edge, would have been unthinkable as they strolled to a fourth straight title last season. "The worrying thing is the number of goals conceded," said ex-England captain Alan Shearer on BBC Match of the Day. "The number of times they were opened up because of the lack of protection and legs in midfield was staggering. There are so many things that are wrong at this moment in time."
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. Man City 'have to find a way' to return to form - Guardiola
+    
+    Afterwards Guardiola was calm, so much so it was difficult to hear him in the news conference, a contrast to the frustrated figure he cut on the touchline. He said: "It depends on us. The solution is bring the players back. We have just one central defender fit, that is difficult. We are going to try next game - another opportunity and we don't think much further than that. "Of course there are more reasons. We concede the goals we don't concede in the past, we [don't] score the goals we score in the past. Football is not just one reason. There are a lot of little factors. "Last season we won the Premier League, but we came here and lost. We have to think positive and I have incredible trust in the guys. Some of them have incredible pride and desire to do it. We have to find a way, step by step, sooner or later to find a way back." Villa boss Unai Emery highlighted City's frailties, saying he felt Villa could seize on the visitors' lack of belief. "Manchester City are a little bit under the confidence they have normally," he said. "The second half was different, we dominated and we scored. Through those circumstances they were feeling worse than even in the first half."
+    
+    Erling Haaland had one touch in the Villa box
+    
+    There are chinks in the armour never seen before at City under Guardiola and Erling Haaland conceded belief within the squad is low. He told TNT after the game: "Of course, [confidence levels are] not the best. We know how important confidence is and you can see that it affects every human being. That is how it is, we have to continue and stay positive even though it is difficult." Haaland, with 76 goals in 83 Premier League appearances since joining City from Borussia Dortmund in 2022, had one shot and one touch in the Villa box. His 18 touches in the whole game were the lowest of all starting players and he has been self critical, despite scoring 13 goals in the top flight this season. Over City's last eight games he has netted just twice though, but Guardiola refused to criticise his star striker. He said: "Without him we will be even worse but I like the players feeling that way. I don't agree with Erling. He needs to have the balls delivered in the right spots but he will fight for the next one."
+    --------------------------------------------------------------------------------
+    Score: 0.5424, Text: 'Promised change, but Juventus are back in crisis'
+    
+    "We have entirely changed the way we think about football," a buoyant Cristiano Giuntoli told Italian newspaper Corriere della Sera at the start of the season. "We started from scratch. We are discovering ourselves and we are curious to see what we can achieve," the Juventus sporting director added. 'Make the Old Lady young again' was the remit - and that's what Giuntoli did. Massimiliano Allegri might have treated us to a bizarre striptease as Juventus lifted the Coppa Italia trophy last season, but his antiquated tactics were shown the door and in came Thiago Motta, the young and upcoming coach who revived Bologna with his stylish vision of the game. Just shy of 200m euros was splashed on the market to bring in the likes of Atalanta's Teun Koopmeiners and Aston Villa's Douglas Luiz. The midfield was injected with fresh new talent and youngsters were promoted and immediately thrown on to the pitch to dazzling effect, at least in the early games of the season. It all began so well. Juventus collected two consecutive league victories, winning 3-0 in both, defeated PSV and RB Leipzig in the Champions League, and most importantly they had an identifiable style of play - something that hadn't been witnessed under Allegri. The team were attacking in nature, aggressive as they won possession high up the pitch and positional fluidity was the name of the game. And then it all started to fall apart.
+    
+    Thiago Motta's Juventus host Manchester City in the Champions League on Wednesday
+    
+    Fifteen matches in and Juventus find themselves in sixth place in Serie A, still unbeaten in the league but incapable of a win. They may boast the strongest defence but their attacking game risks being advertised as a cure for insomnia. Drab, laborious and dreadfully predictable, the Bianconeri promised change but seem to be delivering much of the same, with fewer positive results. At this stage of the season last year, Allegri's Juventus were second in the table with nine points more. They may not have entertained but they were at least winning. Seven draws in their past nine games under Motta and the fans have started to lose patience, jeering and booing the squad in the second half of the match against Bologna last weekend. Juve were down 2-0 before staging a comeback to level the score. Another draw. Without Allegri, critics are stumped as to who to blame for Juve's current crisis - and yes, it is a crisis. Dusan Vlahovic, when available, still can't score goals consistently. Koopmeiners, who helped push Atalanta to a trophy last season, looks like a shadow of himself, playing in a position that has seemingly robbed him of his superpowers and highlighted his limitations. And Douglas Luiz? There's already talk of shipping him back to England.
+    
+    It's still early in the season to cast wild judgements. However, Motta has made some curious decisions that have attracted scrutiny. For example, his insistence on not playing Kenan Yildiz, the magical number 10, in the middle behind the striker - a position where he thrived in the early games of the season. Shunted out wide, the youngster has struggled to make a consistent impact. Meanwhile, Vlahovic's performances continue to spark debate. When the Serbian striker failed to replicate his form for Fiorentina at Juventus, it was difficult not to blame Allegri's defensive tactics for his apparent regression. Exhibiting more of the same mediocrity this season and Vlahovic was soon heard taking aim at his new coach while out for international duty with Serbia. "It is a bit easier for me when there is another striker, because Mitrovic holds up the ball and engages in aerial duels, so I can make more of my own characteristics and qualities," he said. "The coach also does not require many defensive duties from me, so that makes it easier too. With my physicality, I can't really run that much and am not as fresh in my finishing when I've been working so hard." So the Serbian wants total freedom at a club that requires a team effort to start winning again? Motta will not be giving up on Vlahovic and Juve will not give up on Motta any time soon. Both the directors and the fans - even the ones who boo - have a lot of faith in their new coach. Against Empoli, a 0-0 draw, the media noted that Motta's substitutions nearly cost the team a defeat as they began to allow the opposition's counter-attacks. Against Napoli, it was argued Juve can only win against sides that leave gaps at the back. When the Old Lady won the next match against Genoa 3-0, Italian newspaper Gazzetta dello Sport criticised the endless tinkering, asking if Motta was throwing on the kids to 'surprise' when he ought be concentrating on establishing a starting XI. Against Lecce - how could he introduce youth when they were holding on to a 1-0 victory? That's the time for experience, journalists argued.
+    
+    It's difficult to coach any team in Italy, especially one that must win at all times. This is a squad with an injury crisis so deep they only had four outfield players available on the bench in the Champions League match against Aston Villa. Who can be expected to revolutionise a club's playing style, incorporate new arrivals and develop youngsters when he's too busy simply looking for bodies to field on the pitch? Congested fixture lists have meant injuries are a common problem among the big European clubs, and while the coach's physical preparation of the side must always be examined and re-examined, it's worth nothing Juve have often had to deal with a mounting injury list. What ought to be discussed is why Juventus had three strikers in the squad when they were out of European competition but believed Vlahovic and Arkadiusz Milik - who has been seriously injured since June - were enough for a team partaking in four competitions this season. Giuntoli must answer for the decisions. Selling Moise Kean, who has already scored 13 goals for Fiorentina, without replacing him seems to have been a naive move that has cost Juve in this early stage of the season. Allegri is said to have privately believed Kean to be better than Vlahovic. Even more curious is the decision to invest in injury-prone Nico Gonzalez, who has only managed 226 minutes thus far due to injuries. The best ability is availability, and one would have thought Juventus had realised that when they chose to let go of both Paulo Dybala and Federico Chiesa who previously produced much more in Serie A. Against Manchester City, Juventus will face a team suffering a similar crisis with both coaches trying to manage expectations. Another draw or loss for the Old Lady and it will be difficult not to suspect Juve 2.0 are really just a lot like Allegri's originals.
+    --------------------------------------------------------------------------------
+    Score: 0.5319, Text: Under-pressure West Ham manager Julen Lopetegui says "we are going to change the situation" at the struggling club.
+    
+    The Spaniard's future was debated by senior club figures after Tuesday's 3-1 defeat at Leicester City.
+    
+    The Hammers are 14th in the Premier League table and have won just one of their last five games as they go into Monday's home game with second-bottom Wolves.
+    
+    Lopetegui left the Wolves job shortly before the start of the 2023-24 season after just nine months in charge.
+    
+    And asked if he would leave West Ham after replacing David Moyes in May, the 58-year-old Spaniard said: "You are talking about a very different situation.
+    
+    "I have big commitment to my work, always, and I am very happy to stay at West Ham. We are going to change the situation."
+    
+    When it was put to Lopetegui that he has one game to save his job, he replied: "I [am] not thinking about this. I [am] thinking we have one very important challenge on Monday against a good team.
+    
+    "We have to be focused to have a good answer and develop our work until Monday, to get ready to face them and to give our fans a good day.
+    
+    "I understand all the things around football and I understand my main aim and responsibility is to be ready for a tough, hard match.
+    
+    "But in the same way, it's a big opportunity and challenge for us at home, to be ready to achieve the three points. That is the most important thing."
+    
+    West Ham fans have been frustrated at the team's playing style under Lopetegui, who took charge in May, and the Hammers have won four and lost seven of their 14 league games so far this season.
+    
+    They have also lost both games since a 2-0 win at Newcastle and now face a Wolves side beaten 4-0 at Everton on Wednesday.
+    
+    "I don't have anything to say against my players," said former Real Madrid and Spain coach Lopetegui. "I accept the responsibility and the pressure. That's why I am a coach.
+    
+    "For sure, we're not happy and, for sure, the fans are always right. That's why I think, until now, they give us much more than we give them.
+    
+    "We have to change this, and we are looking for this."
+    --------------------------------------------------------------------------------
 
 
 # Retrieval-Augmented Generation (RAG) with Couchbase and Langchain
@@ -544,7 +719,7 @@ try:
     prompt = ChatPromptTemplate.from_template(template)
 
     rag_chain = (
-        {"context": vector_store.as_retriever(), "question": RunnablePassthrough()}
+        {"context": vector_store.as_retriever(search_kwargs={"k": 2}), "question": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
@@ -554,26 +729,51 @@ except Exception as e:
     raise ValueError(f"Error creating RAG chain: {str(e)}")
 ```
 
-    2024-08-30 07:02:34,968 - INFO - Successfully created RAG chain
+    2025-02-26 06:54:10,123 - INFO - Successfully created RAG chain
 
 
 
 ```python
 try:
-    # Get RAG response
+    # Create chain with k=2
+    # Start with k=4 and gradually reduce if token limit exceeded
+    # k=4 -> k=3 -> k=2 based on token limit warnings
+    # Final k=2 produced valid response about Guardiola in 2.33 seconds
+    current_chain = (
+        {
+            "context": vector_store.as_retriever(search_kwargs={"k": 2}),
+            "question": RunnablePassthrough()
+        }
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    
+    # Try to get response
     start_time = time.time()
-    rag_response = rag_chain.invoke(query)
-    rag_elapsed_time = time.time() - start_time
-    logging.info(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+    rag_response = current_chain.invoke(query)
+    elapsed_time = time.time() - start_time
+    
+    logging.info(f"RAG response generated in {elapsed_time:.2f} seconds using k=2")
     print(f"RAG Response: {rag_response}")
+    print(f"Response generated in {elapsed_time:.2f} seconds")
+    
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    if "Payment Required" in str(e):
+        logging.error("Payment required for Jina AI API. Please check your subscription status and API key.")
+        print("To resolve this error:")
+        print("1. Visit 'https://jina.ai/reader/#pricing' to review subscription options")
+        print("2. Ensure your API key is valid and has sufficient credits")
+        print("3. Consider upgrading your subscription plan if needed")
+    else:
+        raise RuntimeError(f"Unexpected error: {str(e)}")
 ```
 
-    2024-08-30 07:02:48,454 - INFO - RAG response generated in 13.46 seconds
+    2025-02-26 06:54:16,919 - INFO - RAG response generated in 4.90 seconds using k=2
 
 
-    RAG Response: The 1929 Great Depression was primarily caused by the stock market crash of 1929, also known as Black Tuesday. This crash occurred after a period of speculation and unsustainable growth in the late 1920s, leading to the loss of billions of dollars and devastating the American economy. It triggered a loss of confidence in the economy and banks, causing people to withdraw their money and worsening the crisis. The stock market crash of 1929 is widely considered to be the main cause of the Great Depression, which lasted for nearly a decade and resulted in high unemployment and poverty. The global depression in 1929 was also known as the Great Depression and had a significant impact on the international trade and banking system. However, it is important to note that the Great Depression was caused by a combination of factors, including overproduction, banking failures, and a decline in international trade.
+    RAG Response: Pep Guardiola has acknowledged that Manchester City's current form has taken a toll on his well-being. He revealed that he has been having trouble sleeping, experiencing a negative impact on his state of mind, and his digestion has been affected. However, he also mentioned that he is fine overall.
+    Response generated in 4.90 seconds
 
 
 # Using Couchbase as a caching mechanism
@@ -585,10 +785,9 @@ For subsequent requests with the same query, the system checks Couchbase first. 
 ```python
 try:
     queries = [
-        "How does photosynthesis work?",
-        "What is the capital of France?",
-        "What caused the 1929 Great Depression?",  # Repeated query
-        "How does photosynthesis work?",  # Repeated query
+        "What happened in the match between Fullham and Liverpool?",
+        "What was manchester city manager pep guardiola's reaction to the team's current form?", # Repeated query
+        "What happened in the match between Fullham and Liverpool?", # Repeated query
     ]
 
     for i, query in enumerate(queries, 1):
@@ -597,27 +796,32 @@ try:
         response = rag_chain.invoke(query)
         elapsed_time = time.time() - start_time
         print(f"Response: {response}")
+        
         print(f"Time taken: {elapsed_time:.2f} seconds")
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    if "Payment Required" in str(e):
+        logging.error("Payment required for Jina AI API. Please check your subscription status and API key.")
+        print("To resolve this error:")
+        print("1. Visit 'https://jina.ai/reader/#pricing' to review subscription options")
+        print("2. Ensure your API key is valid and has sufficient credits")
+        print("3. Consider upgrading your subscription plan if needed")
+    else:
+        raise RuntimeError(f"Unexpected error: {str(e)}")
 ```
 
     
-    Query 1: How does photosynthesis work?
-    Response: Photosynthesis is the process by which plants convert sunlight, carbon dioxide, and water into glucose (energy) and oxygen. This process occurs in chloroplasts, where the pigment called chlorophyll absorbs light and converts it into chemical energy. The key components of photosynthesis are sunlight, chlorophyll, carbon dioxide from the air, and water. The end products of photosynthesis are glucose (sugar) and oxygen, with glucose serving as the plant's source of energy.
-    Time taken: 10.69 seconds
+    Query 1: What happened in the match between Fullham and Liverpool?
+    Response: Fulham and Liverpool played to a 2-2 draw in their Premier League match at Anfield.
+    Time taken: 3.69 seconds
     
-    Query 2: What is the capital of France?
-    Response: The capital of France is Paris.
-    Time taken: 8.08 seconds
+    Query 2: What was manchester city manager pep guardiola's reaction to the team's current form?
+    Response: Pep Guardiola has acknowledged that Manchester City's current form has taken a toll on his well-being. He revealed that he has been having trouble sleeping, experiencing a negative impact on his state of mind, and his digestion has been affected. However, he also mentioned that he is fine overall.
+    Time taken: 1.14 seconds
     
-    Query 3: What caused the 1929 Great Depression?
-    Response: The 1929 Great Depression was primarily caused by the stock market crash of 1929, also known as Black Tuesday. This crash occurred after a period of speculation and unsustainable growth in the late 1920s, leading to the loss of billions of dollars and devastating the American economy. It triggered a loss of confidence in the economy and banks, causing people to withdraw their money and worsening the crisis. The stock market crash of 1929 is widely considered to be the main cause of the Great Depression, which lasted for nearly a decade and resulted in high unemployment and poverty. The global depression in 1929 was also known as the Great Depression and had a significant impact on the international trade and banking system. However, it is important to note that the Great Depression was caused by a combination of factors, including overproduction, banking failures, and a decline in international trade.
-    Time taken: 0.91 seconds
-    
-    Query 4: How does photosynthesis work?
-    Response: Photosynthesis is the process by which plants convert sunlight, carbon dioxide, and water into glucose (energy) and oxygen. This process occurs in chloroplasts, where the pigment called chlorophyll absorbs light and converts it into chemical energy. The key components of photosynthesis are sunlight, chlorophyll, carbon dioxide from the air, and water. The end products of photosynthesis are glucose (sugar) and oxygen, with glucose serving as the plant's source of energy.
-    Time taken: 0.73 seconds
+    Query 3: What happened in the match between Fullham and Liverpool?
+    Response: Fulham and Liverpool played to a 2-2 draw in their Premier League match at Anfield.
+    Time taken: 0.81 seconds
 
 
+## Conclusion
 By following these steps, you’ll have a fully functional semantic search engine that leverages the strengths of Couchbase and Jina. This guide is designed not just to show you how to build the system, but also to explain why each step is necessary, giving you a deeper understanding of the principles behind semantic search and how to implement it effectively. Whether you’re a newcomer to software development or an experienced developer looking to expand your skills, this guide will provide you with the knowledge and tools you need to create a powerful, AI-driven search engine.
