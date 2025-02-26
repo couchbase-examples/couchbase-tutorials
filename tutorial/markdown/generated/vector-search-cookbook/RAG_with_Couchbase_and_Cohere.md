@@ -40,19 +40,19 @@ You can either download the notebook file and run it on [Google Colab](https://c
 
 ## Get Credentials for Cohere
 
-Please follow the [instructions](https://cohere.com/generate) to generate the Cohere credentials.
+Please follow the [instructions](https://dashboard.cohere.com/welcome/register) to generate the Cohere credentials.
 
 ## Create and Deploy Your Free Tier Operational cluster on Capella
 
-To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with a environment where you can explore and learn about Capella with no time constraint.
+To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with an environment where you can explore and learn about Capella with no time constraint.
 
-To know more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+To learn more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
 ### Couchbase Capella Configuration
 
 When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the following prerequisites need to be met.
 
-* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the required bucket (Read and Write) used in the application.
 * [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
 # Setting the Stage: Installing Necessary Libraries
@@ -60,22 +60,22 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-!pip install datasets langchain-couchbase langchain-cohere
+%pip install --quiet datasets langchain-couchbase langchain-cohere python-dotenv
 ```
 
-    [Output too long, omitted for brevity]
+    Note: you may need to restart the kernel to use updated packages.
+
 
 # Importing Necessary Libraries
 The script starts by importing a series of libraries required for various tasks, including handling JSON, logging, time tracking, Couchbase connections, embedding generation, and dataset loading. These libraries provide essential functions for working with data, managing database connections, and processing machine learning models.
 
 
 ```python
+import getpass
 import json
 import logging
 import os
 import time
-import sys
-import getpass
 from datetime import timedelta
 from uuid import uuid4
 
@@ -83,26 +83,21 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import (CouchbaseException,
                                   InternalServerFailureException,
-                                  QueryIndexAlreadyExistsException)
+                                  QueryIndexAlreadyExistsException,
+                                  ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
+from dotenv import load_dotenv
 from langchain_cohere import ChatCohere, CohereEmbeddings
-from langchain_core.documents import Document
 from langchain_core.globals import set_llm_cache
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_couchbase.cache import CouchbaseCache
 from langchain_couchbase.vectorstores import CouchbaseVectorStore
-from tqdm import tqdm
 ```
-
-    /usr/local/lib/python3.10/dist-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
-    * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
-    * 'smart_union' has been removed
-      warnings.warn(message, UserWarning)
-
 
 # Setup Logging
 Logging is configured to track the progress of the script and capture any errors or warnings. This is crucial for debugging and understanding the flow of execution. The logging output includes timestamps, log levels (e.g., INFO, ERROR), and messages that describe what is happening in the script.
@@ -111,6 +106,12 @@ Logging is configured to track the progress of the script and capture any errors
 
 ```python
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',force=True)
+
+# Supress Excessive logging
+logging.getLogger('openai').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('langchain_cohere').setLevel(logging.ERROR)
+
 ```
 
 # Loading Sensitive Informnation
@@ -120,31 +121,22 @@ The script also validates that all required inputs are provided, raising an erro
 
 
 ```python
-COHERE_API_KEY = getpass.getpass('Enter your Cohere API key: ')
-CB_HOST = input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
-CB_USERNAME = input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
-CB_PASSWORD = getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
-CB_BUCKET_NAME = input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
-INDEX_NAME = input('Enter your index name (default: vector_search_cohere): ') or 'vector_search_cohere'
-SCOPE_NAME = input('Enter your scope name (default: shared): ') or 'shared'
-COLLECTION_NAME = input('Enter your collection name (default: cohere): ') or 'cohere'
-CACHE_COLLECTION = input('Enter your cache collection name (default: cache): ') or 'cache'
+load_dotenv()
+
+COHERE_API_KEY = os.getenv('COHERE_API_KEY') or getpass.getpass('Enter your Cohere API key: ')
+CB_HOST = os.getenv('CB_HOST') or input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
+CB_USERNAME = os.getenv('CB_USERNAME') or input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
+CB_PASSWORD = os.getenv('CB_PASSWORD') or getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
+CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME') or input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
+INDEX_NAME = os.getenv('INDEX_NAME') or input('Enter your index name (default: vector_search_cohere): ') or 'vector_search_cohere'
+SCOPE_NAME = os.getenv('SCOPE_NAME') or input('Enter your scope name (default: shared): ') or 'shared'
+COLLECTION_NAME = os.getenv('COLLECTION_NAME') or input('Enter your collection name (default: cohere): ') or 'cohere'
+CACHE_COLLECTION = os.getenv('CACHE_COLLECTION') or input('Enter your cache collection name (default: cache): ') or 'cache'
 
 # Check if the variables are correctly loaded
 if not COHERE_API_KEY:
     raise ValueError("COHERE_API_KEY is not provided and is required.")
 ```
-
-    Enter your Cohere API key: ··········
-    Enter your Couchbase host (default: couchbase://localhost): couchbases://cb.hlcup4o4jmjr55yf.cloud.couchbase.com
-    Enter your Couchbase username (default: Administrator): vector-search-rag-demos
-    Enter your Couchbase password (default: password): ··········
-    Enter your Couchbase bucket name (default: vector-search-testing): 
-    Enter your index name (default: vector_search_cohere): 
-    Enter your scope name (default: shared): 
-    Enter your collection name (default: cohere): 
-    Enter your cache collection name (default: cache): 
-
 
 # Connect to Couchbase
 The script attempts to establish a connection to the Couchbase database using the credentials retrieved from the environment variables. Couchbase is a NoSQL database known for its flexibility, scalability, and support for various data models, including document-based storage. The connection is authenticated using a username and password, and the script waits until the connection is fully established before proceeding.
@@ -164,21 +156,68 @@ except Exception as e:
     raise ConnectionError(f"Failed to connect to Couchbase: {str(e)}")
 ```
 
-    2024-08-29 12:37:48,036 - INFO - Successfully connected to Couchbase
+    2025-02-06 01:27:13,562 - INFO - Successfully connected to Couchbase
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: You will not be able to create a bucket on Capella
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
 
 
 
 ```python
 def setup_collection(cluster, bucket_name, scope_name, collection_name):
     try:
-        bucket = cluster.bucket(bucket_name)
+        # Check if bucket exists, create if it doesn't
+        try:
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
+        except Exception as e:
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
+
         bucket_manager = bucket.collections()
+
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
 
         # Check if collection exists, create if it doesn't
         collections = bucket_manager.get_all_scopes()
@@ -192,9 +231,11 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
             bucket_manager.create_collection(scope_name, collection_name)
             logging.info(f"Collection '{collection_name}' created successfully.")
         else:
-            logging.info(f"Collection '{collection_name}' already exists.Skipping creation.")
+            logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
 
+        # Wait for collection to be ready
         collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
 
         # Ensure primary index exists
         try:
@@ -214,29 +255,34 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
         return collection
     except Exception as e:
         raise RuntimeError(f"Error setting up collection: {str(e)}")
-
+    
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
+
 ```
 
-    2024-08-29 12:37:48,261 - INFO - Collection 'cohere' already exists.Skipping creation.
-    2024-08-29 12:37:48,300 - INFO - Primary index present or created successfully.
-    2024-08-29 12:37:48,981 - INFO - All documents cleared from the collection.
-    2024-08-29 12:37:49,020 - INFO - Collection 'cache' already exists.Skipping creation.
-    2024-08-29 12:37:49,056 - INFO - Primary index present or created successfully.
-    2024-08-29 12:37:49,104 - INFO - All documents cleared from the collection.
+    2025-02-06 01:27:14,806 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-06 01:27:17,199 - INFO - Collection 'cohere' already exists. Skipping creation.
+    2025-02-06 01:27:20,585 - INFO - Primary index present or created successfully.
+    2025-02-06 01:27:20,888 - INFO - All documents cleared from the collection.
+    2025-02-06 01:27:20,889 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-06 01:27:23,271 - INFO - Collection 'cache' already exists. Skipping creation.
+    2025-02-06 01:27:26,258 - INFO - Primary index present or created successfully.
+    2025-02-06 01:27:26,497 - INFO - All documents cleared from the collection.
 
 
 
 
 
-    <couchbase.collection.Collection at 0x7e794bfcd570>
+    <couchbase.collection.Collection at 0x30f219350>
 
 
 
 # Loading Couchbase Vector Search Index
 
 Semantic search requires an efficient way to retrieve relevant documents based on a user's query. This is where the Couchbase **Vector Search Index** comes into play. In this step, we load the Vector Search Index definition from a JSON file, which specifies how the index should be structured. This includes the fields to be indexed, the dimensions of the vectors, and other parameters that determine how the search engine processes queries based on vector similarity.
+
+This Cohere vector search index configuration requires specific default settings to function properly. This tutorial uses the bucket named `vector-search-testing` with the scope `shared` and collection `cohere`. The configuration is set up for vectors with exactly `1024 dimensions`, using dot product similarity and optimized for recall. If you want to use a different bucket, scope, or collection, you will need to modify the index configuration accordingly.
 
 For more information on creating a vector search index, please follow the [instructions](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html).
 
@@ -248,24 +294,34 @@ For more information on creating a vector search index, please follow the [instr
 
 # index_definition_path = '/path_to_your_index_file/cohere_index.json'  # Local setup: specify your file path here
 
-# If you are running in Google Colab, use the following code to upload the index definition file
-from google.colab import files
-print("Upload your index definition file")
-uploaded = files.upload()
-index_definition_path = list(uploaded.keys())[0]
+# # Version for Google Colab
+# def load_index_definition_colab():
+#     from google.colab import files
+#     print("Upload your index definition file")
+#     uploaded = files.upload()
+#     index_definition_path = list(uploaded.keys())[0]
 
-try:
-    with open(index_definition_path, 'r') as file:
-        index_definition = json.load(file)
-except Exception as e:
-    raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+#     try:
+#         with open(index_definition_path, 'r') as file:
+#             index_definition = json.load(file)
+#         return index_definition
+#     except Exception as e:
+#         raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Version for Local Environment
+def load_index_definition_local(index_definition_path):
+    try:
+        with open(index_definition_path, 'r') as file:
+            index_definition = json.load(file)
+        return index_definition
+    except Exception as e:
+        raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Usage
+# Uncomment the appropriate line based on your environment
+# index_definition = load_index_definition_colab()
+index_definition = load_index_definition_local('cohere_index.json')
 ```
-
-    Upload your index definition file
-
-
-    Saving cohere_index.json to cohere_index.json
-
 
 # Creating or Updating Search Indexes
 
@@ -294,87 +350,15 @@ try:
 
 except QueryIndexAlreadyExistsException:
     logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
-
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
 except InternalServerFailureException as e:
-    error_message = str(e)
-    logging.error(f"InternalServerFailureException raised: {error_message}")
-
-    try:
-        # Accessing the response_body attribute from the context
-        error_context = e.context
-        response_body = error_context.response_body
-        if response_body:
-            error_details = json.loads(response_body)
-            error_message = error_details.get('error', '')
-
-            if "collection: 'cohere' doesn't belong to scope: 'shared'" in error_message:
-                raise ValueError("Collection 'cohere' does not belong to scope 'shared'. Please check the collection and scope names.")
-
-    except ValueError as ve:
-        logging.error(str(ve))
-        raise
-
-    except Exception as json_error:
-        logging.error(f"Failed to parse the error message: {json_error}")
-        raise RuntimeError(f"Internal server error while creating/updating search index: {error_message}")
+    logging.error(f"Internal server error: {str(e)}")
+    raise
 ```
 
-    2024-08-29 12:37:57,417 - INFO - Index 'vector_search_cohere' found
-    2024-08-29 12:37:57,576 - INFO - Index 'vector_search_cohere' already exists. Skipping creation/update.
-
-
-# Load TREC Dataset
-The TREC dataset is loaded using the datasets library. TREC is a well-known dataset used in information retrieval and natural language processing (NLP) tasks. In this script, the dataset will be used to generate embeddings, which are numerical representations of text that capture its meaning in a form suitable for machine learning models.
-
-
-
-```python
-try:
-    trec = load_dataset('trec', split='train[:1000]')
-    logging.info(f"Successfully loaded TREC dataset with {len(trec)} samples")
-except Exception as e:
-    raise ValueError(f"Error loading TREC dataset: {str(e)}")
-```
-
-    /usr/local/lib/python3.10/dist-packages/huggingface_hub/utils/_token.py:89: UserWarning: 
-    The secret `HF_TOKEN` does not exist in your Colab secrets.
-    To authenticate with the Hugging Face Hub, create a token in your settings tab (https://huggingface.co/settings/tokens), set it as secret in your Google Colab and restart your session.
-    You will be able to reuse this secret in all of your notebooks.
-    Please note that authentication is recommended but still optional to access public models or datasets.
-      warnings.warn(
-
-
-
-    Downloading builder script:   0%|          | 0.00/5.09k [00:00<?, ?B/s]
-
-
-
-    Downloading readme:   0%|          | 0.00/10.6k [00:00<?, ?B/s]
-
-
-    The repository for trec contains custom code which must be executed to correctly load the dataset. You can inspect the repository content at https://hf.co/datasets/trec.
-    You can avoid this prompt in future by passing the argument `trust_remote_code=True`.
-    
-    Do you wish to run the custom code? [y/N] y
-
-
-
-    Downloading data:   0%|          | 0.00/336k [00:00<?, ?B/s]
-
-
-
-    Downloading data:   0%|          | 0.00/23.4k [00:00<?, ?B/s]
-
-
-
-    Generating train split:   0%|          | 0/5452 [00:00<?, ? examples/s]
-
-
-
-    Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]
-
-
-    2024-08-29 12:38:05,036 - INFO - Successfully loaded TREC dataset with 1000 samples
+    2025-02-06 01:27:27,729 - INFO - Index 'vector_search_cohere' found
+    2025-02-06 01:27:28,595 - INFO - Index 'vector_search_cohere' already exists. Skipping creation/update.
 
 
 # Create Embeddings
@@ -392,7 +376,7 @@ except Exception as e:
     raise ValueError(f"Error creating CohereEmbeddings: {str(e)}")
 ```
 
-    2024-08-29 12:38:05,146 - INFO - Successfully created CohereEmbeddings
+    2025-02-06 01:27:28,613 - INFO - Successfully created CohereEmbeddings
 
 
 # Set Up Vector Store
@@ -415,29 +399,91 @@ except Exception as e:
     raise ValueError(f"Failed to create vector store: {str(e)}")
 ```
 
-    2024-08-29 12:38:05,749 - INFO - Successfully created vector store
+    2025-02-06 01:27:32,177 - INFO - Successfully created vector store
 
 
-# Save Data to Vector Store in Batches
-To avoid overloading memory, the TREC dataset's text fields are saved to the vector store in batches. This step is important for handling large datasets, as it breaks down the data into manageable chunks that can be processed sequentially. Each piece of text is converted into a document, assigned a unique identifier, and then stored in the vector store.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
 try:
-    batch_size = 50
-    logging.disable(sys.maxsize) # Disable logging to prevent tqdm output
-    for i in tqdm(range(0, len(trec['text']), batch_size), desc="Processing Batches"):
-        batch = trec['text'][i:i + batch_size]
-        documents = [Document(page_content=text) for text in batch]
-        uuids = [str(uuid4()) for _ in range(len(documents))]
-        vector_store.add_documents(documents=documents, ids=uuids)
-    logging.disable(logging.NOTSET) # Re-enable logging
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
+    )
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    Processing Batches: 100%|██████████| 20/20 [00:22<00:00,  1.13s/it]
+    2025-02-06 01:27:38,003 - INFO - Successfully loaded the BBC News dataset with 2687 rows.
+
+
+    Loaded the BBC News dataset with 2687 rows
+
+
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
+
+
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of 50 articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 50 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+batch_size = 50
+
+# Automatic Batch Processing
+articles = [article for article in unique_news_articles if article and len(article) <= 50000]
+
+try:
+    vector_store.add_texts(
+        texts=articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully.")
+except Exception as e:
+    raise ValueError(f"Failed to save documents to vector store: {str(e)}")
+
+```
+
+    2025-02-06 01:29:07,077 - INFO - Document ingestion completed successfully.
 
 
 # Set Up Cache
@@ -459,7 +505,7 @@ except Exception as e:
     raise ValueError(f"Failed to create cache: {str(e)}")
 ```
 
-    2024-08-29 12:38:28,910 - INFO - Successfully created cache
+    2025-02-06 01:30:37,657 - INFO - Successfully created cache
 
 
 # Create Language Model (LLM)
@@ -471,25 +517,25 @@ The script initializes a Cohere language model (LLM) that will be used for gener
 try:
     llm = ChatCohere(
         cohere_api_key=COHERE_API_KEY,
-        model="command",
+        model="command-r-plus-08-2024",
         temperature=0
     )
-    logging.info(f"Successfully created Cohere LLM with model command")
+    logging.info("Successfully created Cohere LLM with model command")
 except Exception as e:
     raise ValueError(f"Error creating Cohere LLM: {str(e)}")
 ```
 
-    2024-08-29 12:38:29,015 - INFO - Successfully created Cohere LLM with model command
+    2025-02-06 01:30:38,684 - INFO - Successfully created Cohere LLM with model command
 
 
 # Perform Semantic Search
-Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined. Common metrics include cosine similarity, Euclidean distance, or dot product, but other metrics can be implemented based on specific use cases. Different embedding models like BERT, Word2Vec, or GloVe can also be used depending on the application's needs, with the vectors generated by these models stored and searched within Couchbase itself.
+Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined. 
 
 In the provided code, the search process begins by recording the start time, followed by executing the similarity_search_with_score method of the CouchbaseVectorStore. This method searches Couchbase for the most relevant documents based on the vector similarity to the query. The search results include the document content and a similarity score that reflects how closely each document aligns with the query in the defined semantic space. The time taken to perform this search is then calculated and logged, and the results are displayed, showing the most relevant documents along with their similarity scores. This approach leverages Couchbase as both a storage and retrieval engine for vector data, enabling efficient and scalable semantic searches. The integration of vector storage and search capabilities within Couchbase allows for sophisticated semantic search operations without relying on external services for vector storage or comparison.
 
 
 ```python
-query = "Why do heavier objects travel downhill faster?"
+query = "What was manchester city manager pep guardiola's reaction to the team's current form?"
 
 try:
     # Perform the semantic search
@@ -501,8 +547,10 @@ try:
 
     # Display search results
     print(f"\nSemantic Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print("-" * 80)  # Add separator line
     for doc, score in search_results:
-        print(f"Distance: {score:.4f}, Text: {doc.page_content}")
+        print(f"Score: {score:.4f}, Text: {doc.page_content}")
+        print("-" * 80)  # Add separator between results
 
 except CouchbaseException as e:
     raise RuntimeError(f"Error performing semantic search: {str(e)}")
@@ -510,22 +558,128 @@ except Exception as e:
     raise RuntimeError(f"Unexpected error: {str(e)}")
 ```
 
-    2024-08-29 12:38:29,072 - INFO - HTTP Request: POST https://api.cohere.com/v1/embed "HTTP/1.1 200 OK"
-    2024-08-29 12:38:29,273 - INFO - Semantic search completed in 0.25 seconds
+    2025-02-06 01:30:43,101 - INFO - Semantic search completed in 1.89 seconds
 
 
     
-    Semantic Search Results (completed in 0.25 seconds):
-    Distance: 0.8184, Text: Why do heavier objects travel downhill faster ?
-    Distance: 0.3748, Text: What is a fear of passing high objects ?
-    Distance: 0.3322, Text: How fast is light ?
-    Distance: 0.3047, Text: How fast does the fastest car go ?
-    Distance: 0.2881, Text: What is the speed of the Mississippi River ?
-    Distance: 0.2881, Text: What is the speed of the Mississippi River ?
-    Distance: 0.2881, Text: What is the speed of the Mississippi River ?
-    Distance: 0.2872, Text: What makes a tornado turn ?
-    Distance: 0.2637, Text: What is the second hardest substance ?
-    Distance: 0.2623, Text: What makes thunder ?
+    Semantic Search Results (completed in 1.89 seconds):
+    --------------------------------------------------------------------------------
+    Score: 0.6641, Text: Manchester City boss Pep Guardiola has won 18 trophies since he arrived at the club in 2016
+    
+    Manchester City boss Pep Guardiola says he is "fine" despite admitting his sleep and diet are being affected by the worst run of results in his entire managerial career. In an interview with former Italy international Luca Toni for Amazon Prime Sport before Wednesday's Champions League defeat by Juventus, Guardiola touched on the personal impact City's sudden downturn in form has had. Guardiola said his state of mind was "ugly", that his sleep was "worse" and he was eating lighter as his digestion had suffered. City go into Sunday's derby against Manchester United at Etihad Stadium having won just one of their past 10 games. The Juventus loss means there is a chance they may not even secure a play-off spot in the Champions League. Asked to elaborate on his comments to Toni, Guardiola said: "I'm fine. "In our jobs we always want to do our best or the best as possible. When that doesn't happen you are more uncomfortable than when the situation is going well, always that happened. "In good moments I am happier but when I get to the next game I am still concerned about what I have to do. There is no human being that makes an activity and it doesn't matter how they do." Guardiola said City have to defend better and "avoid making mistakes at both ends". To emphasise his point, Guardiola referred back to the third game of City's current run, against a Sporting side managed by Ruben Amorim, who will be in the United dugout at the weekend. City dominated the first half in Lisbon, led thanks to Phil Foden's early effort and looked to be cruising. Instead, they conceded three times in 11 minutes either side of half-time as Sporting eventually ran out 4-1 winners. "I would like to play the game like we played in Lisbon on Sunday, believe me," said Guardiola, who is facing the prospect of only having three fit defenders for the derby as Nathan Ake and Manuel Akanji try to overcome injury concerns. If there is solace for City, it comes from the knowledge United are not exactly flying. Their comeback Europa League victory against Viktoria Plzen on Thursday was their third win of Amorim's short reign so far but only one of those successes has come in the Premier League, where United have lost their past two games against Arsenal and Nottingham Forest. Nevertheless, Guardiola can see improvements already on the red side of the city. "It's already there," he said. "You see all the patterns, the movements, the runners and the pace. He will do a good job at United, I'm pretty sure of that."
+    
+    Guardiola says skipper Kyle Walker has been offered support by the club after the City defender highlighted the racial abuse he had received on social media in the wake of the Juventus trip. "It's unacceptable," he said. "Not because it's Kyle - for any human being. "Unfortunately it happens many times in the real world. It is not necessary to say he has the support of the entire club. It is completely unacceptable and we give our support to him."
+    --------------------------------------------------------------------------------
+    Score: 0.6521, Text: 'We have to find a way' - Guardiola vows to end relegation form
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. 'Worrying' and 'staggering' - Why do Manchester City keep conceding?
+    
+    Manchester City are currently in relegation form and there is little sign of it ending. Saturday's 2-1 defeat at Aston Villa left them joint bottom of the form table over the past eight games with just Southampton for company. Saints, at the foot of the Premier League, have the same number of points, four, as City over their past eight matches having won one, drawn one and lost six - the same record as the floundering champions. And if Southampton - who appointed Ivan Juric as their new manager on Saturday - get at least a point at Fulham on Sunday, City will be on the worst run in the division. Even Wolves, who sacked boss Gary O'Neil last Sunday and replaced him with Vitor Pereira, have earned double the number of points during the same period having played a game fewer. They are damning statistics for Pep Guardiola, even if he does have some mitigating circumstances with injuries to Ederson, Nathan Ake and Ruben Dias - who all missed the loss at Villa Park - and the long-term loss of midfield powerhouse Rodri. Guardiola was happy with Saturday's performance, despite defeat in Birmingham, but there is little solace to take at slipping further out of the title race. He may have needed to field a half-fit Manuel Akanji and John Stones at Villa Park but that does not account for City looking a shadow of their former selves. That does not justify the error Josko Gvardiol made to gift Jhon Duran a golden chance inside the first 20 seconds, or £100m man Jack Grealish again failing to have an impact on a game. There may be legitimate reasons for City's drop off, whether that be injuries, mental fatigue or just simply a team coming to the end of its lifecycle, but their form, which has plunged off a cliff edge, would have been unthinkable as they strolled to a fourth straight title last season. "The worrying thing is the number of goals conceded," said ex-England captain Alan Shearer on BBC Match of the Day. "The number of times they were opened up because of the lack of protection and legs in midfield was staggering. There are so many things that are wrong at this moment in time."
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. Man City 'have to find a way' to return to form - Guardiola
+    
+    Afterwards Guardiola was calm, so much so it was difficult to hear him in the news conference, a contrast to the frustrated figure he cut on the touchline. He said: "It depends on us. The solution is bring the players back. We have just one central defender fit, that is difficult. We are going to try next game - another opportunity and we don't think much further than that. "Of course there are more reasons. We concede the goals we don't concede in the past, we [don't] score the goals we score in the past. Football is not just one reason. There are a lot of little factors. "Last season we won the Premier League, but we came here and lost. We have to think positive and I have incredible trust in the guys. Some of them have incredible pride and desire to do it. We have to find a way, step by step, sooner or later to find a way back." Villa boss Unai Emery highlighted City's frailties, saying he felt Villa could seize on the visitors' lack of belief. "Manchester City are a little bit under the confidence they have normally," he said. "The second half was different, we dominated and we scored. Through those circumstances they were feeling worse than even in the first half."
+    
+    Erling Haaland had one touch in the Villa box
+    
+    There are chinks in the armour never seen before at City under Guardiola and Erling Haaland conceded belief within the squad is low. He told TNT after the game: "Of course, [confidence levels are] not the best. We know how important confidence is and you can see that it affects every human being. That is how it is, we have to continue and stay positive even though it is difficult." Haaland, with 76 goals in 83 Premier League appearances since joining City from Borussia Dortmund in 2022, had one shot and one touch in the Villa box. His 18 touches in the whole game were the lowest of all starting players and he has been self critical, despite scoring 13 goals in the top flight this season. Over City's last eight games he has netted just twice though, but Guardiola refused to criticise his star striker. He said: "Without him we will be even worse but I like the players feeling that way. I don't agree with Erling. He needs to have the balls delivered in the right spots but he will fight for the next one."
+    --------------------------------------------------------------------------------
+    Score: 0.6322, Text: 'Self-doubt, errors & big changes' - inside the crisis at Man City
+    
+    Pep Guardiola has not been through a moment like this in his managerial career. Manchester City have lost nine matches in their past 12 - as many defeats as they had suffered in their previous 106 fixtures. At the end of October, City were still unbeaten at the top of the Premier League and favourites to win a fifth successive title. Now they are seventh, 12 points behind leaders Liverpool having played a game more. It has been an incredible fall from grace and left people trying to work out what has happened - and whether Guardiola can make it right. After discussing the situation with those who know him best, I have taken a closer look at the future - both short and long term - and how the current crisis at Man City is going to be solved.
+    
+    Pep Guardiola's Man City have lost nine of their past 12 matches
+    
+    Guardiola has also been giving it a lot of thought. He has not been sleeping very well, as he has said, and has not been himself at times when talking to the media. He has been talking to a lot of people about what is going on as he tries to work out the reasons for City's demise. Some reasons he knows, others he still doesn't. What people perhaps do not realise is Guardiola hugely doubts himself and always has. He will be thinking "I'm not going to be able to get us out of this" and needs the support of people close to him to push away those insecurities - and he has that. He is protected by his people who are very aware, like he is, that there are a lot of people that want City to fail. It has been a turbulent time for Guardiola. Remember those marks he had on his head after the 3-3 draw with Feyenoord in the Champions League? He always scratches his head, it is a gesture of nervousness. Normally nothing happens but on that day one of his nails was far too sharp so, after talking to the players in the changing room where he scratched his head because of his usual agitated gesturing, he went to the news conference. His right-hand man Manel Estiarte sent him photos in a message saying "what have you got on your head?", but by the time Guardiola returned to the coaching room there was hardly anything there again. He started that day with a cover on his nose after the same thing happened at the training ground the day before. Guardiola was having a footballing debate with Kyle Walker about positional stuff and marked his nose with that same nail. There was also that remarkable news conference after the Manchester derby when he said "I don't know what to do". That is partly true and partly not true. Ignore the fact Guardiola suggested he was "not good enough". He actually meant he was not good enough to resolve the situation with the group of players he has available and with all the other current difficulties. There are obviously logical explanations for the crisis and the first one has been talked about many times - the absence of injured midfielder Rodri. You know the game Jenga? When you take the wrong piece out, the whole tower collapses. That is what has happened here. It is normal for teams to have an over-reliance on one player if he is the best in the world in his position. And you cannot calculate the consequences of an injury that rules someone like Rodri out for the season. City are a team, like many modern ones, in which the holding midfielder is a key element to the construction. So, when you take Rodri out, it is difficult to hold it together. There were Plan Bs - John Stones, Manuel Akanji, even Nathan Ake - but injuries struck. The big injury list has been out of the ordinary and the busy calendar has also played a part in compounding the issues. However, one factor even Guardiola cannot explain is the big uncharacteristic errors in almost every game from international players. Why did Matheus Nunes make that challenge to give away the penalty against Manchester United? Jack Grealish is sent on at the end to keep the ball and cannot do that. There are errors from Walker and other defenders. These are some of the best players in the world. Of course the players' mindset is important, and confidence is diminishing. Wrong decisions get taken so there is almost panic on the pitch instead of calm. There are also players badly out of form who are having to play because of injuries. Walker is now unable to hide behind his pace, I'm not sure Kevin de Bruyne is ever getting back to the level he used to be at, Bernardo Silva and Ilkay Gundogan do not have time to rest, Grealish is not playing at his best. Some of these players were only meant to be playing one game a week but, because of injuries, have played 12 games in 40 days. It all has a domino effect. One consequence is that Erling Haaland isn't getting the service to score. But the Norwegian still remains City's top-scorer with 13. Defender Josko Gvardiol is next on the list with just four. The way their form has been analysed inside the City camp is there have only been three games where they deserved to lose (Liverpool, Bournemouth and Aston Villa). But of course it is time to change the dynamic.
+    
+    Guardiola has never protected his players so much. He has not criticised them and is not going to do so. They have won everything with him. Instead of doing more with them, he has tried doing less. He has sometimes given them more days off to clear their heads, so they can reset - two days this week for instance. Perhaps the time to change a team is when you are winning, but no-one was suggesting Man City were about to collapse when they were top and unbeaten after nine league games. Some people have asked how bad it has to get before City make a decision on Guardiola. The answer is that there is no decision to be made. Maybe if this was Real Madrid, Barcelona or Juventus, the pressure from outside would be massive and the argument would be made that Guardiola has to go. At City he has won the lot, so how can anyone say he is failing? Yes, this is a crisis. But given all their problems, City's renewed target is finishing in the top four. That is what is in all their heads now. The idea is to recover their essence by improving defensive concepts that are not there and re-establishing the intensity they are known for. Guardiola is planning to use the next two years of his contract, which is expected to be his last as a club manager, to prepare a new Manchester City. When he was at the end of his four years at Barcelona, he asked two managers what to do when you feel people are not responding to your instructions. Do you go or do the players go? Sir Alex Ferguson and Rafael Benitez both told him that the players need to go. Guardiola did not listen because of his emotional attachment to his players back then and he decided to leave the Camp Nou because he felt the cycle was over. He will still protect his players now but there is not the same emotional attachment - so it is the players who are going to leave this time. It is likely City will look to replace five or six regular starters. Guardiola knows it is the end of an era and the start of a new one. Changes will not be immediate and the majority of the work will be done in the summer. But they are open to any opportunities in January - and a holding midfielder is one thing they need. In the summer City might want to get Spain's Martin Zubimendi from Real Sociedad and they know 60m euros (£50m) will get him. He said no to Liverpool last summer even though everything was agreed, but he now wants to move on and the Premier League is the target. Even if they do not get Zubimendi, that is the calibre of footballer they are after. A new Manchester City is on its way - with changes driven by Guardiola, incoming sporting director Hugo Viana and the football department.
+    --------------------------------------------------------------------------------
+    Score: 0.6160, Text: 'I am not good enough' - Guardiola faces daunting and major rebuild
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. 'I am not good enough' - Guardiola says he must find a 'solution' after derby loss
+    
+    Pep Guardiola says his sleep has suffered during Manchester City's deepening crisis, so he will not be helped by a nightmarish conclusion to one of the most stunning defeats of his long reign. Guardiola looked agitated, animated and on edge even after City led the Manchester derby through Josko Gvardiol's 36th-minute header, his reaction to the goal one of almost disdain that it came via a deflected cross as opposed to in his purist style. He sat alone with his eyes closed sipping from a water bottle before the resumption of the second half, then was denied even the respite of victory when Manchester United gave this largely dismal derby a dramatic conclusion it barely deserved with a remarkable late comeback. First, with 88 minutes on the clock, Matheus Nunes presented Amad Diallo with the ball before compounding his error by flattening the forward as he made an attempt to recover his mistake. Bruno Fernandes completed the formalities from the penalty spot. Worse was to come two minutes later when Lisandro Martinez's routine long ball caught City's defence inexplicably statuesque. Goalkeeper Ederson's positioning was awry, allowing the lively Diallo to pounce from an acute angle to leave Guardiola and his players stunned. It was the latest into any game, 88 minutes, that reigning Premier League champions had led then lost. It was also the first time City had lost a game they were leading so late on. And in a sign of City's previous excellence that is now being challenged, they have only lost four of 105 Premier League home games under Guardiola in which they have been ahead at half-time, winning 94 and drawing seven. Guardiola delivered a brutal self-analysis as he told Match of the Day: "I am not good enough. I am the boss. I am the manager. I have to find solutions and so far I haven't. That's the reality. "Not much else to say. No defence. Manchester United were incredibly persistent. We have not lost eight games in two seasons. We can't defend that."
+    
+    Manchester City manager Pep Guardiola in despair during the derby defeat to Manchester United
+    
+    Guardiola suggested the serious renewal will wait until the summer but the red flags have been appearing for weeks in the sudden and shocking decline of a team that has lost the aura of invincibility that left many opponents beaten before kick-off in previous years. He has had stated City must "survive" this season - whatever qualifies as survival for a club of such rich ambition - but the quest for a record fifth successive Premier League title is surely over as they lie nine points behind leaders Liverpool having played a game more. Their Champions League aspirations are also in jeopardy after another loss, this time against Juventus in Turin. City's squad has been allowed to grow too old together. The insatiable thirst for success seems to have gone, the scales of superiority have fallen away and opponents now sense vulnerability right until the final whistle, as United did here. The manner in which United were able, and felt able, to snatch this victory drove right to the heart of how City, and Guardiola, are allowing opponents to prey on their downfall. Guardiola has every reason to cite injuries, most significantly to Rodri and also John Stones as well as others, but this cannot be used an excuse for such a dramatic decline in standards, allied to the appearance of a soft underbelly that is so easily exploited. And City's rebuild will not be a quick fix. With every performance, every defeat, the scale of what lies in front of Guardiola becomes more obvious - and daunting. Manchester City's fans did their best to reassure Guardiola of their faith in him with a giant Barcelona-inspired banner draped from the stands before kick-off emblazoned with his image reading "Més que un entrenador" - "More Than A Coach". And Guardiola will now need to be more than a coach than at any time in his career. He will have the finances but it will be done with City's challengers also strengthening. Kevin de Bruyne, 34 in June, lasted 68 minutes here before he was substituted. Age and injuries are catching up with one of the greatest players of the Premier League era and he is unlikely to be at City next season. Mateo Kovacic, who replaced De Bruyne, is also 31 in May. Kyle Walker, 34, is being increasingly exposed. His most notable contribution here was an embarrassing collapse to the ground after the mildest head-to-head collision with Rasmus Hojlund. Ilkay Gundogan, another 34-year-old and a previous pillar of Guardiola's great successes, no longer has the legs or energy to exert influence. This looks increasingly like a season too far following his return from Barcelona. Flaws are also being exposed elsewhere, with previously reliable performers failing to hit previous standards. Phil Foden scored 27 goals and had 12 assists when he was Premier League Player of the Season last term. This year he has just three goals and two assists in 18 appearances in all competitions. He has no goals and just one assist in 11 Premier League games. Jack Grealish, who came on after 77 minutes against United, has not scored in a year for Manchester City, his last goal coming in a 2-2 draw against Crystal Palace on 16 December last year. He has, in the meantime, scored twice for England. Erling Haaland is also struggling as City lack creativity and cutting edge. He has three goals in his past 11 Premier League games after scoring 10 in his first five. And in another indication of City's impotence, and their reliance on Haaland, defender Gvardiol's goal against United was his fourth this season, making him their second highest scorer in all competitions behind the Norwegian striker, who has 18. Goalkeeper Ederson, so reliable for so long, has already been dropped once this season and did not cover himself in glory for United's winner. Guardiola, with that freshly signed two-year contract, insists he "wants it" as he treads on this alien territory of failure. He will be under no illusions about the size of the job in front of him as he placed his head in his hands in anguish after yet another damaging and deeply revealing defeat. City and Guardiola are in new, unforgiving territory.
+    --------------------------------------------------------------------------------
+    Score: 0.5727, Text: Pep Guardiola has said Manchester City will be his final managerial job in club football before he "maybe" coaches a national team.
+    
+    The former Barcelona and Bayern Munich boss has won 15 major trophies since taking charge of City in 2016.
+    
+    The 53-year-old Spaniard was approached in the summer about the possibility of becoming England manager, but last month signed a two-year contract extension with City until 2027.
+    
+    Speaking to celebrity chef Dani Garcia on YouTube, Guardiola did not indicate when he intends to step down at City but said he would not return to club football - in the Premier League or overseas.
+    
+    "I'm not going to manage another team," he said.
+    
+    "I'm not talking about the long-term future, but what I'm not going to do is leave Manchester City, go to another country, and do the same thing as now.
+    
+    "I wouldn't have the energy. The thought of starting somewhere else, all the process of training and so on. No, no, no. Maybe a national team, but that's different.
+    
+    "I want to leave it and go and play golf, but I can't [if he takes a club job]. I think stopping would do me good."
+    
+    City have won just once since Guardiola extended his contract - and once in nine games since beating Southampton on 26 October.
+    
+    That victory came at home to Nottingham Forest last Wednesday, but was followed by a 2-2 draw at Crystal Palace at the weekend.
+    
+    The Blues visit Juventus next in the Champions League on Wednesday (20:00 GMT), before hosting Manchester United in the Premier League on Sunday (16:30).
+    
+    "Right now we are not in the position - when we have had the results of the last seven, eight games - to talk about winning games in plural," said Guardiola at his pre-match news conference.
+    
+    "We have to win the game and not look at what happens in the next one yet."
+    --------------------------------------------------------------------------------
+    Score: 0.5508, Text: Man City might miss out on Champions League - Guardiola
+    
+    Erling Haaland was part of the Manchester City side that won the Champions League for the first time in 2023
+    
+    Manchester City boss Pep Guardiola says the club are in danger of missing out on a place in next season's Champions League. City are currently in their 14th consecutive season in European football's most prestigious club competition. Only Arsenal between 1998 and 2017, and Manchester United between 1996 and 2014, have a longer record of qualifying among English clubs. City are seventh in the Premier League after 17 matches, four points behind Nottingham Forest in fourth and a point behind fifth-placed Bournemouth. England are currently top of Uefa's European Performance Spot table and well placed to secure a fifth place in next season's Champions League, although City would still not qualify on current standings. "When I said before, people laughed," said Guardiola. "They said, 'qualifying for the Champions League is not a big success'. "But I know it because it happens with clubs in this country. They were dominant for many years and after they were many years not qualifying for the Champions League."
+    
+    Guardiola's side host Everton on Boxing Day, before a trip to Leicester on 29 December and a home match against West Ham on 4 January. Given all three opponents are in the bottom seven, it offers City a chance to improve on an appalling recent record of four points from eight games, which Guardiola acknowledges has left their lofty European ambitions in doubt. "The one team that has been in the Champions League for the past years has been Manchester City," he added. "Now we are at risk, of course we are. Definitely." Arsenal, Chelsea, Liverpool and Manchester United finished in the Premier League's top four from the 2005-06 season to 2008-09. At least three of them also occupied the top four spots for 15 successive campaigns until 2012. But United have spent five out of the past 11 seasons outside the Champions League. Arsenal spent six seasons out of the competition before returning last term. Liverpool missed out all but one year in seven from 2010, while Chelsea are in their second successive campaign outside Europe's elite. This term the threat to City comes from unexpected sources. As well as Forest and Bournemouth, Aston Villa are ahead of City, while Newcastle, Fulham and Brighton are also within a couple of points. "There are a lot of contenders," said Guardiola, whose side have lost nine of their last 12 games in all competitions. "For every club it is so important and if we are not winning games, we will be out. "If we don't qualify it is because we don't deserve it, because we were not prepared and because we had a lot of problems and didn't solve them."
+    --------------------------------------------------------------------------------
+    Score: 0.5456, Text: 'Life is not easy' - Haaland penalty miss sums up Man City crisis
+    
+    Manchester City striker Erling Haaland has now missed two of his 17 penalties taken in the Premier League
+    
+    Nothing seems to be going Manchester City's way at the moment - and star striker Erling Haaland is not a happy man. If there was any player currently in the Premier League you would hand the ball to for a penalty to win a match, it would be the prolific Norwegian. Not on this occasion, though. Looking to land a knockout blow, Haaland saw his second-half strike saved by spot-kick expert Jordan Pickford, as Manchester City's crisis continued with a 1-1 draw against Everton at Etihad Stadium. "How do you react mentally?" asked boss Pep Guardiola about the penalty miss. "Life is not easy. Sport is not easy. When it happens, it is OK. "There are still a lot of minutes to play and we had the chances afterwards. We created, incredible how they ran and fight. In some games it was not good but today well played." At the full-time whistle, there were a smattering of boos from home supporters at Etihad Stadium and a despondent Haaland ripped off his hair bobble and shirt before heading straight down the tunnel. As Haaland trudged off out of sight, Guardiola stood motionless on the pitch with the look of a man unable to find answers to their current crisis. City's all-conquering side have suffered a remarkable drop-off and now won just once in their last 13 games in all competitions. In the post-match news conference, the stunned Spaniard was barely audible in the responses to the questions fired his way. "My body language was positive," he uttered. "The team played really good. We had I don't know how many shots. The first half was brilliant."
+    
+    City have a lengthy injury list, but their downturn has coincided with Haaland's struggles in front of goal. The striker made a blistering start to the campaign looked to be on his way to setting more goalscoring records when netting 10 goals in his first five games, but has only managed three in 13 since. This has largely been down to underperformance on his expected goal (xG) rate, with statistics showing he has scored five fewer goals than he should have done during this recent run. There is also a stark contrast from his shot conversion rate from the first five games to his last 13, dropping from 38.5% to a lowly 6.4%. The penalty miss was Haaland's only shot on target in the contest - but Everton did not set out to pay him extra attention. Asked if there had been a special plan to handle the frontman, Dyche said: "No. I was asked the other day when playing Chelsea about Cole Palmer and what a great player he is turning out to be. "We know Haaland is too but I believe in the team. I don't look at one aspect of it, I look at the team, what they are doing and they have done a good job today."
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser.
+    
+    Pickford saved his seventh penalty in the Premier League since joining Everton in 2017
+    
+    After Toffees forward Iliman Ndiaye had cancelled out Bernardo Silva's opener, the defining moment came in the second half when Vitalii Mykolenko tripped Savinho in the box. During the VAR check, it was a battle of the minds with Everton captain Seamus Coleman receiving a yellow card for trying to put off Haaland, who had the ball in his hand. The booking ultimately appeared to be a well-earned one for the team and Pickford seemed to revel in his big moment, jumping up and down on his line, sticking his tongue out before stooping low to his right to push the ball away. Pickford has made big penalty saves for England on the international stage and this was seventh spot-kick stop since joining Everton in 2017. Such is City's luck at the moment that they managed to recycle the ball and Haaland headed in, but it was ruled out for offside, much to the joy of the travelling supporters. Haaland had scored 15 of 16 of his previous penalties in the league, with the other hitting the woodwork, while this was the first he had seen saved. "It is good from the analysts to give him as much benefit of as many penalties as they can," Dyche said of Pickford's save. "Credit to him for making the right decision in the spur of the moment." Former England goalkeeper Paul Robinson said on BBC Radio 5 Live: "Pickford is good at putting pressure on strikers. Haaland must have felt the pressure there, this place went silent. "It was a decent save but a really poor penalty. He didn't whip it around like a left-footer should. A poor penalty, but a good save." Ex-England defender Matt Upson added on Amazon Prime: "It was brilliant save from Pickford. He relishes situations like this. He doesn't make life any easier for the penalty taker. "But for Haaland to miss that penalty speaks a bit about where the confidence is in this team at the moment."
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. Dyche 'very pleased' with Everton defence in Man City draw
+    --------------------------------------------------------------------------------
+    Score: 0.5186, Text: 'So happy he is back' - 'integral' De Bruyne 'one of best we've seen'
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. Match of the Day: How Kevin de Bruyne inspired Man City back to winning ways
+    
+    As Kevin de Bruyne made his way off the pitch after being replaced by Rico Lewis 16 minutes from the end of Manchester City's 3-0 win over Nottingham Forest, Pep Guardiola grabbed the Belgian and pulled him into an embrace. It was like a father offering affection to his son at a job well done. De Bruyne responded with a smile of satisfaction before continuing on his way to the top of the small terrace of City benches. A day earlier, Guardiola scoffed at the suggestions of Sky Sports duo Jamie Carragher and Gary Neville that there was some kind of rift between the boss and his star man. Why on earth, Guardiola countered, would he leave out someone who is capable of delivering moments like no-one else, even in his star-studded squad? Finally back on the pitch to start a Premier League game for the first time since August, De Bruyne proved exactly what Guardiola meant.
+    
+    Manchester City's Kevin de Bruyne has now scored two goals this season
+    
+    On a night Guardiola conceded City had to win, it was the Belgian's firm header that created an eighth-minute opener for Bernardo Silva as they went on to finally end their seven-match winless run and close the gap to leaders Liverpool to nine points. The goal from De Bruyne that followed was a thing of beauty as he backed away from Jeremy Doku as his fellow countryman ran with the ball, arriving in enough space to take the short pass and send his shot into the corner. Afforded extra space by his manager's decision to play Jack Grealish alongside him in a central position, De Bruyne schemed in the way he usually does. As chances came and went, he was playing some significant role. De Bruyne lasted 74 minutes, his longest match time since completing the full 90 minutes against Brentford on 14 September. He was on the bench when he was announced as man of the match, a decision received with enthusiasm by the City support. "I am so happy he is back," said Guardiola. "He played 75 fantastic minutes. "He deserves the best because he's a lovely guy and has been massively important for so many years since he arrived."
+    
+    City are now unbeaten in their past 31 Premier League games with De Bruyne starting. He has been involved in 25 goals (nine goals, 16 assists) in those games. De Bruyne said: "There have never been issues between me and Pep. He knows I've been struggling. It's painful and uncomfortable. "Hopefully I can get back to my body with not much pain and then I'll be fine." However, a bit like the victory itself - tarnished by an injury to Manuel Akanji that may rule the Switzerland defender out of the weekend trip to Crystal Palace, and a hamstring problem for Nathan Ake who has already missed five weeks with a similar injury this season that Guardiola said "doesn’t look good" and makes him feel "sad" for the Dutchman - there was a caveat as the City boss assessed De Bruyne's contribution. "He fought a lot and he prepared himself," he said. "He is back to his physicality. The minutes he played at Anfield were really good. "Last season he was out for many months, this season as well. We will see how he recovers after a long time injured and how he feels in three days." De Bruyne recorded four or more shots and created four or more chances for the third time in a Premier League game this season. Despite only starting five Premier League games, only Arsenal's Bukayo Saka has done so more often this term. Guardiola's fear must be that if he pushes De Bruyne too far too quickly, his body will let him down. Former Man City defender Micah Richards told BBC Match of the Day: "He is a top-quality player and one of the best we have seen. He always manages to find space on the pitch." "He has been integral to Man City's success over a number of years," added former City boss Stuart Pearce on Amazon Prime. "He is the go-to player that sets Erling Haaland alight with his passing. He creates goals, he scores goals. "If you were to pick one player out over the last eight or nine years De Bruyne would be at the top of almost everyone's list." It is a delicate balance given his team are still nine points adrift of Premier League leaders Liverpool and are also outside the Champions League top eight before next week's trip to Italy and a meeting with Juventus, after which City will only have January first-phase games remaining to ensure they secure qualification for the last-16 without needing to be bothered by February's play-off round. However, as with his team, De Bruyne's recovery had to start somewhere.
+    --------------------------------------------------------------------------------
+    Score: 0.4964, Text: Liverpool boss Arne Slot says his Liverpool side "came close to perfection" in their win against Manchester City.
+    
+    MATCH REPORT: Liverpool beat Man City to go nine points clear at top of Premier League
+    
+    Available to UK users only.
+    --------------------------------------------------------------------------------
+    Score: 0.4667, Text: Man City's Dias ruled out for 'three or four weeks'
+    
+    Ruben Dias has won 10 major trophies during his time at Manchester City
+    
+    Manchester City have suffered a fresh injury blow with manager Pep Guardiola confirming Portugal central defender Ruben Dias has been ruled out for "three or four weeks" with a muscle injury. Dias, who suffered the injury in Saturday's 2-1 defeat by Manchester United, will miss the entire festive programme and potentially the FA Cup third-round tie with Salford on 11 January. The 27-year-old also faces a battle to be fit for City's crucial Champions League trip to Paris St-Germain on 22 January. Dias has already missed seven games with a calf injury this season, adding to a defensive injury list that has seen John Stones, Nathan Ake, Manuel Akanji and Kyle Walker all ruled out at various points, while Ballon d'Or winner Rodri will miss the remainder of the domestic season after suffering a cruciate knee ligament injury. "It's a muscular problem and he will be out for three to four weeks," said Guardiola. "After 75 minutes against United he felt something. But he's so strong and wanted to stay on the pitch. Now he's injured." Guardiola confirmed Stones, Akanji and midfielder Mateo Kovacic have all trained this week and could feature at Aston Villa on Saturday (12:30 GMT), but said goalkeeper Ederson was "a doubt" with an unspecified problem. "Ederson has been struggling with some niggles in his leg, he doesn't feel completely fine," said Guardiola. "Ederson is so important for us." Amid City's current run of one win in 11 games, surprise has been expressed about Guardiola's use of youngsters James McAtee and Nico O'Reilly. City made a point of keeping both players despite numerous loan options. Yet McAtee has made just two substitute appearances - coming on in the last minute on both occasions - while O'Reilly is yet to make his league debut. But it seems they will stay at the club for the second half of the season, with Guardiola replying "I don't think so" when asked if players might leave during the January transfer window. The Spaniard said he is "not a big fan" of buying players in January but it is "possible" City will look to sign someone because "the circumstances of this season have been special".
+    
+    Guardiola's mood was so downbeat in the immediate aftermath of the United defeat it was easy to imagine he might conclude he was no longer capable of doing the job. He gave his players a couple of days off afterwards and was brighter when he spoke to journalists in his scheduled briefing before the Villa trip. "We'd just finished a game that we lost in the circumstances and I was not happy," he said. "I try to be honest about the feelings of my teams. We fell down six times [number of Premier League games without a win], we have to stand up seven. There is no alternative. "I'm fine. I'm a normal person with feelings like all of us. When the situation is going well we are better but it's normal. I would not go to the press conference if we were 1-0 up and expressing something that I didn't feel." Former Villa forward Jack Grealish has not scored for City in over a year but Guardiola pointed out he is not the only attacking player struggling this season. He added: "We are struggling to create a little bit up front, but always I am optimistic about my players that they are going to turn and perform well."
+    --------------------------------------------------------------------------------
 
 
 # Retrieval-Augmented Generation (RAG) with Couchbase and Langchain
@@ -553,35 +707,32 @@ except Exception as e:
     raise ValueError(f"Error creating RAG chain: {str(e)}")
 ```
 
-    2024-08-29 12:38:29,284 - INFO - Successfully created RAG chain
+    2025-02-06 01:30:46,088 - INFO - Successfully created RAG chain
 
 
 
 ```python
+start_time = time.time()
 try:
-    # Get RAG response
-    logging.disable(sys.maxsize) # Disable logging
-    start_time = time.time()
     rag_response = rag_chain.invoke(query)
     rag_elapsed_time = time.time() - start_time
     print(f"RAG Response: {rag_response}")
     print(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
-    RAG Response: Heavier objects travel downhill faster due to gravitational forces. As an object moves downhill, gravity accelerates the object, and velocity increases. The force of gravity is proportional to the object's mass, meaning heavier objects experience a more substantial gravitational force, leading to faster downhill speeds.
+    RAG Response: Manchester City manager Pep Guardiola has been open about the impact the team's poor form has had on him personally. He has admitted that his sleep and diet have been affected, and that he has been feeling "ugly" and uncomfortable. Guardiola has also been giving a lot of thought to the reasons for the team's decline, talking to many people and trying to work out the causes. He has been very protective of his players, refusing to criticise them and instead giving them more days off to clear their heads.
     
-    This relationship, known as the gravitational force equation, explains why heavier objects descend faster than lighter ones- 
+    Guardiola has also been very self-critical, saying that he is "not good enough" and that he needs to find solutions to the team's problems. He has acknowledged that the team is not performing as well as it used to, and that there are many factors contributing to their poor form, including injuries, mental fatigue, and a lack of confidence. He has also suggested that the team needs to improve its defensive concepts and re-establish its intensity.
     
-    ```
-    force of gravity = gravitational force = acceleration due to gravity * mass = F = m*g
-    ```
-    
-    In this equation, the acceleration due to gravity is a constant value represented by `g`, and the mass `m` represents the object's mass. Consequently, the force of gravity is directly proportional to the object's mass, explaining heavier objects's downhill speed.
-    
-    As a generic response, this explains the fundamental principle of gravity's impact on downhill speed, however, on a broader context, this answer refers to objects moving along a gravitational field, such as a hill.
-    RAG response generated in 6.45 seconds
+    Overall, Guardiola seems to be taking a very hands-on approach to the team's struggles, trying to find solutions and protect his players while also being very honest about his own role in the situation.
+    RAG response generated in 9.52 seconds
 
 
 # Using Couchbase as a caching mechanism
@@ -593,10 +744,9 @@ For subsequent requests with the same query, the system checks Couchbase first. 
 ```python
 try:
     queries = [
-        "How does photosynthesis work?",
-        "What is the capital of France?",
-        "Why do heavier objects travel downhill faster?",  # Repeated query
-        "How does photosynthesis work?",  # Repeated query
+        "What happened in the match between Fullham and Liverpool?",
+        "What was manchester city manager pep guardiola's reaction to the team's current form?", # Repeated query
+        "What happened in the match between Fullham and Liverpool?", # Repeated query
     ]
 
     for i, query in enumerate(queries, 1):
@@ -606,50 +756,32 @@ try:
         elapsed_time = time.time() - start_time
         print(f"Response: {response}")
         print(f"Time taken: {elapsed_time:.2f} seconds")
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
     
-    Query 1: How does photosynthesis work?
-    Response: Photosynthesis is a process by which plants convert sunlight into chemical energy, specifically glucose. The process occurs in special structures called chloroplasts within the plant's cells. Here are the steps behind photosynthesis:
+    Query 1: What happened in the match between Fullham and Liverpool?
+    Response: Liverpool and Fulham played out a thrilling 2-2 draw at Anfield. Liverpool were reduced to 10 men after Andy Robertson was sent off in the 17th minute, but they fought back twice to earn a point. The Reds dominated the match despite their numerical disadvantage, with over 60% possession and leading in several attacking metrics. Diogo Jota scored the equaliser in the 86th minute, capping off an impressive performance that showcased Liverpool's title credentials.
+    Time taken: 5.29 seconds
     
-    1. Absorption of sunlight: Chlorophyll, a pigment found in chloroplasts, captures the energy of sunlight.
+    Query 2: What was manchester city manager pep guardiola's reaction to the team's current form?
+    Response: Manchester City manager Pep Guardiola has been open about the impact the team's poor form has had on him personally. He has admitted that his sleep and diet have been affected, and that he has been feeling "ugly" and uncomfortable. Guardiola has also been giving a lot of thought to the reasons for the team's decline, talking to many people and trying to work out the causes. He has been very protective of his players, refusing to criticise them and instead giving them more days off to clear their heads.
     
-    2. Light reaction: The absorbed sunlight energizes electrons within the chloroplasts, initiating a series of complex reactions. During this stage, water molecules are split into hydrogen ions (H+), electrons (e^-), and oxygen atoms (O). The oxygen is released into the atmosphere as a byproduct, while the hydrogen ions and electrons are utilized in the next stage.
+    Guardiola has also been very self-critical, saying that he is "not good enough" and that he needs to find solutions to the team's problems. He has acknowledged that the team is not performing as well as it used to, and that there are many factors contributing to their poor form, including injuries, mental fatigue, and a lack of confidence. He has also suggested that the team needs to improve its defensive concepts and re-establish its intensity.
     
-    3. Carbon fixation: The energized hydrogen ions and electrons combine with carbon dioxide (CO2) in a process known as the Calvin cycle. Through a series of enzyme-mediated reactions, this combination produces glucose and other organic molecules that serve as the primary energy source and building blocks for the plant's growth and development. 
+    Overall, Guardiola seems to be taking a very hands-on approach to the team's struggles, trying to find solutions and protect his players while also being very honest about his own role in the situation.
+    Time taken: 2.13 seconds
     
-    Overall, the essence of photosynthesis is the transformation of sunlight, water, and carbon dioxide into chemical energy (glucose) and oxygen. This process is essential for plant life and also serves as the primary energy source for almost all life on Earth, as plants are the primary producers in many ecosystems, forming the base of the food chain.
-    Time taken: 9.02 seconds
-    
-    Query 2: What is the capital of France?
-    Response: Paris is the capital of France.
-    Time taken: 0.67 seconds
-    
-    Query 3: Why do heavier objects travel downhill faster?
-    Response: Heavier objects travel downhill faster due to gravitational forces. As an object moves downhill, gravity accelerates the object, and velocity increases. The force of gravity is proportional to the object's mass, meaning heavier objects experience a more substantial gravitational force, leading to faster downhill speeds.
-    
-    This relationship, known as the gravitational force equation, explains why heavier objects descend faster than lighter ones- 
-    
-    ```
-    force of gravity = gravitational force = acceleration due to gravity * mass = F = m*g
-    ```
-    
-    In this equation, the acceleration due to gravity is a constant value represented by `g`, and the mass `m` represents the object's mass. Consequently, the force of gravity is directly proportional to the object's mass, explaining heavier objects's downhill speed.
-    
-    As a generic response, this explains the fundamental principle of gravity's impact on downhill speed, however, on a broader context, this answer refers to objects moving along a gravitational field, such as a hill.
-    Time taken: 0.46 seconds
-    
-    Query 4: How does photosynthesis work?
-    Response: Photosynthesis is a process by which plants convert sunlight into chemical energy, specifically glucose. The process occurs in special structures called chloroplasts within the plant's cells. Here are the steps behind photosynthesis:
-    
-    1. Absorption of sunlight: Chlorophyll, a pigment found in chloroplasts, captures the energy of sunlight.
-    
-    2. Light reaction: The absorbed sunlight energizes electrons within the chloroplasts, initiating a series of complex reactions. During this stage, water molecules are split into hydrogen ions (H+), electrons (e^-), and oxygen atoms (O). The oxygen is released into the atmosphere as a byproduct, while the hydrogen ions and electrons are utilized in the next stage.
-    
-    3. Carbon fixation: The energized hydrogen ions and electrons combine with carbon dioxide (CO2) in a process known as the Calvin cycle. Through a series of enzyme-mediated reactions, this combination produces glucose and other organic molecules that serve as the primary energy source and building blocks for the plant's growth and development. 
-    
-    Overall, the essence of photosynthesis is the transformation of sunlight, water, and carbon dioxide into chemical energy (glucose) and oxygen. This process is essential for plant life and also serves as the primary energy source for almost all life on Earth, as plants are the primary producers in many ecosystems, forming the base of the food chain.
-    Time taken: 0.26 seconds
+    Query 3: What happened in the match between Fullham and Liverpool?
+    Response: Liverpool and Fulham played out a thrilling 2-2 draw at Anfield. Liverpool were reduced to 10 men after Andy Robertson was sent off in the 17th minute, but they fought back twice to earn a point. The Reds dominated the match despite their numerical disadvantage, with over 60% possession and leading in several attacking metrics. Diogo Jota scored the equaliser in the 86th minute, capping off an impressive performance that showcased Liverpool's title credentials.
+    Time taken: 1.36 seconds
 
+
+## Conclusion
+By following these steps, you'll have a fully functional semantic search engine that leverages the strengths of Couchbase and Cohere. This guide is designed not just to show you how to build the system, but also to explain why each step is necessary, giving you a deeper understanding of the principles behind semantic search and how to implement it effectively. Whether you're a newcomer to software development or an experienced developer looking to expand your skills, this guide will provide you with the knowledge and tools you need to create a powerful, AI-driven search engine.
