@@ -56,7 +56,7 @@ Example JSON document:
 ```
 Couchbase Uses JSON because:
 - **Flexible Schema**: No predefined structure, allowing easy adaptation to changing requirements.
-- **Efficient Querying**: Uses SQL-like N1QL queries for fast data retrieval.
+- **Efficient Querying**: Uses SQL-like SQL++ queries for fast data retrieval.
 - **Scalability**: Distributed architecture supports large-scale applications.
 - **Natural Data Representation**: JSON structure aligns well with modern application objects.
 
@@ -185,7 +185,7 @@ def get_all_airports(_connection):
 
 `get_routes_for_airports(_connection, selected_airports_df)`: Retrieves routes between selected airports.
 
-This function fetches route information from the `route` collection in the `travel-sample.inventory` dataset based on selected airports. The function first constructs a list of FAA codes from `selected_airports_df`, formatting it as a valid N1QL query list. It then executes a query to find routes where both the source and destination airports match the selected FAA codes. The results are extracted from the query response and returned as a Pandas DataFrame.
+This function fetches route information from the `route` collection in the `travel-sample.inventory` dataset based on selected airports. The function first constructs a list of FAA codes from `selected_airports_df`, formatting it as a valid SQL++ query list. It then executes a query to find routes where both the source and destination airports match the selected FAA codes. The results are extracted from the query response and returned as a Pandas DataFrame.
 
 ```python
 @st.cache_data       
@@ -734,7 +734,7 @@ Here are some helpful resources for learning more about Couchbase and Streamlit:
 - [Couchbase Python SDK Compatibility](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat)  
 - [Getting Started with Couchbase Capella](https://docs.couchbase.com/cloud/get-started/intro.html)  
 - [Connecting to Couchbase Capella](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites)  
-- [N1QL Query Language Guide](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html)  
+- [SQL++ Query Language Guide](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html)  
 - [Couchbase SDKs Overview](https://docs.couchbase.com/home/sdk.html)  
 
 ### **Streamlit Documentation**
