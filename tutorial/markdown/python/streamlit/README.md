@@ -1,11 +1,12 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-streamlit-connector"
-title: Couchbase Connector for Streamlit
-short_title: Couchbase Connector for Streamlit
+title: "Building an Interactive Flight Search App with Streamlit and Couchbase"
+short_title: "Flight Search App with Streamlit & Couchbase"
 description:
-  - Learn how to integrate streamlit with Couchbase Capella
-  - Build demo streamlit application with travel-sample dataset
+  - Build a fully functional Streamlit application on top of Couchbase.
+  - Leverage the travel-sample dataset to search for flights between cities and visualize routes interactively.
+  - Learn how to connect to Couchbase, efficiently query flight data, and optimize performance.
 content_type: tutorial
 filter: sdk
 technology:
