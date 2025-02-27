@@ -32,7 +32,7 @@ By the end of this tutorial, you will have a working flight visualization tool a
 
 The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/). The original code for this demo is available [here](https://github.com/couchbase-examples/streamlit-quickstart/blob/main/Demo.py).
 
-## Important Concepts
+## Basic Concepts
 
 ### Understanding JSON and Document Databases
 Couchbase is a NoSQL document database that stores data in JSON format. This allows for flexible and scalable data modeling. JSON (JavaScript Object Notation) is a lightweight data format that is:
@@ -69,7 +69,7 @@ Couchbase organizes data into a hierarchical structure:
 | **Collection**    | Table                  | Group of related JSON documents. |
 | **Document**      | Row                    | Individual JSON record. |
 
-### Important Operation Notes  
+### Operation Notes  
 - **CRUD Operations**: Create, Read, Update, and Delete operations only work on the specific bucket, scope, and collection specified during connection setup.  
 - **Queries**: Can work across any bucket, scope, and collection in the cluster, regardless of the connection settings.  
 - **Access Control**: Both CRUD operations and queries are limited by the permissions assigned to the Couchbase user in the cluster. The **Username** and **Password** provided during connection setup must belong to a Couchbase user with the necessary cluster access permissions. 
@@ -77,7 +77,7 @@ Couchbase organizes data into a hierarchical structure:
 By understanding these key concepts, you'll be well-prepared to build and optimize applications using Couchbase and Streamlit.
 
 ## Dataset Overview
-The `travel-sample` dataset in Couchbase consists of multiple scopes and collections related to travel and transportation data. The primary scope used in this application is `inventory`, which contains five collections:
+The [`travel-sample`](https://docs.couchbase.com/ruby-sdk/current/ref/travel-app-data-model.html) dataset in Couchbase consists of multiple scopes and collections related to travel and transportation data. The primary scope used in this application is `inventory`, which contains five collections:
 
 - **airline (190 documents)**: Contains information about airlines, including their name, country, ICAO, IATA codes, and callsigns.
   - **Key fields:** `name`, `country`, `icao`, `iata`, `callsign`, `id`, `type`
@@ -143,7 +143,7 @@ Before setting up the environment, ensure you have the following:
 - **Operational Couchbase cluster** with configured access ([Instructions](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites))
 - **Connection string** from Couchbase Capella
 
-### Step 1: Installation and Setup
+### Installation and Setup
 Create an isolated Python environment, run the following commands:
 
 ```sh
@@ -161,8 +161,8 @@ streamlit hello
 
 If everything is set up correctly, a browser window should open with Streamlit's demo application.
 
-### Step 2: Implement Data Fetching Functions
-To optimize performance, data retrieval functions are cached using `@st.cache_data`. This prevents redundant queries and speeds up the app.
+### Implement Data Fetching Functions
+To optimize performance, data retrieval functions are cached using `@st.cache_data`, which stores previously fetched data to prevent redundant queries and speed up the app. However, the `_connection` object is intentionally not cached (indicated by the underscore prefix) to ensure a fresh database connection is established each time. Caching the connection could lead to issues with stale or expired sessions, potentially causing failed queries or inconsistent data retrieval. For more details, refer to the official documentation: [Streamlit `st.cache_data`](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data).
 
 `get_all_airports(_connection)`: Fetches airport details.
 ```python
@@ -324,11 +324,11 @@ def get_all_hotels(_connection, cities):
     return pd.DataFrame(hotels)
 ```
 
-### Step 3: Create Interactive Visualizations
+### Create Interactive Visualizations
 
 `plot_airports_and_routes(airports_df, routes_df)`: Displays airports and their flight routes.
 
-This function visualizes flight routes between airports using Plotly. It first extracts airport coordinates from `airports_df` into a dictionary for quick lookup. Then, it iterates through `routes_df` to collect latitude and longitude pairs for each flight route, ensuring that non-existent airports are skipped. A scatter map plot is created using `Scattermap` to represent routes as blue lines. Additionally, a separate scatter plot of airports is overlaid, with markers color-coded in red and displaying airport details on hover. The final visualization is displayed using `st.plotly_chart`.
+This function visualizes flight routes between airports using [Plotly](https://plotly.com/python/lines-on-tile-maps/). It first extracts airport coordinates from `airports_df` into a dictionary for quick lookup. Then, it iterates through `routes_df` to collect latitude and longitude pairs for each flight route, ensuring that non-existent airports are skipped. A scatter map plot is created using `Scattermap` to represent routes as blue lines. Additionally, a separate scatter plot of airports is overlaid, with markers color-coded in red and displaying airport details on hover. The final visualization is displayed using `st.plotly_chart`.
 
 ```python
 def plot_airports_and_routes(airports_df, routes_df):
@@ -384,7 +384,7 @@ def plot_airports_and_routes(airports_df, routes_df):
 
 `create_landmark_map(landmarks, hotels_near_landmark)`: Shows landmarks along with nearby hotels.
 
-This function visualizes landmarks and nearby hotels on an interactive map using Plotly. Hotels are color-coded based on their distance from landmarks: red for distances ≤3 km, orange for ≤6 km, and gold for farther hotels. Each hotel is plotted with a marker, and a tooltip displays the name and distance. Landmarks are represented as blue star-shaped markers. The map uses OpenStreetMap styling and is embedded in a Streamlit app for easy visualization.
+This function visualizes landmarks and nearby hotels on an interactive map using [Plotly](https://plotly.com/python/tile-scatter-maps/). Hotels are color-coded based on their distance from landmarks: red for distances ≤3 km, orange for ≤6 km, and gold for farther hotels. Each hotel is plotted with a marker, and a tooltip displays the name and distance. Landmarks are represented as blue star-shaped markers. The map uses OpenStreetMap styling and is embedded in a Streamlit app for easy visualization.
 
 ```python
 def create_landmark_map(landmarks, hotels_near_landmark):
@@ -430,7 +430,7 @@ def create_landmark_map(landmarks, hotels_near_landmark):
 ```
 
 `create_hotel_map(hotels_df)`: Plots hotels, color-coded by their average ratings.
-This function visualizes hotel locations on an interactive map using Plotly and Streamlit. Hotels are color-coded based on their average ratings, with a continuous color scale for rated hotels and a distinct color (orange) for those without ratings. It ensures that the map remains interactive even when no data is available by adding an invisible marker. The function also converts numeric ratings into a star-based format for better readability in the hover tooltips.
+This function visualizes hotel locations on an interactive map using [Plotly](https://plotly.com/python/tile-scatter-maps/) and Streamlit. Hotels are color-coded based on their average ratings, with a continuous color scale for rated hotels and a distinct color (orange) for those without ratings. It ensures that the map remains interactive even when no data is available by adding an invisible marker. The function also converts numeric ratings into a star-based format for better readability in the hover tooltips.
 ```python
 def create_hotel_map(hotels_df):
     
@@ -520,7 +520,7 @@ def create_hotel_map(hotels_df):
     st.plotly_chart(fig, use_container_width=True)
 ```
 
-### Step 4: Implement Streamlit Tabs
+### Implement Streamlit Tabs
 The application is structured into three tabs:
 1. **Airports & Flight Routes**: Users can select airports to display routes between them.
 
@@ -609,7 +609,7 @@ def tab3_visual():
     create_hotel_map(hotels)
 ```
 
-### Step 5: Putting It All Together
+### Putting It All Together
 
 In the Streamlit sidebar, users need to enter their Couchbase credentials to connect to the database. The connection is established using the `CouchbaseConnector` class.
 
@@ -621,11 +621,11 @@ st.title("Couchbase Streamlit App")
 # Sidebar inputs for Couchbase connection parameters
 st.sidebar.header("Enter Couchbase Credentials")
 conn_str = st.sidebar.text_input("Connection String", "couchbases://your-cluster-url")
-username = st.sidebar.text_input("Username", "admin")
+username = st.sidebar.text_input("Username", "Administrator")
 password = st.sidebar.text_input("Password", type="password")  # Password input is masked
-bucket_name = st.sidebar.text_input("Bucket Name", "default")
-scope_name = st.sidebar.text_input("Scope Name", "_default")
-collection_name = st.sidebar.text_input("Collection Name", "_default")
+bucket_name = st.sidebar.text_input("Bucket Name", "travel-sample")
+scope_name = st.sidebar.text_input("Scope Name", "inventory")
+collection_name = st.sidebar.text_input("Collection Name", "airline")
 
 if st.sidebar.button("Connect"):
     try:
@@ -659,7 +659,7 @@ if "connection" in st.session_state:
         tab3_visual()
 ```
 
-### Step 6: Run the Application
+### Run the Application
 To start the Streamlit app, run the following command:
 ```sh
 streamlit run app.py
@@ -691,7 +691,7 @@ This will launch the app in your browser, allowing you to interactively explore 
 
 Now that you've built your demo app, it's time to deploy it for free using **Streamlit Community Cloud**!
 
-### Step 1: Push Your App to GitHub
+### Push Your App to GitHub
 Ensure your app is stored in a GitHub repository with the following files:
 - `app.py` (your main script)
 - `requirements.txt` (dependencies)
@@ -705,10 +705,10 @@ plotly
 geopy
 ```
 
-### Step 2: Set Up a Streamlit Community Cloud Account
+### Set Up a Streamlit Community Cloud Account
 Sign up or log in at [Streamlit Community Cloud](https://share.streamlit.io/), then link your GitHub account.
 
-### Step 3: Deploy Your App
+### Deploy Your App
 1. Click **New App** on the Streamlit Community Cloud dashboard.
 2. Select your GitHub repository.
 3. Specify the branch and main script (`app.py`).
