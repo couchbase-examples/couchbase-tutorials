@@ -21,7 +21,7 @@ length: 30 Mins
 # Building an Interactive Flight Search App with Streamlit and Couchbase
 
 ## Introduction
-This tutorial will guide you through building a fully functional Streamlit application on top of Couchbase. The app will leverage Couchbase's `travel-sample.inventory` dataset to enable users to search for flights between cities and visualize routes dynamically on an interactive map. By following this tutorial, you will learn how to:
+This tutorial will guide you through building a fully functional Streamlit application on top of Couchbase. The app will leverage Couchbase's [`travel-sample`](https://docs.couchbase.com/ruby-sdk/current/ref/travel-app-data-model.html) dataset to enable users to search for flights between cities and visualize routes dynamically on an interactive map. By following this tutorial, you will learn how to:
 
 - Connect a Streamlit app to a Couchbase database
 - Query and filter flight data efficiently
