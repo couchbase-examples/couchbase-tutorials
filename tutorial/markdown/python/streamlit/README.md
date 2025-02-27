@@ -18,7 +18,7 @@ sdk_language:
 length: 30 Mins
 ---
 
-# Couchbase Connector for Streamlit
+# Building an Interactive Flight Search App with Streamlit and Couchbase
 
 ## Introduction
 This tutorial will guide you through building a fully functional Streamlit application on top of Couchbase. The app will leverage Couchbase's `travel-sample.inventory` dataset to enable users to search for flights between cities and visualize routes dynamically on an interactive map. By following this tutorial, you will learn how to:
