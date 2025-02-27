@@ -139,10 +139,13 @@ This section outlines the step-by-step process of building the Streamlit applica
 ### Prerequisites
 Before setting up the environment, ensure you have the following:
 
-- **Python 3.10 or higher** ([Check compatibility](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat))
-- **Couchbase Capella account** ([Setup Guide](https://docs.couchbase.com/cloud/get-started/intro.html))
-- **Operational Couchbase cluster** with configured access ([Instructions](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites))
-- **Connection string** from Couchbase Capella
+- **Python 3.10 or higher** (check [compatibility](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK).  
+- A **Couchbase Capella account** ([Docs](https://docs.couchbase.com/cloud/get-started/intro.html)) **or** a local installation (or Docker container) of **Couchbase Server** ([Download](https://www.couchbase.com/downloads)).  
+- An **operational cluster** created in a project (Capella) or properly configured on your local machine (Couchbase Server).  
+- Ensure proper access control:  
+  - For **Couchbase Capella**, configure cluster access permissions and allowlisted IP addresses ([Docs](https://docs.couchbase.com/cloud/get-started/connect.html#prerequisites)).  
+  - For **Couchbase Server**, set up appropriate user roles and permissions ([Docs](https://docs.couchbase.com/server/current/manage/manage-security/manage-users-and-roles.html)).  
+- Obtain the **connection string** for **Couchbase Capella** or **Couchbase Server** by following the official guide: [Docs](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect).  
 
 ### Installation and Setup
 Create an isolated Python environment, run the following commands:
