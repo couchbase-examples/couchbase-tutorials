@@ -60,7 +60,7 @@ Couchbase Uses JSON because:
 - **Natural Data Representation**: JSON structure aligns well with modern application objects.
 
 ### Couchbase Data Model and Comparison to Relational Databases
-Unlike relational databases, Couchbase organizes data into a hierarchical structure:
+Couchbase organizes data into a hierarchical structure:
 
 | Couchbase Concept  | Relational Equivalent  | Description  |
 |--------------------|-----------------------|-------------|
