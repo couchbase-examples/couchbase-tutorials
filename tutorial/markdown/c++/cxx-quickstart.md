@@ -119,10 +119,10 @@ For running tests, a self-managed cluster is required with travel-sample bucket 
 ./tests/u_tests
 ```
 
-### Data Model
 
-For this quickstart, we use one collection, `airline`  and `hotels` collection that contains sample airline and sample hotel information. For CRUD operations, we make use of the `airline` collection, whereas for Search indexes and Query execution we use the `hotel`collection.
-You can find the schema for both these collections in the model folder.
+### Schema and Usage Overview  
+
+This quickstart utilizes two collections: **airline** and **hotel**. The **airline** collection is used for CRUD operations, while the **hotel** collection is leveraged for Search indexes and Query execution. The schemas for both collections can be found in the `model` folder.
 
 
 ## Code Review
