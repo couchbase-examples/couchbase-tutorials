@@ -14,10 +14,11 @@ technology:
   - edge-server
   - react
   - mobile
+sdk: 
+  - any
 tags:
   - Couchbase Edge Server
-  - Capella App Services
-  - Mobile
+  - App Services
 length: 45 Mins
 ---
 
