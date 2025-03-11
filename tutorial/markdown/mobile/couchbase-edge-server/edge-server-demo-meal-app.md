@@ -14,7 +14,7 @@ technology:
   - edge-server
   - react
   - mobile
-sdk: 
+sdk_language: 
   - any
 tags:
   - Couchbase Edge Server
