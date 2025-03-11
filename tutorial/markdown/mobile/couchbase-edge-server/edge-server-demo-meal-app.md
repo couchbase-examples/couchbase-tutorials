@@ -1,0 +1,187 @@
+---
+# frontmatter
+path: "/tutorial-couchbase-edge-server-demo"
+title: "Explore Couchbase Edge Server with seat back application"
+short_title: "Couchbase Edge Server Demo"
+description:
+  - Learn how to set up Couchbase Edge Server
+  - Explore seatback meal-application showcasing Couchbase Edge Server capabilities
+  - Explore data synchronization between edge and cloud deployments
+content_type: tutorial
+filter: mobile
+technology:
+  - app-services
+  - edge-server
+  - react
+  - mobile
+tags:
+  - Couchbase Edge Server
+  - Capella App Services
+  - Mobile
+length: 45 Mins
+---
+
+## Introduction
+
+The sample React-based web application simulates an airline seat back application, that allows users in business and economy class to place their in-flight meal orders. The sample app leverages **Couchbase Edge Server** for data storage and processing at the edge, simulating a disconnected offline experience within an aircraft. The seatback web app accesses Edge Server via a RESTful interface. When there is Internet connectivity, the **Edge Server** syncs data with remote Capella App Services.
+
+## Setup & Technology Stack
+
+The setup would be as follows:
+
+![](./edge-sample-app-setup.png)
+
+* Capella / Capella App Services
+* Couchbase Edge Server
+* Sample web application
+
+## Installation Instructions
+### Capella Cluster Setup
+Although instructions are specified for Capella, equivalent instructions apply to self-managed Couchbase Server as well. 
+
+* Sign up for Capella Free Tier and [follow the steps](https://docs.couchbase.com/cloud/get-started/create-account.html) to deploy a free tier cluster. 
+* Follow [instructions to create a bucket](https://docs.couchbase.com/cloud/clusters/data-service/manage-buckets.html#add-bucket) to create a *bucket* named "mealordering". 
+* Follow [scope creation instructions](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#scopes) to create a *scope* named "AmericanAirlines" and follow the [instructions to create a collection](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html#collections) to create a *collection* named "AA234".
+
+   ![](./edge-sample-create-doc.png)
+* Download **"mealordering.zip"** sample data set from [this location](https://edge-server-tutorial-data.s3.us-east-2.amazonaws.com/mealordering.zip). It includes 4 documents:
+    - businessinventory.json
+    - businessmeal.json
+    - economyinventory.json
+    - economymeal.json
+
+* Follow [instructions](https://docs.couchbase.com/cloud/clusters/data-service/manage-documents.html#create-documents) to create sample documents corresponding to each of the documents above. Add them to specified bucket named "mealordering", scope named "AmericanAirlines", and collection named "AA234" created in the previous step. For example, create a document with docId of "businessinventory" and copy the contents of the sample JSON file to the document body.
+
+   ![](./create-new-document.png)
+
+At the end of the setup, your Capella Setup looks like this:
+![](./edge-sample-cluster.png)
+
+### Capella App Services
+Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
+
+* Follow [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) to create a free tier App Services that links to the free tier cluster created in previous step.
+* Create an *App Endpoint* named "american234" by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint). When you create the App Endpoint, link it to the bucket named "mealordering", the scope named "AmericanAirlines", and the collection named "AA234".
+
+   The configuration should look something like this:
+   ![](./edge-sample-appendpoint.png)
+
+* Create an App User named "edgeserver234". Remember the password you use as you will need to configure your Edge Server later. 
+      - Set up the access grant so the App User is granted access to the channel named "AA234" in the corresponding collection.
+
+   The configuration of App User should look something like this:
+
+   ![](./edge-sample-app-user.png)
+
+* Go to the "connect" tab and record the public URL endpoint. You will need it when you configure your Edge Server.
+
+   ![](./edge-sample-connect.png)
+
+### Couchbase Edge Server Setup
+The instructions below describe how to deploy and run edge server on your local Mac machine. The equivalent instructions should apply to Linux-based machines as well.
+
+* Download Edge Server binary from the [downloads page](https://www.couchbase.com/downloads?family=edge-server).
+* Download the associated configuration .zip file named **"config-edge-server.zip"** from this [location](https://edge-server-tutorial-data.s3.us-east-2.amazonaws.com/config-edge-server.zip).
+* Unzip the contents of the package and place them in the same directory as your Edge Server executable. It will include the following:
+      - **usersfile**: This includes the list of web users who can access data from Edge Server. These are the credentials with which the web app authenticates with the server.
+         - [Optional] If you are interested in learning about how to generate your own users, run `./couchbase-edge-server --help` command to get more details.
+      - **certfile.pem** and **keyfile**: The edge server is configured to start up with an anonymous self-signed certificate with a "common name" of localhost. This is the cert file and private key corresponding to that. 
+         - [Optional] If you are interested in how you can generate your own anonymous self-signed certfile and keyfile, run the `./couchbase-edge-server --help` command to get more details. We'd recommend you follow the Edge Server documentation to generate your own certificate and private key.
+* Open the config file named "config-tls-replication-sync.json" and edit the file as follows:
+   - In the Replication section, replace these placeholders:
+
+```json
+{
+   "replications": [
+      {
+         // setup a bidirectional continuous replication
+         "source": "<<REPLACE WITH THE PUBLIC URL FROM CONNECT PAGE>>",
+         "target": "american234",
+         "bidirectional": true,
+         "continuous": true,
+         "collections": {
+            "AmericanAirlines.AA234": {}
+         },
+         "auth": {
+            "user": "edgeserver234",        // user setup on remote app services/Sync Gateway
+            "password": "<<REPLACE WITH PASSWORD OF APP USER>>" // user setup on remote app services/Sync Gateway
+         }
+      }
+   ]
+}
+```
+
+     - The source should correspond to the public URL that you get from the Connect tab of App Endpoint.
+     - The password should be the password corresponding to the App User that you created on App Endpoint.
+
+* Start the edge server. It will start listening for incoming connections on port 60000 (you can change that in your config file):
+
+      ```bash
+         ./couchbase-edge-server --verbose config-tls-replication-sync.json
+      ```
+
+      If everything is set up properly, the Edge Server will sync down documents from remote App Services.
+
+### Web App Setup 
+
+Follow these steps to set up and run the application locally on the same machine as the Edge Server:
+
+* **Clone the Repository**:
+   ```bash
+   git clone <repository-url>
+   cd edge-server-sko-demo
+   ```
+
+* **Install Dependencies**:
+   Ensure you have **Node.js** (version 16 or later) installed. Then, install the required dependencies by running:
+   ```bash
+   npm install
+   ```
+
+* **Create .env File**:
+   Create a .env file in the project root and define the URL to the Edge Server:
+   ```bash
+   EDGE_SERVER_BASE_URL="https://localhost:60000"
+   ```
+
+* **Start the Development Server**:
+   Launch the application in development mode using:
+   ```bash
+   npm run dev -- --host
+   ```
+   The application will be available at `http://localhost:5173` (or at an IP Address that can be accessible over local network).
+
+## Run the demo
+* Open the web app in a browser. It can be on a local machine or remote. 
+   - `http://localhost:5173` will open up the business version of the app.
+   - `http://localhost:5173/economy` will open up the economy version of the app.
+
+* Disconnect the local machine from the Internet so it cannot access the remote App Services. In this scenario, the Edge Server and the web app are disconnected from Internet.
+
+   ![](./edge-sample-app-business.png)
+
+* Place some orders via the app. 
+
+   ![](./edge-sample-app-place-order.png)
+
+You will see corresponding requests show up in the console output of the Edge Server, similar to ones below:
+```bash
+2025-02-24T20:04:08.756-0500	127.0.0.1:61556 PUT /american234.AmericanAirlines.AA234/economyinventory?rev=5-3ad339cd20ca9f04874bf62e45c95eac8bcc0689 -> 201 Created  [282.551ms]
+2025-02-24T20:04:08.756-0500	(Listener) Obj=/RESTConnection#107/ End of socket connection from 127.0.0.1:61556 (Connection:close) 
+2025-02-24T20:04:08.769-0500	(Listener) Incoming TLS connection from 127.0.0.1:61558 -- starting handshake
+2025-02-24T20:04:08.799-0500	(Listener) Accepted connection from 127.0.0.1:61558
+2025-02-24T20:04:08.800-0500	(Listener) {RESTConnection#108}==> litecore::edge_server::RESTConnection from 127.0.0.1:61558 @0x600003d08650
+2025-02-24T20:04:08.800-0500	(Listener) Obj=/RESTConnection#108/ Handling GET /american234.AmericanAirlines.AA234/economyinventory 
+2025-02-24T20:04:09.078-0500	127.0.0.1:61558 GET /american234.AmericanAirlines.AA234/economyinventory -> 200   [278.044ms]
+2025-02-24T20:04:09.078-0500	(Listener) Obj=/RESTConnection#108/ End of socket connection from 127.0.0.1:61558 (Connection) 
+```
+* You can also use any HTTP client to fetch a document and verify that it's updated:
+
+```bash
+curl --location 'https://localhost:60000/american234.AmericanAirlines.AA234/businessinventory' \
+--header 'Authorization: Basic c2VhdHVzZXI6cGFzc3dvcmQ='
+```
+
+## Reference Documentation
+- [Couchbase Edge Server](https://docs.couchbase.com/couchbase-edge-server/current/get-started/get-started-landing.html)
+- [Capella](https://docs.couchbase.com/cloud/get-started/intro.html)
