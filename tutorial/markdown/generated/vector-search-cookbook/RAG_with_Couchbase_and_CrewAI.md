@@ -47,12 +47,11 @@ Before you start
      a forever free tier operational cluster
    - This account provides you with an environment where you can explore and learn 
      about Capella with no time constraint
-   - To know more, please follow the [Getting Started Guide](https://docs.couchbase.com/cloud/get-started/create-account.html)
+   - To learn more, please follow the [Getting Started Guide](https://docs.couchbase.com/cloud/get-started/create-account.html)
 
 2. Couchbase Capella Configuration
    When running Couchbase using Capella, the following prerequisites need to be met:
-   - Create the database credentials to access the [travel-sample bucket](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) (Read and Write) 
-     used in the application
+   - Create the database credentials to access the required bucket (Read and Write) used in the application
    - Allow access to the Cluster from the IP on which the application is running by following the [Network Security documentation](https://docs.couchbase.com/cloud/security/security.html#public-access)
 
 # Setting the Stage: Installing Necessary Libraries
@@ -63,14 +62,13 @@ We'll install the following key libraries:
 - `langchain-openai`: For accessing OpenAI's embedding and chat models
 - `crewai`: To create and orchestrate our AI agents for RAG operations
 - `python-dotenv`: For securely managing environment variables and API keys
-- `tqdm`: For displaying progress bars during data processing
 
 These libraries provide the foundation for building a semantic search engine with vector embeddings, 
 database integration, and agent-based RAG capabilities.
 
 
 ```python
-%pip install --quiet datasets langchain-couchbase langchain-openai crewai python-dotenv tqdm
+%pip install --quiet datasets langchain-couchbase langchain-openai crewai python-dotenv
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -81,6 +79,7 @@ The script starts by importing a series of libraries required for various tasks,
 
 
 ```python
+import getpass
 import json
 import logging
 import os
@@ -90,8 +89,10 @@ from datetime import timedelta
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.diagnostics import PingState, ServiceType
-from couchbase.exceptions import (CouchbaseException,
-                                  InternalServerFailureException)
+from couchbase.exceptions import (InternalServerFailureException,
+                                  QueryIndexAlreadyExistsException,
+                                  ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
@@ -113,6 +114,9 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Suppress httpx logging
+logging.getLogger('httpx').setLevel(logging.CRITICAL)
 ```
 
 # Loading Sensitive Informnation
@@ -126,17 +130,17 @@ The script uses environment variables to store sensitive information, enhancing 
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or input("Enter your OpenAI API key: ")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set")
 
-CB_HOST = os.getenv('CB_HOST', 'couchbase://localhost')
-CB_USERNAME = os.getenv('CB_USERNAME', 'Administrator')
-CB_PASSWORD = os.getenv('CB_PASSWORD', 'password')
-CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME', 'vector-search-testing')
-INDEX_NAME = os.getenv('INDEX_NAME', 'vector_search_crew')
-SCOPE_NAME = os.getenv('SCOPE_NAME', 'shared')
-COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'crew')
+CB_HOST = os.getenv('CB_HOST') or input("Enter Couchbase host (default: couchbase://localhost): ") or 'couchbase://localhost'
+CB_USERNAME = os.getenv('CB_USERNAME') or input("Enter Couchbase username (default: Administrator): ") or 'Administrator'
+CB_PASSWORD = os.getenv('CB_PASSWORD') or getpass.getpass("Enter Couchbase password (default: password): ") or 'password'
+CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME') or input("Enter bucket name (default: vector-search-testing): ") or 'vector-search-testing'
+INDEX_NAME = os.getenv('INDEX_NAME') or input("Enter index name (default: vector_search_crew): ") or 'vector_search_crew'
+SCOPE_NAME = os.getenv('SCOPE_NAME') or input("Enter scope name (default: shared): ") or 'shared'
+COLLECTION_NAME = os.getenv('COLLECTION_NAME') or input("Enter collection name (default: crew): ") or 'crew'
 
 print("Configuration loaded successfully")
 ```
@@ -201,68 +205,123 @@ except Exception as e:
     raise
 ```
 
-    Search service is responding at: 18.209.43.8:18094
+    Search service is responding at: 127.0.0.1:8094
     Search service check passed successfully
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: If you are using Capella, create a bucket manually called vector-search-testing(or any name you prefer) with the same properties.
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
+
 
 
 ```python
-
-# Setup collections
-try:
-    bucket = cluster.bucket(CB_BUCKET_NAME)
-    bucket_manager = bucket.collections()
-
-    # Setup main collection
-    collections = bucket_manager.get_all_scopes()
-    collection_exists = any(
-        scope.name == SCOPE_NAME and COLLECTION_NAME in [col.name for col in scope.collections]
-        for scope in collections
-    )
-
-    if not collection_exists:
+def setup_collection(cluster, bucket_name, scope_name, collection_name):
+    try:
+        # Check if bucket exists, create if it doesn't
         try:
-            bucket_manager.create_collection(SCOPE_NAME, COLLECTION_NAME)
-            print(f"Collection '{COLLECTION_NAME}' created")
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
         except Exception as e:
-            print(f"Failed to create collection '{COLLECTION_NAME}': {str(e)}")
-            raise
-    else:
-        print(f"Collection '{COLLECTION_NAME}' already exists")
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
 
-    # Create primary index
-    try:
-        cluster.query(
-            f"CREATE PRIMARY INDEX IF NOT EXISTS ON `{CB_BUCKET_NAME}`.`{SCOPE_NAME}`.`{COLLECTION_NAME}`"
-        ).execute()
-        print(f"Primary index created for '{COLLECTION_NAME}'")
-    except InternalServerFailureException as e:
-        print(f"Failed to create primary index for '{COLLECTION_NAME}': {str(e)}")
-        raise
+        bucket_manager = bucket.collections()
 
-    # Clear collection
-    try:
-        cluster.query(
-            f"DELETE FROM `{CB_BUCKET_NAME}`.`{SCOPE_NAME}`.`{COLLECTION_NAME}`"
-        ).execute()
-        print(f"Collection '{COLLECTION_NAME}' cleared")
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
+
+        # Check if collection exists, create if it doesn't
+        collections = bucket_manager.get_all_scopes()
+        collection_exists = any(
+            scope.name == scope_name and collection_name in [col.name for col in scope.collections]
+            for scope in collections
+        )
+
+        if not collection_exists:
+            logging.info(f"Collection '{collection_name}' does not exist. Creating it...")
+            bucket_manager.create_collection(scope_name, collection_name)
+            logging.info(f"Collection '{collection_name}' created successfully.")
+        else:
+            logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
+
+        # Wait for collection to be ready
+        collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
+
+        # Ensure primary index exists
+        try:
+            cluster.query(f"CREATE PRIMARY INDEX IF NOT EXISTS ON `{bucket_name}`.`{scope_name}`.`{collection_name}`").execute()
+            logging.info("Primary index present or created successfully.")
+        except Exception as e:
+            logging.warning(f"Error creating primary index: {str(e)}")
+
+        # Clear all documents in the collection
+        try:
+            query = f"DELETE FROM `{bucket_name}`.`{scope_name}`.`{collection_name}`"
+            cluster.query(query).execute()
+            logging.info("All documents cleared from the collection.")
+        except Exception as e:
+            logging.warning(f"Error while clearing documents: {str(e)}. The collection might be empty.")
+
+        return collection
     except Exception as e:
-        print(f"Failed to clear collection '{COLLECTION_NAME}': {str(e)}")
-        raise
+        raise RuntimeError(f"Error setting up collection: {str(e)}")
+    
+setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 
-except Exception as e:
-    print(f"An error occurred during setup: {str(e)}")
-    raise
 ```
 
-    Collection 'crew' already exists
-    Primary index created for 'crew'
-    Collection 'crew' cleared
+    2025-02-27 14:40:21 [INFO] Bucket 'vector-search-testing' exists.
+    2025-02-27 14:40:21 [INFO] Collection 'crew' does not exist. Creating it...
+    2025-02-27 14:40:21 [INFO] Collection 'crew' created successfully.
+    2025-02-27 14:40:25 [INFO] Primary index present or created successfully.
+    2025-02-27 14:40:25 [INFO] All documents cleared from the collection.
+
+
+
+
+
+    <couchbase.collection.Collection at 0x3100ea490>
+
 
 
 # Configuring and Initializing Couchbase Vector Search Index for Semantic Document Retrieval
@@ -275,85 +334,93 @@ For more information on creating a vector search index, please follow the instru
 
 
 ```python
+# Load index definition
 try:
-    # Load index definition
-    try:
-        with open('crew_index.json', 'r') as file:
-            index_definition = json.load(file)
-    except FileNotFoundError as e:
-        print(f"Error: crew_index.json file not found: {str(e)}")
-        raise
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in crew_index.json: {str(e)}")
-        raise
-    except Exception as e:
-        print(f"Error loading index definition: {str(e)}")
-        raise
-
-    # Setup vector search index
-    try:
-        scope_index_manager = cluster.bucket(CB_BUCKET_NAME).scope(SCOPE_NAME).search_indexes()
-
-        # Check if index exists
-        try:
-            existing_indexes = scope_index_manager.get_all_indexes()
-            index_exists = any(index.name == INDEX_NAME for index in existing_indexes)
-        except InternalServerFailureException:
-            # If no indexes exist yet, continue with creation
-            index_exists = False
-            print("No existing indexes found, proceeding with index creation")
-
-        if index_exists:
-            print(f"Index '{INDEX_NAME}' already exists")
-        else:
-            search_index = SearchIndex.from_json(index_definition)
-            scope_index_manager.upsert_index(search_index)
-            print(f"Index '{INDEX_NAME}' created")
-    except InternalServerFailureException as e:
-        print(f"Internal server error occurred while creating vector search index '{INDEX_NAME}'. This may indicate insufficient system resources or an issue with the Couchbase server configuration: {str(e)}")
-        raise
-    except CouchbaseException as e:
-        print(f"A Couchbase-specific error occurred while managing vector search index '{INDEX_NAME}'. Please verify your cluster connectivity and index configuration settings: {str(e)}")
-        raise
-    except Exception as e:
-        print(f"An unexpected error occurred while managing vector search index '{INDEX_NAME}'. This requires investigation of system logs for root cause analysis: {str(e)}")
-        raise
-
+    with open('crew_index.json', 'r') as file:
+        index_definition = json.load(file)
+except FileNotFoundError as e:
+    print(f"Error: crew_index.json file not found: {str(e)}")
+    raise
+except json.JSONDecodeError as e:
+    print(f"Error: Invalid JSON in crew_index.json: {str(e)}")
+    raise
 except Exception as e:
-    print(f"Fatal error in vector search index setup: {str(e)}")
+    print(f"Error loading index definition: {str(e)}")
     raise
 ```
 
-    Index 'vector_search_crew' already exists
+# Creating or Updating Search Indexes
+
+With the index definition loaded, the next step is to create or update the **Vector Search Index** in Couchbase. This step is crucial because it optimizes our database for vector similarity search operations, allowing us to perform searches based on the semantic content of documents rather than just keywords. By creating or updating a Vector Search Index, we enable our search engine to handle complex queries that involve finding semantically similar documents using vector embeddings, which is essential for a robust semantic search engine.
 
 
-# Setting Up OpenAI Components
+```python
+try:
+    scope_index_manager = cluster.bucket(CB_BUCKET_NAME).scope(SCOPE_NAME).search_indexes()
+
+    # Check if index already exists
+    existing_indexes = scope_index_manager.get_all_indexes()
+    index_name = index_definition["name"]
+
+    if index_name in [index.name for index in existing_indexes]:
+        logging.info(f"Index '{index_name}' found")
+    else:
+        logging.info(f"Creating new index '{index_name}'...")
+
+    # Create SearchIndex object from JSON definition
+    search_index = SearchIndex.from_json(index_definition)
+
+    # Upsert the index (create if not exists, update if exists)
+    scope_index_manager.upsert_index(search_index)
+    logging.info(f"Index '{index_name}' successfully created/updated.")
+
+except QueryIndexAlreadyExistsException:
+    logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
+except InternalServerFailureException as e:
+    logging.error(f"Internal server error: {str(e)}")
+    raise
+```
+
+    2025-02-27 14:40:29 [INFO] Creating new index 'vector_search_crew'...
+    2025-02-27 14:40:29 [INFO] Index 'vector_search_crew' successfully created/updated.
+
+
+## Setting Up OpenAI Components
 
 This section initializes two key OpenAI components needed for our RAG system:
 
 1. OpenAI Embeddings:
-   - Uses the 'text-embedding-ada-002' model
+   - Uses the 'text-embedding-3-small' model
    - Converts text into high-dimensional vector representations (embeddings)
    - These embeddings enable semantic search by capturing the meaning of text
    - Required for vector similarity search in Couchbase
 
 2. ChatOpenAI Language Model:
    - Uses the 'gpt-4o' model
-   - Temperature set to 0.0 for focused responses
-   - Higher temperatures increase creativity and variation
-   - Handles the actual text generation and responses
-   - Acts as the brain of our RAG system for processing retrieved context
+   - Temperature set to 0.2 for balanced creativity and focus
+   - Serves as the cognitive engine for CrewAI agents
+   - Powers agent reasoning, decision-making, and task execution
+   - Enables agents to:
+     - Process and understand retrieved context from vector search
+     - Generate thoughtful responses based on that context
+     - Follow instructions defined in agent roles and goals
+     - Collaborate with other agents in the crew
+   - The relatively low temperature (0.2) ensures agents produce reliable,
+     consistent outputs while maintaining some creative problem-solving ability
 
 Both components require a valid OpenAI API key (OPENAI_API_KEY) for authentication.
-The embeddings model is optimized for creating vector representations,
-while the language model is optimized for understanding and generating human-like text.
+In the CrewAI framework, the LLM acts as the "brain" for each agent, allowing them
+to interpret tasks, retrieve relevant information via the RAG system, and generate
+appropriate outputs based on their specialized roles and expertise.
 
 
 ```python
 # Initialize OpenAI components
 embeddings = OpenAIEmbeddings(
     openai_api_key=OPENAI_API_KEY,
-    model="text-embedding-ada-002"
+    model="text-embedding-3-small"
 )
 
 llm = ChatOpenAI(
@@ -388,54 +455,103 @@ print("Vector store initialized")
     Vector store initialized
 
 
-# Load the TREC Dataset
-To build a search engine, we need data to search through. We use the TREC dataset, a well-known benchmark in the field of information retrieval. This dataset contains a wide variety of text data that we'll use to train our search engine. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the data in the TREC dataset make it an excellent choice for testing and refining our search engine, ensuring that it can handle a wide range of queries effectively.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
-The TREC dataset's rich content allows us to simulate real-world scenarios where users ask complex questions, enabling us to fine-tune our search engine's ability to understand and respond to various types of queries.
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
-# Load TREC dataset
-trec = load_dataset('trec', split='train[:1000]')
-print(f"Loaded {len(trec)} samples from TREC dataset")
-
 try:
-    batch_size = 50
-    vector_store.add_texts(
-        texts=trec['text'],
-        batch_size=batch_size,
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
     )
-    print(f"Added {len(trec)} documents to vector store")
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    Loaded 1000 samples from TREC dataset
+    2025-02-27 14:40:41 [INFO] Successfully loaded the BBC News dataset with 2687 rows.
 
 
-    2024-12-17 23:12:01 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+    Loaded the BBC News dataset with 2687 rows
 
 
-    Added 1000 documents to vector store
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
 
 
-# Creating a Vector Search Tool
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 100 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+batch_size = 100
+
+# Automatic Batch Processing
+articles = [article for article in unique_news_articles if article and len(article) <= 50000]
+
+try:
+    vector_store.add_texts(
+        texts=articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully.")
+except Exception as e:
+    raise ValueError(f"Failed to save documents to vector store: {str(e)}")
+```
+
+    2025-02-27 14:41:48 [INFO] Document ingestion completed successfully.
+
+
+## Creating a Vector Search Tool
 After loading our data into the vector store, we need to create a tool that can efficiently search through these vector embeddings. This involves two key components:
 
-## Vector Retriever
-The vector retriever is configured to perform similarity searches with specific parameters:
-- k=8: Returns the 8 most similar documents
-- fetch_k=20: Initially retrieves 20 candidates before filtering to the top 8
-This two-stage approach helps balance between accuracy and performance.
+### Vector Retriever
+The vector retriever is configured to perform similarity searches. This creates a retriever that performs semantic similarity searches against our vector database. The similarity search finds documents whose vector embeddings are closest to the query's embedding in the vector space.
 
-## Search Tool
+### Search Tool
 The search tool wraps the retriever in a user-friendly interface that:
-- Accepts natural language queries
-- Handles both string and structured query inputs
-- Formats results with clear document separation
-- Includes metadata for traceability
+- Takes a query string as input
+- Passes the query to the retriever to find relevant documents
+- Formats the results with clear document separation using document numbers and dividers
+- Returns the formatted results as a single string with each document clearly delineated
 
-The tool is designed to integrate seamlessly with our AI agents, providing them with reliable access to our knowledge base through vector similarity search.
+The tool is designed to integrate seamlessly with our AI agents, providing them with reliable access to our knowledge base through vector similarity search. The lambda function in the tool handles both direct string queries and structured query objects, ensuring flexibility in how the tool can be invoked.
 
 
 
@@ -443,10 +559,6 @@ The tool is designed to integrate seamlessly with our AI agents, providing them 
 # Create vector retriever
 retriever = vector_store.as_retriever(
     search_type="similarity",
-    search_kwargs={
-        "k": 8,
-        "fetch_k": 20
-    }
 )
 
 # Create search tool using retriever
@@ -563,6 +675,38 @@ print("Agents created successfully")
     Agents created successfully
 
 
+## How CrewAI Agents Work in this RAG System
+
+### Agent-Based RAG Architecture
+
+This system uses a two-agent approach to implement Retrieval-Augmented Generation (RAG):
+
+1. **Research Expert Agent**:
+   - Receives the user query
+   - Uses the vector search tool to retrieve relevant documents from Couchbase
+   - Analyzes and synthesizes information from retrieved documents
+   - Produces a comprehensive research summary with key findings
+
+2. **Technical Writer Agent**:
+   - Takes the research summary as input
+   - Structures and formats the information
+   - Creates a polished, user-friendly response
+   - Ensures proper attribution and citation
+
+#### How the Process Works:
+
+1. **Query Processing**: User query is passed to the Research Agent
+2. **Vector Search**: Query is converted to embeddings and matched against document vectors
+3. **Document Retrieval**: Most similar documents are retrieved from Couchbase
+4. **Analysis**: Research Agent analyzes documents for relevance and extracts key information
+5. **Synthesis**: Research Agent combines findings into a coherent summary
+6. **Refinement**: Writer Agent restructures and enhances the content
+7. **Response Generation**: Final polished response is returned to the user
+
+This multi-agent approach separates concerns (research vs. writing) and leverages
+specialized expertise for each task, resulting in higher quality responses.
+
+
 # Testing the Search System
 
 Test the system with some example queries.
@@ -570,6 +714,15 @@ Test the system with some example queries.
 
 ```python
 def process_query(query, researcher, writer):
+    """
+    Test the complete RAG system with a user query.
+    
+    This function tests both the vector search capability and the agent-based processing:
+    1. Vector search: Retrieves relevant documents from Couchbase
+    2. Agent processing: Uses CrewAI agents to analyze and format the response
+    
+    The function measures performance and displays detailed outputs from each step.
+    """
     print(f"\nQuery: {query}")
     print("-" * 80)
     
@@ -624,566 +777,212 @@ def process_query(query, researcher, writer):
 
 
 ```python
-query = "What caused the 1929 Great Depression?"
+# Disable logging before running the query
+logging.disable(logging.CRITICAL)
+
+query = "What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures."
 process_query(query, researcher, writer)
 ```
 
-    23:12:07 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o-mini; provider = openai
-    2024-12-17 23:12:07 [INFO] 
-    LiteLLM completion() model= gpt-4o-mini; provider = openai
-
-
     
-    Query: What caused the 1929 Great Depression?
+    Query: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.
     --------------------------------------------------------------------------------
      
-    [2024-12-17 23:12:07][INFO]: Planning the crew execution
-
-
-    2024-12-17 23:12:15 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:15 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:15 [INFO] Wrapper: Completed Call, calling success_handler
-    23:12:15 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:15 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
+    [2025-02-27 14:42:16][INFO]: Planning the crew execution
     # Agent: Research Expert
-    ## Task: Research and analyze information relevant to: What caused the 1929 Great Depression?1. Initiate the task by clearly defining the research question: 'What caused the 1929 Great Depression?'
-    2. Use the vector_search tool to find relevant documents. Input the query string that accurately represents the research question.
-    3. Analyze the results from the vector_search tool. Review the list of documents returned with a focus on their content and metadata.
-    4. Collect key findings from the most relevant documents, noting any reliable sources, statistics, and historical facts that provide insight into the causes of the Great Depression.
-    5. Synthesize the findings into a cohesive analysis, ensuring it includes different perspectives and theories about the causes of the Great Depression, such as stock market crash, bank failures, reduced consumer spending, and international trade issues.
-    6. Prepare a summary of the analysis highlighting key findings and supporting evidence that answers the query with a well-rounded perspective.
-
-
-    2024-12-17 23:12:17 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:17 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:17 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:18 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:19 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:19 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
+    ## Task: Research and analyze information relevant to: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.1. Begin by formulating a precise query that captures the core of what is needed: 'What are the key details about the FA Cup third round draw, including details on Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures?'.
+    2. Utilize the 'vector_search' tool to input the query. This can involve typing the query into the tool's input field, ensuring proper grammar and clarity for optimal search results.
+    3. Receive a list of relevant document contents with their respective metadata. Review these documents carefully to extract crucial details regarding:
+       - The context of the FA Cup third round draw.
+       - Specific match insights related to Manchester United vs Arsenal and Tamworth vs Tottenham, including player information, historical context, and any statistics or predictions if available.
+       - Additional notable fixtures that might grab attention, thus ensuring a comprehensive analysis.
+    4. Analyze gathered information to identify key themes, facts, and figures related to the matches.
+    5. Compile the findings in a structured manner, highlighting essential information for easy reference in the next task.
     
     
     # Agent: Research Expert
-    ## Thought: I need to use the vector_search tool to find relevant documents that explain the causes of the 1929 Great Depression.
     ## Using tool: vector_search
     ## Tool Input: 
-    "{\"query\": \"What caused the 1929 Great Depression?\"}"
+    "{\"query\": \"FA Cup third round draw Manchester United vs Arsenal Tamworth vs Tottenham notable fixtures\"}"
     ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
     
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 4:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 5:
-    ----------------------------------------
-    What caused the Lynmouth floods ?
-    
-    Document 6:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 7:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 8:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-
-
-    2024-12-17 23:12:20 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:21 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:21 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:21 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:22 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:22 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: Thought: The search results do not directly address the causes of the 1929 Great Depression. I need to refine my search query to obtain more relevant documents.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"causes of the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 6:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 7:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 8:
-    ----------------------------------------
-    What causes pneumonia ?
-
-
-    2024-12-17 23:12:24 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:24 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:24 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:24 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:26 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:26 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: Thought: The search results still do not provide direct information on the causes of the 1929 Great Depression. I need to refine my search query further to focus specifically on economic factors and events leading to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"economic causes of the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What do economists do ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 6:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 7:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 8:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    
-    You ONLY have access to the following tools, and should NEVER make up tools that are not listed here:
-    
-    Tool Name: vector_search
-    Tool Arguments: {'query': {'description': '', 'type': 'Any'}}
-    Tool Description: Search for relevant documents using vector similarity.
-        Input should be a simple text query string.
-        Returns a list of relevant document contents with metadata.
-        Use this tool to find detailed information about topics.
-    
-    Use the following format:
-    
-    Thought: you should always think about what to do
-    Action: the action to take, only one name of [vector_search], just the name, exactly as it's written.
-    Action Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using " to wrap keys and values.
-    Observation: the result of the action
-    
-    Once all necessary information is gathered:
-    
-    Thought: I now know the final answer
-    Final Answer: the final answer to the original input question
-    
-
-
-    2024-12-17 23:12:27 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:27 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:27 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:28 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:29 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:29 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are not yielding the desired information on the causes of the 1929 Great Depression. I will attempt a broader query to capture any related documents that might provide insights into the economic factors leading to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"factors leading to the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 6:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 7:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 8:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-
-
-    2024-12-17 23:12:31 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:32 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:32 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:32 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:33 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:33 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are consistently not providing relevant information about the causes of the 1929 Great Depression. I will attempt one more refined search query focusing on specific economic events and policies that might have contributed to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"economic events and policies causing the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What do economists do ?
-    
-    Document 4:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 5:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 6:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 7:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 8:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-
-
-    2024-12-17 23:12:35 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:35 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:35 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:36 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:37 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:37 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are still not providing the necessary information on the causes of the 1929 Great Depression. It seems there might be an issue with the search tool or the available documents. I will attempt one last search with a different approach, focusing on the stock market crash and economic downturn.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"1929 stock market crash and economic downturn causes\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What are bear and bull markets ?
-    
-    Document 4:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 5:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 6:
-    ----------------------------------------
-    What animals do you find in the stock market ?
-    
-    Document 7:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 8:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    
-    You ONLY have access to the following tools, and should NEVER make up tools that are not listed here:
-    
-    Tool Name: vector_search
-    Tool Arguments: {'query': {'description': '', 'type': 'Any'}}
-    Tool Description: Search for relevant documents using vector similarity.
-        Input should be a simple text query string.
-        Returns a list of relevant document contents with metadata.
-        Use this tool to find detailed information about topics.
-    
-    Use the following format:
-    
-    Thought: you should always think about what to do
-    Action: the action to take, only one name of [vector_search], just the name, exactly as it's written.
-    Action Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using " to wrap keys and values.
-    Observation: the result of the action
-    
-    Once all necessary information is gathered:
-    
-    Thought: I now know the final answer
-    Final Answer: the final answer to the original input question
-    
-
-
-    2024-12-17 23:12:44 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:44 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:44 [INFO] Wrapper: Completed Call, calling success_handler
-    23:12:44 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:44 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
     
     
     # Agent: Research Expert
     ## Final Answer: 
-    The 1929 Great Depression was caused by a combination of factors, including:
+    my best complete final answer to the task.
     
-    1. Stock Market Crash of 1929: The stock market crash in October 1929 is often cited as the immediate trigger of the Great Depression. The crash led to a loss of confidence in the financial system and a reduction in consumer spending and investment.
+    The FA Cup third round draw is a significant event in English football, marking the entry of Premier League and Championship teams into the competition. This round often features exciting matchups and potential upsets, as lower league teams get the chance to face top-tier clubs.
     
-    2. Bank Failures: Many banks failed during the early 1930s, leading to a contraction in the money supply. This was partly due to bank runs, where panicked depositors withdrew their funds, causing even solvent banks to collapse.
+    Key details about the FA Cup third round draw include:
     
-    3. Reduction in Consumer Spending: As people lost their jobs and savings, consumer spending decreased significantly, leading to a decline in production and further job losses.
+    1. **Manchester United vs Arsenal**: This fixture is one of the standout matches of the third round, featuring two of the most successful clubs in FA Cup history. Both teams have a rich history in the competition, with numerous titles between them. The match is expected to be highly competitive, with both clubs aiming to progress further in the tournament. Historical context, player form, and tactical approaches will be crucial in determining the outcome.
     
-    4. International Trade Issues: The imposition of tariffs, such as the Smoot-Hawley Tariff, led to a decline in international trade. Other countries retaliated with their tariffs, exacerbating the global economic downturn.
+    2. **Tamworth vs Tottenham**: This match presents a classic FA Cup scenario where a lower league team, Tamworth, faces a Premier League giant, Tottenham Hotspur. Such fixtures are often referred to as "David vs Goliath" encounters, where the smaller club hopes to cause an upset. The game will be a significant occasion for Tamworth, offering them a chance to showcase their talent on a larger stage.
     
-    5. Monetary Policy: The Federal Reserve's monetary policy during this period is often criticized for being too tight, which contributed to deflation and worsened the economic situation.
+    3. **Other Notable Fixtures**: The third round draw typically includes several intriguing matchups. These can involve local derbies, historical rivalries, or games featuring clubs with contrasting styles and histories. The draw often garners attention for its potential to produce memorable moments and unexpected results.
     
-    These factors, among others, created a downward economic spiral that resulted in the prolonged economic hardship known as the Great Depression.
+    Overall, the FA Cup third round is eagerly anticipated by fans and clubs alike, as it embodies the spirit of competition and unpredictability that the tournament is known for. The matches mentioned, along with other fixtures, contribute to the excitement and allure of the FA Cup.
+    ```
     
     
     # Agent: Technical Writer
-    ## Task: Create a comprehensive and well-structured response1. Gather all the findings and insights collected from the research phase on the causes of the 1929 Great Depression.
-    2. Organize the information in a logical structure, which might include an introduction, main body (with sub-sections for each cause), and a conclusion.
-    3. Write the introduction to provide context about the Great Depression, including its historical significance.
-    4. In the main body, elaborate on each of the key causes identified:
-       a. Stock Market Crash: Describe the events leading to the crash and its immediate economic impact.
-       b. Bank Failures: Discuss how bank failures contributed to the economic crisis.
-       c. Decline in Consumer Spending: Analyze the effects of lower consumer confidence on the economy.
-       d. International Trade Issues: Explain the global impact and how trade policies affected the U.S. economy.
-    5. End the response with a conclusion summarizing how these factors interlinked to cause the Great Depression.
-    6. Review and edit the response to ensure clarity, accuracy, and coherence.
-
-
-    2024-12-17 23:13:03 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:13:03 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:13:03 [INFO] Wrapper: Completed Call, calling success_handler
-
-
+    ## Task: Create a comprehensive and well-structured response1. Review the analysis conducted in Task Number 1, ensuring all key findings, insights, and evidence are clearly noted down.
+    2. Organize the information into clear sections: Introduction, Match Summaries (Manchester United vs Arsenal, Tamworth vs Tottenham), and Notable Fixtures.
+    3. Write an engaging introduction that sets the stage for the FA Cup third round, mentioning its significance in the football calendar and what readers can expect from the upcoming matches.
+    4. For each match summary, include:
+       - Overview: Briefly explain the significance of the matchup.
+       - Head-to-Head History: Mention past encounters, if available, and any rivalry context.
+       - Key Players: Highlight star players to watch from both teams for each match.
+       - Predictions/Expectations: Any expert insights or statistics that formulate potential match outcomes.
+    5. In the Notable Fixtures section, provide short insights into other fixtures, adopting a similar format to ensure consistency.
+    6. Finish with a conclusion that encapsulates the excitement of the upcoming matches and encourages engagement from the readers.
+    7. Review the drafted response for clarity, coherence, and alignment with the initial task description, making adjustments as necessary to ensure a polished final output.
     
     
     # Agent: Technical Writer
     ## Final Answer: 
-    **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
-    
     **Introduction**
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    The FA Cup third round is a pivotal moment in the English football calendar, marking the entry of Premier League and Championship teams into the competition. This stage is renowned for its thrilling matchups and the potential for upsets, as lower league teams are given the opportunity to challenge top-tier clubs. Fans eagerly anticipate this round, which is celebrated for its unpredictability and the spirit of competition it embodies. In this article, we will delve into some of the most exciting fixtures of the third round, including Manchester United vs Arsenal and Tamworth vs Tottenham, along with other notable matches.
     
-    **Main Body**
+    **Match Summaries**
     
-    **a. Stock Market Crash of 1929**
+    **Manchester United vs Arsenal**
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    - **Overview**: This fixture is a highlight of the third round, featuring two of the most successful clubs in FA Cup history. Both Manchester United and Arsenal have a storied legacy in the competition, with numerous titles to their names. The match promises to be fiercely competitive, as both teams are determined to advance further in the tournament.
     
-    **b. Bank Failures**
+    - **Head-to-Head History**: Manchester United and Arsenal have a long-standing rivalry, with numerous encounters in both domestic and cup competitions. Their FA Cup clashes are often memorable, with both teams having secured victories over the other in past tournaments.
     
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
+    - **Key Players**: For Manchester United, players like Bruno Fernandes and Marcus Rashford are expected to play pivotal roles. Arsenal will rely on the talents of Bukayo Saka and Martin Ødegaard to make an impact.
     
-    **c. Reduction in Consumer Spending**
+    - **Predictions/Expectations**: Experts anticipate a closely contested match, with both teams in strong form. Historical data suggests a balanced encounter, though Manchester United's home advantage could be a decisive factor.
     
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
+    **Tamworth vs Tottenham**
     
-    **d. International Trade Issues**
+    - **Overview**: This match epitomizes the classic "David vs Goliath" scenario, with non-league Tamworth facing Premier League giants Tottenham Hotspur. Such fixtures are the essence of the FA Cup, where smaller clubs dream of causing an upset.
     
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
+    - **Head-to-Head History**: This is a rare encounter, with Tamworth and Tottenham having little to no previous competitive history. The match is a significant occasion for Tamworth, providing them with a platform to showcase their abilities.
     
-    **e. Monetary Policy**
+    - **Key Players**: Tamworth will look to their standout performers, such as their top scorer, to challenge Tottenham. Meanwhile, Tottenham's Harry Kane and Son Heung-min are expected to lead the charge for the Premier League side.
     
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    - **Predictions/Expectations**: While Tottenham is the clear favorite, the magic of the FA Cup means Tamworth could potentially surprise. The match is expected to draw significant attention, with fans eager to see if an upset is on the cards.
+    
+    **Notable Fixtures**
+    
+    The third round draw also features several other intriguing matchups. Local derbies and historical rivalries add to the excitement, with clubs of varying styles and histories facing off. These fixtures often produce memorable moments and unexpected results, contributing to the allure of the FA Cup.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round is a celebration of football's unpredictability and competitive spirit. With high-profile matches like Manchester United vs Arsenal and the potential for upsets in games such as Tamworth vs Tottenham, fans are in for an exhilarating experience. As the tournament progresses, the excitement and engagement from supporters will only intensify, underscoring the enduring appeal of the FA Cup.
     
     
     
-    Query completed in 55.89 seconds
+    Query completed in 20.09 seconds
     ================================================================================
     RESPONSE
     ================================================================================
-    **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
-    
     **Introduction**
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    The FA Cup third round is a pivotal moment in the English football calendar, marking the entry of Premier League and Championship teams into the competition. This stage is renowned for its thrilling matchups and the potential for upsets, as lower league teams are given the opportunity to challenge top-tier clubs. Fans eagerly anticipate this round, which is celebrated for its unpredictability and the spirit of competition it embodies. In this article, we will delve into some of the most exciting fixtures of the third round, including Manchester United vs Arsenal and Tamworth vs Tottenham, along with other notable matches.
     
-    **Main Body**
+    **Match Summaries**
     
-    **a. Stock Market Crash of 1929**
+    **Manchester United vs Arsenal**
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    - **Overview**: This fixture is a highlight of the third round, featuring two of the most successful clubs in FA Cup history. Both Manchester United and Arsenal have a storied legacy in the competition, with numerous titles to their names. The match promises to be fiercely competitive, as both teams are determined to advance further in the tournament.
     
-    **b. Bank Failures**
+    - **Head-to-Head History**: Manchester United and Arsenal have a long-standing rivalry, with numerous encounters in both domestic and cup competitions. Their FA Cup clashes are often memorable, with both teams having secured victories over the other in past tournaments.
     
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
+    - **Key Players**: For Manchester United, players like Bruno Fernandes and Marcus Rashford are expected to play pivotal roles. Arsenal will rely on the talents of Bukayo Saka and Martin Ødegaard to make an impact.
     
-    **c. Reduction in Consumer Spending**
+    - **Predictions/Expectations**: Experts anticipate a closely contested match, with both teams in strong form. Historical data suggests a balanced encounter, though Manchester United's home advantage could be a decisive factor.
     
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
+    **Tamworth vs Tottenham**
     
-    **d. International Trade Issues**
+    - **Overview**: This match epitomizes the classic "David vs Goliath" scenario, with non-league Tamworth facing Premier League giants Tottenham Hotspur. Such fixtures are the essence of the FA Cup, where smaller clubs dream of causing an upset.
     
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
+    - **Head-to-Head History**: This is a rare encounter, with Tamworth and Tottenham having little to no previous competitive history. The match is a significant occasion for Tamworth, providing them with a platform to showcase their abilities.
     
-    **e. Monetary Policy**
+    - **Key Players**: Tamworth will look to their standout performers, such as their top scorer, to challenge Tottenham. Meanwhile, Tottenham's Harry Kane and Son Heung-min are expected to lead the charge for the Premier League side.
     
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    - **Predictions/Expectations**: While Tottenham is the clear favorite, the magic of the FA Cup means Tamworth could potentially surprise. The match is expected to draw significant attention, with fans eager to see if an upset is on the cards.
+    
+    **Notable Fixtures**
+    
+    The third round draw also features several other intriguing matchups. Local derbies and historical rivalries add to the excitement, with clubs of varying styles and histories facing off. These fixtures often produce memorable moments and unexpected results, contributing to the allure of the FA Cup.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round is a celebration of football's unpredictability and competitive spirit. With high-profile matches like Manchester United vs Arsenal and the potential for upsets in games such as Tamworth vs Tottenham, fans are in for an exhilarating experience. As the tournament progresses, the excitement and engagement from supporters will only intensify, underscoring the enduring appeal of the FA Cup.
     
     ================================================================================
     DETAILED TASK OUTPUTS
     ================================================================================
     
-    Task: Research and analyze information relevant to: What caused the 1929 Great Depression?1. Initiate the ...
+    Task: Research and analyze information relevant to: What are the key details about the FA Cup third round ...
     ----------------------------------------
-    Output: The 1929 Great Depression was caused by a combination of factors, including:
+    Output: my best complete final answer to the task.
     
-    1. Stock Market Crash of 1929: The stock market crash in October 1929 is often cited as the immediate trigger of the Great Depression. The crash led to a loss of confidence in the financial system and a reduction in consumer spending and investment.
+    The FA Cup third round draw is a significant event in English football, marking the entry of Premier League and Championship teams into the competition. This round often features exciting matchups and potential upsets, as lower league teams get the chance to face top-tier clubs.
     
-    2. Bank Failures: Many banks failed during the early 1930s, leading to a contraction in the money supply. This was partly due to bank runs, where panicked depositors withdrew their funds, causing even solvent banks to collapse.
+    Key details about the FA Cup third round draw include:
     
-    3. Reduction in Consumer Spending: As people lost their jobs and savings, consumer spending decreased significantly, leading to a decline in production and further job losses.
+    1. **Manchester United vs Arsenal**: This fixture is one of the standout matches of the third round, featuring two of the most successful clubs in FA Cup history. Both teams have a rich history in the competition, with numerous titles between them. The match is expected to be highly competitive, with both clubs aiming to progress further in the tournament. Historical context, player form, and tactical approaches will be crucial in determining the outcome.
     
-    4. International Trade Issues: The imposition of tariffs, such as the Smoot-Hawley Tariff, led to a decline in international trade. Other countries retaliated with their tariffs, exacerbating the global economic downturn.
+    2. **Tamworth vs Tottenham**: This match presents a classic FA Cup scenario where a lower league team, Tamworth, faces a Premier League giant, Tottenham Hotspur. Such fixtures are often referred to as "David vs Goliath" encounters, where the smaller club hopes to cause an upset. The game will be a significant occasion for Tamworth, offering them a chance to showcase their talent on a larger stage.
     
-    5. Monetary Policy: The Federal Reserve's monetary policy during this period is often criticized for being too tight, which contributed to deflation and worsened the economic situation.
+    3. **Other Notable Fixtures**: The third round draw typically includes several intriguing matchups. These can involve local derbies, historical rivalries, or games featuring clubs with contrasting styles and histories. The draw often garners attention for its potential to produce memorable moments and unexpected results.
     
-    These factors, among others, created a downward economic spiral that resulted in the prolonged economic hardship known as the Great Depression.
+    Overall, the FA Cup third round is eagerly anticipated by fans and clubs alike, as it embodies the spirit of competition and unpredictability that the tournament is known for. The matches mentioned, along with other fixtures, contribute to the excitement and allure of the FA Cup.
+    ```
     ----------------------------------------
     
-    Task: Create a comprehensive and well-structured response1. Gather all the findings and insights collected...
+    Task: Create a comprehensive and well-structured response1. Review the analysis conducted in Task Number 1...
     ----------------------------------------
-    Output: **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
+    Output: **Introduction**
     
-    **Introduction**
+    The FA Cup third round is a pivotal moment in the English football calendar, marking the entry of Premier League and Championship teams into the competition. This stage is renowned for its thrilling matchups and the potential for upsets, as lower league teams are given the opportunity to challenge top-tier clubs. Fans eagerly anticipate this round, which is celebrated for its unpredictability and the spirit of competition it embodies. In this article, we will delve into some of the most exciting fixtures of the third round, including Manchester United vs Arsenal and Tamworth vs Tottenham, along with other notable matches.
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    **Match Summaries**
     
-    **Main Body**
+    **Manchester United vs Arsenal**
     
-    **a. Stock Market Crash of 1929**
+    - **Overview**: This fixture is a highlight of the third round, featuring two of the most successful clubs in FA Cup history. Both Manchester United and Arsenal have a storied legacy in the competition, with numerous titles to their names. The match promises to be fiercely competitive, as both teams are determined to advance further in the tournament.
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    - **Head-to-Head History**: Manchester United and Arsenal have a long-standing rivalry, with numerous encounters in both domestic and cup competitions. Their FA Cup clashes are often memorable, with both teams having secured victories over the other in past tournaments.
     
-    **b. Bank Failures**
+    - **Key Players**: For Manchester United, players like Bruno Fernandes and Marcus Rashford are expected to play pivotal roles. Arsenal will rely on the talents of Bukayo Saka and Martin Ødegaard to make an impact.
     
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
+    - **Predictions/Expectations**: Experts anticipate a closely contested match, with both teams in strong form. Historical data suggests a balanced encounter, though Manchester United's home advantage could be a decisive factor.
     
-    **c. Reduction in Consumer Spending**
+    **Tamworth vs Tottenham**
     
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
+    - **Overview**: This match epitomizes the classic "David vs Goliath" scenario, with non-league Tamworth facing Premier League giants Tottenham Hotspur. Such fixtures are the essence of the FA Cup, where smaller clubs dream of causing an upset.
     
-    **d. International Trade Issues**
+    - **Head-to-Head History**: This is a rare encounter, with Tamworth and Tottenham having little to no previous competitive history. The match is a significant occasion for Tamworth, providing them with a platform to showcase their abilities.
     
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
+    - **Key Players**: Tamworth will look to their standout performers, such as their top scorer, to challenge Tottenham. Meanwhile, Tottenham's Harry Kane and Son Heung-min are expected to lead the charge for the Premier League side.
     
-    **e. Monetary Policy**
+    - **Predictions/Expectations**: While Tottenham is the clear favorite, the magic of the FA Cup means Tamworth could potentially surprise. The match is expected to draw significant attention, with fans eager to see if an upset is on the cards.
     
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    **Notable Fixtures**
+    
+    The third round draw also features several other intriguing matchups. Local derbies and historical rivalries add to the excitement, with clubs of varying styles and histories facing off. These fixtures often produce memorable moments and unexpected results, contributing to the allure of the FA Cup.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round is a celebration of football's unpredictability and competitive spirit. With high-profile matches like Manchester United vs Arsenal and the potential for upsets in games such as Tamworth vs Tottenham, fans are in for an exhilarating experience. As the tournament progresses, the excitement and engagement from supporters will only intensify, underscoring the enduring appeal of the FA Cup.
     ----------------------------------------
 
+
+## Conclusion
+By following these steps, you've built a powerful RAG system that combines Couchbase's vector storage capabilities with CrewAI's agent-based architecture. This multi-agent approach separates research and writing concerns, resulting in higher quality responses to user queries.
+
+The system demonstrates several key advantages:
+1. Efficient vector search using Couchbase's vector store
+2. Specialized AI agents that focus on different aspects of the RAG pipeline
+3. Collaborative workflow between agents to produce comprehensive, well-structured responses
+4. Scalable architecture that can be extended with additional agents for more complex tasks
+
+Whether you're building a customer support system, a research assistant, or a knowledge management solution, this agent-based RAG approach provides a flexible foundation that can be adapted to various use cases and domains.
