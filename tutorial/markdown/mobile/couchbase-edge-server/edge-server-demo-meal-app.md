@@ -1,7 +1,7 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-edge-server-demo"
-title: "Explore Couchbase Edge Server with seat back application"
+title: "Building an Offline-First Airline Meal Ordering App with Couchbase Edge Server"
 short_title: "Couchbase Edge Server Demo"
 description:
   - Learn how to set up Couchbase Edge Server
@@ -24,7 +24,32 @@ length: 45 Mins
 
 ## Introduction
 
-The sample React-based web application simulates an airline seat back application, that allows users in business and economy class to place their in-flight meal orders. The sample app leverages **Couchbase Edge Server** for data storage and processing at the edge, simulating a disconnected offline experience within an aircraft. The seatback web app accesses Edge Server via a RESTful interface. When there is Internet connectivity, the **Edge Server** syncs data with remote Capella App Services.
+Imagine you’re on a 10-hour international flight. Passengers want to order meals, but the plane has unstable internet connection. How do you ensure orders are captured reliably and synced to the cloud? This is where Couchbase Edge Server shines.
+
+In this tutorial, you’ll build a flight meal ordering system that:
+
+- Works offline using Edge Server, a lightweight database for edge devices.
+- Syncs seamlessly with the cloud via Capella App Services when connectivity resumes.
+- Uses a React frontend to simulate seatback screens for business/economy classes.
+
+What You’ll Learn?
+
+- Why Edge Server solves offline data challenges
+- How to sync edge data with the cloud
+- How to design APIs for offline resilience //fix
+
+## Architecture Overview
+
+- Couchbase Edge Server
+   - Lightweight (~10MB) database for edge devices (e.g., aircraft servers).
+   - Provides REST APIs for web/mobile apps.
+   - Stores data locally and syncs with the cloud when online.
+- Capella App Services
+   - Manages secure sync between Edge Server and the cloud.
+   - Acts as the "source of truth" for meal inventory and orders.
+- React Web App
+   - Simulates seatback ordering screens.
+   - Talks directly to Edge Server via REST.
 
 ## Setup & Technology Stack
 
@@ -144,6 +169,62 @@ Follow these steps to set up and run the application locally on the same machine
    ```bash
    EDGE_SERVER_BASE_URL="https://localhost:60000"
    ```
+
+* **Explore the Code**:
+
+Fetching Meal Options (Business Class):
+   ```js
+   export const fetchBusinessMeal = createAsyncThunk<MealDoc>(
+      "meal/fetchBusinessMeal",
+      async () => {
+         try {
+            const response = await api.fetch("/american234.AmericanAirlines.AA234/businessmeal");
+
+            if (!response) {
+               const errorData = await response.text();
+               throw new Error(errorData || "Failed to fetch businessmeal data");
+            }
+
+            return response as MealDoc;
+         } catch (error) {
+            if (error instanceof Error) {
+               throw new Error(`Failed to fetch businessmeal data: ${error.message}`);
+            }
+            throw new Error("An unknown error occurred");
+         }
+      }
+   );
+   ```
+
+Placing an Order:
+   ```js
+   const updateInventoryData = async (
+      inventory: InventoryDoc,
+      revId: string
+   ): Promise<InventoryDoc> => {
+      return api.fetch(
+         `/american234.AmericanAirlines.AA234/businessinventory?rev=${revId}`,
+         {
+            method: "PUT",
+            body: JSON.stringify(inventory),
+         }
+      );
+   };
+   ```
+
+How are we handling changes in the order?
+```js
+        const response = await fetch(
+          `/american234.AmericanAirlines.AA234/_changes?feed=continuous&include_docs=true&heartbeat=600&since=now&filter=doc_ids&doc_ids=businessinventory`,
+          {
+            headers: {
+              'Authorization': `Basic ${credentials}`,
+              'Accept': 'application/json'
+            },
+            signal: abortController.signal
+          }
+        );
+```
 
 * **Start the Development Server**:
    Launch the application in development mode using:
