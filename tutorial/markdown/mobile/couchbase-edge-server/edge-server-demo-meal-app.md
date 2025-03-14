@@ -85,7 +85,7 @@ At the end of the setup, your Capella Setup looks like this:
 ![](./edge-sample-cluster.png)
 
 ### Capella App Services
-Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
+App Services acts as our cloud sync layer - it will validate and route data between Edge Server and Capella while enforcing security rules. Although instructions are specified for Capella App Services, equivalent instructions apply to self-managed Sync Gateway as well. 
 
 * Follow [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html#app-services) to create a free tier App Services that links to the free tier cluster created in previous step.
 * Create an *App Endpoint* named "american234" by following these [instructions](https://docs.couchbase.com/cloud/get-started/configuring-app-services.html#create-app-endpoint). When you create the App Endpoint, link it to the bucket named "mealordering", the scope named "AmericanAirlines", and the collection named "AA234".
@@ -207,16 +207,8 @@ To place an Order:
    };
    ```
 
-The below api is used to handle real-time changes to orders using the Edge Server's changes feed API. Let's break it down:
 
-- `_changes?feed=continuous` - This establishes a continuous feed connection that stays open to receive updates in real-time
-- `include_docs=true` - Includes the full document content with each change notification
-- `heartbeat=600` - Sends an empty line every 600ms to keep the connection alive
-- `since=now` - Only get changes that occur after the feed is established
-- `filter=doc_ids&doc_ids=businessinventory` - Filter to only receive changes for the businessinventory document
-- The request includes basic authentication headers and uses an AbortController to allow canceling the feed
-
-This allows the web app to react immediately when inventory changes occur from other seats placing orders.
+The web app uses Edge Server's real-time _changes API to instantly reflect inventory updates across all seats. When business class seat 4A orders steak, other seats see the remaining count update without refreshing:
 
 ```js
         const response = await fetch(
