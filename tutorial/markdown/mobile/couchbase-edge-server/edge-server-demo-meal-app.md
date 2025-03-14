@@ -34,9 +34,10 @@ In this tutorial, you’ll build a flight meal ordering system that:
 
 What You’ll Learn?
 
-- Why Edge Server solves offline data challenges
-- How to sync edge data with the cloud
-- How to design APIs for offline resilience //fix
+- How to set up Couchbase Edge Server on your local machine.
+- How to configure it to synchronize data with a remote Capella App Services instance.
+- How to deploy and run a React-based seatback meal-ordering web application that communicates with Couchbase Edge Server over a REST API.
+- Observe how the application continues to function and store data offline even when there is no internet connectivity, and then automatically syncs changes once the connection returns.
 
 ## Architecture Overview
 
@@ -170,33 +171,27 @@ Follow these steps to set up and run the application locally on the same machine
    EDGE_SERVER_BASE_URL="https://localhost:60000"
    ```
 
-* **Explore the Code**:
-
-Fetching Meal Options (Business Class):
+* **Edge Server REST Calls in React**:
+In the web app, you might see code making REST requests to the Edge Server base URL. For example, to fetch the meal of business class:
    ```js
-   export const fetchBusinessMeal = createAsyncThunk<MealDoc>(
-      "meal/fetchBusinessMeal",
-      async () => {
-         try {
-            const response = await api.fetch("/american234.AmericanAirlines.AA234/businessmeal");
-
-            if (!response) {
-               const errorData = await response.text();
-               throw new Error(errorData || "Failed to fetch businessmeal data");
-            }
-
-            return response as MealDoc;
-         } catch (error) {
-            if (error instanceof Error) {
-               throw new Error(`Failed to fetch businessmeal data: ${error.message}`);
-            }
-            throw new Error("An unknown error occurred");
+   export const fetchBusinessMeal = async () => {
+      try {
+         const response = await api.fetch("/american234.AmericanAirlines.AA234/businessmeal");
+         if (!response) {
+            const errorData = await response.text();
+            throw new Error(errorData || "Failed to fetch businessmeal data");
          }
+         return response as MealDoc;
+      } catch (error) {
+         if (error instanceof Error) {
+            throw new Error(`Failed to fetch businessmeal data: ${error.message}`);
+         }
+         throw new Error("An unknown error occurred");
       }
-   );
+   }
    ```
 
-Placing an Order:
+To place an Order:
    ```js
    const updateInventoryData = async (
       inventory: InventoryDoc,
@@ -212,7 +207,17 @@ Placing an Order:
    };
    ```
 
-How are we handling changes in the order?
+The below api is used to handle real-time changes to orders using the Edge Server's changes feed API. Let's break it down:
+
+- `_changes?feed=continuous` - This establishes a continuous feed connection that stays open to receive updates in real-time
+- `include_docs=true` - Includes the full document content with each change notification
+- `heartbeat=600` - Sends an empty line every 600ms to keep the connection alive
+- `since=now` - Only get changes that occur after the feed is established
+- `filter=doc_ids&doc_ids=businessinventory` - Filter to only receive changes for the businessinventory document
+- The request includes basic authentication headers and uses an AbortController to allow canceling the feed
+
+This allows the web app to react immediately when inventory changes occur from other seats placing orders.
+
 ```js
         const response = await fetch(
           `/american234.AmericanAirlines.AA234/_changes?feed=continuous&include_docs=true&heartbeat=600&since=now&filter=doc_ids&doc_ids=businessinventory`,
@@ -263,6 +268,9 @@ You will see corresponding requests show up in the console output of the Edge Se
 curl --location 'https://localhost:60000/american234.AmericanAirlines.AA234/businessinventory' \
 --header 'Authorization: Basic c2VhdHVzZXI6cGFzc3dvcmQ='
 ```
+
+## Conclusion
+By walking through this tutorial, you have explored not just how to run the application, but also why Couchbase Edge Server plays a crucial role in offline-first scenarios. You have seen how integrating Edge Server on the aircraft side and using Capella App Services  allows you to elegantly synchronize data once connectivity is restored. You also saw how the seatback React app, using the Edge Server’s REST API, can continue to function even without an internet connection.
 
 ## Reference Documentation
 - [Couchbase Edge Server](https://docs.couchbase.com/couchbase-edge-server/current/get-started/get-started-landing.html)
