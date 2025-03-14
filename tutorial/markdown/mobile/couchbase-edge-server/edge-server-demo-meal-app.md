@@ -6,12 +6,12 @@ short_title: "Couchbase Edge Server Demo"
 description:
   - Learn how to set up Couchbase Edge Server
   - Explore seatback meal-application showcasing Couchbase Edge Server capabilities
-  - Explore data synchronization between edge and cloud deployments
+  - Configure bidirectional sync between Edge Server and Capella App Services
 content_type: tutorial
 filter: mobile
 technology:
-  - app-services
   - edge-server
+  - app-services
   - react
   - mobile
 sdk_language: 
