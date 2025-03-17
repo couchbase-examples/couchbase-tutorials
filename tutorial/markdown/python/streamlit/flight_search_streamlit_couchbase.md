@@ -22,7 +22,7 @@ length: 30 Mins
 # Building an Interactive Flight Search App with Streamlit and Couchbase
 
 ## Introduction
-This tutorial will guide you through building a fully functional Streamlit application on top of Couchbase. The app will leverage Couchbase's [`travel-sample`](https://docs.couchbase.com/ruby-sdk/current/ref/travel-app-data-model.html) dataset to enable users to search for flights between cities and visualize routes dynamically on an interactive map. By following this tutorial, you will learn how to:
+This tutorial will guide you through building a fully functional Streamlit application on top of Couchbase. The app will leverage Couchbase's [`travel-sample`](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) dataset to enable users to search for flights between cities and visualize routes dynamically on an interactive map. By following this tutorial, you will learn how to:
 
 - Connect a Streamlit app to a Couchbase database
 - Query and filter flight data efficiently
@@ -32,6 +32,26 @@ This tutorial will guide you through building a fully functional Streamlit appli
 By the end of this tutorial, you will have a working flight visualization tool and a deeper understanding of how to integrate Couchbase with Streamlit for interactive data applications.
 
 The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/). The original code for this demo is available [here](https://github.com/couchbase-examples/streamlit-quickstart/blob/main/Demo.py).
+
+#### Screenshots of the Final App
+<table align="center">
+    <tr>
+        <td align="center">
+            <img src="startup_demo_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
+        </td>
+        <td align="center">
+            <img src="flight_visuals_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
+        </td>
+    </tr>
+    <tr>
+        <td align="center">
+            <img src="hotel_near_landmarks_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
+        </td>
+        <td align="center">
+            <img src="hotels_in_city_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
+        </td>
+    </tr>
+</table>
 
 ## Basic Concepts
 
@@ -78,7 +98,7 @@ Couchbase organizes data into a hierarchical structure:
 By understanding these key concepts, you'll be well-prepared to build and optimize applications using Couchbase and Streamlit.
 
 ## Dataset Overview
-The [`travel-sample`](https://docs.couchbase.com/ruby-sdk/current/ref/travel-app-data-model.html) dataset in Couchbase consists of multiple scopes and collections related to travel and transportation data. The primary scope used in this application is `inventory`, which contains five collections:
+The [`travel-sample`](https://docs.couchbase.com/python-sdk/current/ref/travel-app-data-model.html) dataset in Couchbase consists of multiple scopes and collections related to travel and transportation data. The primary scope used in this application is `inventory`, which contains five collections:
 
 - **airline (190 documents)**: Contains information about airlines, including their name, country, ICAO, IATA codes, and callsigns.
   - **Key fields:** `name`, `country`, `icao`, `iata`, `callsign`, `id`, `type`
@@ -670,27 +690,6 @@ streamlit run app.py
 ```
 This will launch the app in your browser, allowing you to interactively explore Couchbase data with intuitive visualizations.
 
-#### Screenshots of the Final App
-<table align="center">
-    <tr>
-        <td align="center">
-            <img src="startup_demo_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-        <td align="center">
-            <img src="flight_visuals_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-    </tr>
-    <tr>
-        <td align="center">
-            <img src="hotel_near_landmarks_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-        <td align="center">
-            <img src="hotels_in_city_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-    </tr>
-</table>
-
-
 ## Cloud Deployment Using Streamlit Community Cloud
 
 Now that you've built your demo app, it's time to deploy it for free using **Streamlit Community Cloud**!
@@ -701,12 +700,9 @@ Ensure your app is stored in a GitHub repository with the following files:
 - `requirements.txt` (dependencies)
 - Optional `.streamlit/config.toml` for customization
 
-Example `requirements.txt`:
-```txt
-couchbase-streamlit-connector
-pandas
-plotly
-geopy
+To generate `requirements.txt` use this command in your terminal:
+```sh
+pip freeze > requirements.txt
 ```
 
 ### Set Up a Streamlit Community Cloud Account
