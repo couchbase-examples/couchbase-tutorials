@@ -31,49 +31,16 @@ This tutorial will guide you through building a fully functional Streamlit appli
 
 By the end of this tutorial, you will have a working flight visualization tool and a deeper understanding of how to integrate Couchbase with Streamlit for interactive data applications.
 
-The final app will look like this hosted Streamlit application: [Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/). The original code for this demo is available [here](https://github.com/couchbase-examples/streamlit-quickstart/blob/main/Demo.py).
+### Try It Now on Streamlit Cloud
+You can experience the application live on Streamlit Cloud: [Try the Couchbase Connector Demo App](https://couchbase-connector-demo-app.streamlit.app/). If the application doesn't load, the app may have gone to sleep due to inactivity. If you see a 'Zzzz' screen, click the 'Yes, get this app back up!' button to wake it up and wait for a while as it restarts.
 
-#### Screenshots of the Final App
-<table align="center">
-    <tr>
-        <td align="center">
-            <img src="startup_demo_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-        <td align="center">
-            <img src="flight_visuals_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-    </tr>
-    <tr>
-        <td align="center">
-            <img src="hotel_near_landmarks_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-        <td align="center">
-            <img src="hotels_in_city_tab.png" style="width: 200vw; height: auto; border-radius: 1vw;">
-        </td>
-    </tr>
-</table>
+The original code for this demo is available [here](https://github.com/couchbase-examples/streamlit-quickstart/blob/main/Demo.py).
 
 ## Basic Concepts
 
-### Understanding JSON and Document Databases
-Couchbase is a NoSQL document database that stores data in JSON format. This allows for flexible and scalable data modeling. JSON (JavaScript Object Notation) is a lightweight data format that is:
-- **Human-readable**: Easy to interpret and debug.
-- **Flexible**: Supports hierarchical structures.
-- **Efficient**: Quick to parse and generate.
+### JSON and Document Databases in Couchbase
+Couchbase is a NoSQL document database that stores data in JSON format. This allows for flexible and scalable data modeling. 
 
-Example JSON document:
-```json
-{
-  "id": "user_123",
-  "name": "Alice Smith",
-  "email": "alice@example.com",
-  "age": 21,
-  "preferences": {
-    "theme": "dark",
-    "notifications": true
-  }
-}
-```
 Couchbase Uses JSON because:
 - **Flexible Schema**: No predefined structure, allowing easy adaptation to changing requirements.
 - **Efficient Querying**: Uses SQL-like SQL++ queries for fast data retrieval.
@@ -123,17 +90,20 @@ These collections provide the necessary data for flight visualization, enabling 
    - Displays airports on an OpenStreetMap-based interactive map.
    - Allows users to select specific airports and visualize routes between them.
    - Uses Plotly for dynamic visualization of routes.
+<img src="flight_visuals_tab.png" style="width: 100%; height: auto; border-radius: 10px;">
 
 2. **Landmark and Hotel Visualization**
    - Shows landmarks along with relevant details such as activities, address, and descriptions.
    - Displays hotels near selected landmarks within a specified distance.
    - Uses Geopy to calculate distances between landmarks and hotels.
    - Color-coded markers distinguish landmarks and hotels.
+<img src="hotel_near_landmarks_tab.png" style="width: 100%; height: auto; border-radius: 10px;">
 
 3. **Hotel Listings by City**
    - Users can select multiple cities to view hotels.
    - Displays hotels on an interactive map, color-coded based on average ratings.
    - Includes additional details such as price, amenities, and customer ratings.
+<img src="hotels_in_city_tab.png" style="width: 100%; height: auto; border-radius: 10px;">
 
 4. **Efficient Data Retrieval from Couchbase**
    - Queries optimized to fetch only relevant data for visualization.
