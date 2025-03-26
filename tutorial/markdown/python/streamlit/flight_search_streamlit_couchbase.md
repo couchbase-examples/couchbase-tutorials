@@ -155,8 +155,8 @@ streamlit hello
 
 If everything is set up correctly, a browser window should open with Streamlit's demo application.
 
-### Implement Data Fetching Functions
-To optimize performance, data retrieval functions are cached using `@st.cache_data`, which stores previously fetched data to prevent redundant queries and speed up the app. However, the `_connection` object is intentionally not cached (indicated by the underscore prefix) to ensure a fresh database connection is established each time. Caching the connection could lead to issues with stale or expired sessions, potentially causing failed queries or inconsistent data retrieval. For more details, refer to the official documentation: [Streamlit `st.cache_data`](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data).
+### Implement Data Fetching Functions  
+To optimize performance, data retrieval functions are cached using `@st.cache_data`, which stores previously fetched data to prevent redundant queries and speed up the app. However, the `_connection` argument is not cached because database connection objects are not hashable. The underscore prefix is used to explicitly exclude it from caching, ensuring that Streamlit does not attempt to hash the connection. Since `@st.cache_data` requires function arguments to be hashable, unhashable objects like database connections must be excluded to avoid errors. For more details, refer to the official documentation: [Streamlit `st.cache_data`](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data).  
 
 `get_all_airports(_connection)`: Fetches airport details.
 ```python
@@ -180,13 +180,7 @@ This function fetches route information from the `route` collection in the `trav
 ```python
 @st.cache_data       
 def get_routes_for_airports(_connection, selected_airports_df):    
-    airports_faa = "[" # Initialize a string to store FAA codes in a list format
-    for i in range(len(selected_airports_df)):
-        if i != len(selected_airports_df) - 1:
-            airports_faa += f'"{(selected_airports_df.iloc[i])["faa"]}", ' # Append each FAA code with a comma
-        else:
-            airports_faa += f'"{(selected_airports_df.iloc[i])["faa"]}"' # Append last FAA code without a comma
-    airports_faa += "]"
+    airports_faa = str(selected_airports_df["faa"].to_list()) # Initialize a string to store FAA codes in a list format
     query = f"""
     SELECT * FROM `travel-sample`.`inventory`.`route`
     WHERE (sourceairport IN {airports_faa} AND destinationairport IN {airports_faa});
@@ -296,13 +290,7 @@ This function retrieves hotel data from the `travel-sample.inventory.hotel` coll
 ```python
 @st.cache_data
 def get_all_hotels(_connection, cities):
-    cities_str = "[" # Initialize the string for city names
-    for i in range(len(cities)):
-        if i != len(cities) - 1:
-            cities_str += f'"{cities[i]}", ' # Add city name with a comma
-        else:
-            cities_str += f'"{cities[i]}"' # Add last city without a comma
-    cities_str += "]"
+    cities_str = f"{cities}"
     query = f"""
     SELECT h.*, geo.lat as lat, geo.lon as lon, ARRAY_AVG(ARRAY r.ratings.Overall FOR r IN h.reviews WHEN r.ratings.Overall IS NOT MISSING END) as avg_rating
     FROM `travel-sample`.inventory.hotel h
@@ -328,11 +316,8 @@ This function visualizes flight routes between airports using [Plotly](https://p
 def plot_airports_and_routes(airports_df, routes_df):
     fig = go.Figure()
     # Create a dictionary mapping FAA codes to latitude and longitude for quick lookup
-    airport_coords = {
-        row["faa"]: (row["lat"], row["lon"])
-        for _, row in airports_df.iterrows()
-        if row["faa"] is not None  # Ensure faa is not null
-    }
+    filtered_airports_df = airports_df.dropna(subset=["faa"])  # Remove rows where faa is NaN
+    airport_coords = dict(zip(filtered_airports_df["faa"], zip(filtered_airports_df["lat"], filtered_airports_df["lon"])))
     lats = []
     lons = []
     # Iterate through routes to fetch airport coordinates and construct flight paths
@@ -367,7 +352,10 @@ def plot_airports_and_routes(airports_df, routes_df):
     fig.add_traces(airports_markers.data)
 
     # Set map style and layout
+    fig.update_geos(fitbounds="locations")
     fig.update_layout(
+        map_zoom= 0.5,  # Zoom level
+        showlegend= False,  # Hide legend
         mapbox_style="open-street-map",  
         margin=dict(l=0, r=0, t=50, b=0),  # Remove extra margins
         title="Airports and Flight Routes"
@@ -382,7 +370,9 @@ This function visualizes landmarks and nearby hotels on an interactive map using
 
 ```python
 def create_landmark_map(landmarks, hotels_near_landmark):
-    fig = go.Figure()     
+    fig = go.Figure()   
+    centre = {"lat": 0, "lon": 0}
+    num_points = 0  
     # Plot hotels with color-coded markers based on distance   
     for hotel in hotels_near_landmark:
         color = 'red' if hotel.get('distance') <= 3 else 'orange' if hotel.get('distance') <= 6 else 'gold'
@@ -397,6 +387,8 @@ def create_landmark_map(landmarks, hotels_near_landmark):
             hoverinfo='text',
             name=f'Hotel ({color})'
         ))
+        centre = {"lat": centre["lat"] + hotel.get('lat'), "lon": centre["lon"] + hotel.get('lon')}
+        num_points += 1
          
     # Plot landmarks as blue star markers
     for landmark in landmarks:
@@ -411,9 +403,17 @@ def create_landmark_map(landmarks, hotels_near_landmark):
             hoverinfo='text',
             name='Landmark'
         ))
+        centre = {"lat": centre["lat"] + landmark.get('lat', 0), "lon": centre["lon"] + landmark.get('lon', 0)}
+        num_points += 1
+    
+    if num_points > 0:
+        centre = {"lat": centre["lat"] / num_points, "lon": centre["lon"] / num_points}
+    fig.update_geos(fitbounds="locations")
     
     # Configure map layout
     fig.update_layout(
+        map_zoom=11,
+        map_center=centre,
         mapbox_style='open-street-map',
         margin=dict(l=0, r=0, t=50, b=0),
         title='Landmarks and Hotels Nearby',
@@ -448,6 +448,10 @@ def create_hotel_map(hotels_df):
     if 'avg_rating' not in hotels_df.columns:
         hotels_df['avg_rating'] = np.nan  # Add avg_rating column if it doesn't exist
     hotels_df['avg_rating'] = pd.to_numeric(hotels_df['avg_rating'], errors='coerce')
+    centre = {
+        "lat": hotels_df['lat'].mean(),
+        "lon": hotels_df['lon'].mean()
+    }
     
     # Create a column for star ratings
     hotels_df['star_rating'] = hotels_df['avg_rating'].apply(lambda x: '⭐' * int(round(x)) if not np.isnan(x) else 'No rating')
@@ -494,6 +498,8 @@ def create_hotel_map(hotels_df):
     
     # Set up layout and color bar for ratings
     fig.update_layout(
+        map_zoom=10,
+        map_center=centre,
         mapbox_style="open-street-map",
         margin=dict(l=0, r=0, t=50, b=0),
         title="Hotels (colored by average rating)",
@@ -502,13 +508,6 @@ def create_hotel_map(hotels_df):
             tickvals=[0, 1, 2, 3, 4, 5],
             ticktext=["0", "1", "2", "3", "4", "5"]
         )
-    )
-    
-    fig.update_layout(
-        mapbox_style="open-street-map",
-        margin=dict(l=0, r=0, t=50, b=0),
-        title="Hotels (colored by average rating)",
-        coloraxis_colorbar_title="Avg Rating"
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -593,8 +592,8 @@ def tab3_visual():
     # Retrieve the list of all available cities from the database
     all_cities = get_all_cities(connection)["city"].tolist()
 
-    # Allow users to select multiple cities; defaults to Newport, Birmingham, and London
-    cities = st.multiselect("Select cities", all_cities, default=["Newport", "Birmingham", "London"])
+    # Allow users to select multiple cities; defaults to London
+    cities = st.multiselect("Select cities", all_cities, default=["London"])
 
     # Fetch hotels based on the selected cities
     hotels = get_all_hotels(connection, cities)
