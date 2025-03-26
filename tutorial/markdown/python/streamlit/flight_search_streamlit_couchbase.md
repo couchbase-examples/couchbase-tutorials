@@ -183,9 +183,9 @@ def get_routes_for_airports(_connection, selected_airports_df):
     airports_faa = str(selected_airports_df["faa"].to_list()) # Initialize a string to store FAA codes in a list format
     query = f"""
     SELECT * FROM `travel-sample`.`inventory`.`route`
-    WHERE (sourceairport IN {airports_faa} AND destinationairport IN {airports_faa});
+    WHERE (sourceairport IN $airports_faa AND destinationairport IN $airports_faa);
     """
-    result = _connection.query(query)
+    result = _connection.query(query, opts=QueryOptions(named_parameters={"airports_faa": airports_faa}))
     data = []
     for row in result:
         data.append(row["route"])
@@ -290,16 +290,15 @@ This function retrieves hotel data from the `travel-sample.inventory.hotel` coll
 ```python
 @st.cache_data
 def get_all_hotels(_connection, cities):
-    cities_str = f"{cities}"
     query = f"""
     SELECT h.*, geo.lat as lat, geo.lon as lon, ARRAY_AVG(ARRAY r.ratings.Overall FOR r IN h.reviews WHEN r.ratings.Overall IS NOT MISSING END) as avg_rating
     FROM `travel-sample`.inventory.hotel h
     WHERE h.geo.lat IS NOT MISSING 
     AND h.type = "hotel" 
     AND h.geo.lon IS NOT MISSING 
-    AND h.city IN {cities_str}
+    AND h.city IN $cities;
     """
-    result = _connection.query(query)
+    result = _connection.query(query, QueryOptions(named_parameters={"cities": cities}))
     hotels = []
     for row in result:
         hotels.append(row)
