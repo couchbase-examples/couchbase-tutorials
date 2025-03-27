@@ -298,7 +298,7 @@ def get_all_hotels(_connection, cities):
     AND h.geo.lon IS NOT MISSING 
     AND h.city IN $cities;
     """
-    result = _connection.query(query, QueryOptions(named_parameters={"cities": cities}))
+    result = _connection.query(query, opts=QueryOptions(named_parameters={"cities": cities}))
     hotels = []
     for row in result:
         hotels.append(row)
