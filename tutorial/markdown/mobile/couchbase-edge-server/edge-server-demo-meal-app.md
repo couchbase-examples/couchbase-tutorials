@@ -38,6 +38,7 @@ What You’ll Learn?
 - How to configure it to synchronize data with a remote Capella App Services instance.
 - How to deploy and run a React-based seatback meal-ordering web application that communicates with Couchbase Edge Server over a REST API.
 - Observe how the application continues to function and store data offline even when there is no internet connectivity, and then automatically syncs changes once the connection returns.
+> **Disclaimer**: "American Airlines" is used generally to refer to any airline and does not reflect a specific use case with American Airlines or any specific airliner.
 
 ## Architecture Overview
 
