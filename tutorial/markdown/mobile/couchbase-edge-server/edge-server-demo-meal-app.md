@@ -1,7 +1,7 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-edge-server-demo"
-title: "Building an Offline-First Airline Meal Ordering App with Couchbase Edge Server"
+title: "Explore Couchbase Edge Server with Offline-First Meal Application"
 short_title: "Couchbase Edge Server Demo"
 description:
   - Learn how to set up Couchbase Edge Server
