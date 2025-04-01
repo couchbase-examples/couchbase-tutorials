@@ -19,7 +19,7 @@ tags:
   - Streamlit
   - LangChain
   - LLama3
-  - AWS
+  - Amazon Bedrock
   - Artificial Intelligence
 sdk_language:
   - python
