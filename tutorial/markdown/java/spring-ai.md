@@ -54,8 +54,7 @@ Spring AI brings several benefits to Java developers:
 ## Couchbase Embedding Store 
 Couchbase spring-ai integration stores each embedding in a separate document and uses an FTS vector index to perform
 queries against stored vectors. Currently, it supports storing embeddings and their metadata, as well as removing 
-embeddings. Filtering selected by vector search embeddings by their metadata was not supported at the moment of writing 
-this tutorial.
+embeddings.
 
 ## Project Structure
 
