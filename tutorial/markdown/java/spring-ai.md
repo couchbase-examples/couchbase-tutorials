@@ -22,9 +22,8 @@ length: 10 Mins
 ---
 
 ## About This Tutorial
-This tutorial will show how to use a Couchbase database cluster as a Spring AI embedding storage.
-
-## Example Source code
+This tutorial is your quick and easy guide to getting started with Spring AI and Couchbase as a Vector Store. Let's dive in and explore how these powerful tools can work together to enhance your applications.
+### Example Source code
 Example source code for this tutorial can be obtained from [Spring AI demo application with Couchbase Vector Store](https://github.com/couchbase-examples/couchbase-spring-ai-demo).
 To do this, clone the repository using git:
 ```shell
@@ -34,6 +33,7 @@ cd couchbase-spring-ai-demo
 
 ### What is Spring AI?
 
+
 Spring AI is an extension of the Spring Framework that simplifies the integration of AI capabilities into Spring applications. It provides abstractions and integrations for working with various AI services and models, making it easier for developers to incorporate AI functionality without having to manage low-level implementation details.
 
 Key features of Spring AI include:
@@ -42,7 +42,7 @@ Key features of Spring AI include:
 - **Vector stores**: Abstractions for storing and retrieving vector embeddings
 - **Document processing**: Utilities for working with unstructured data
 
-### Why Use Spring AI?
+##### Why Use Spring AI?
 
 Spring AI brings several benefits to Java developers:
 1. **Familiar programming model**: Uses Spring's dependency injection and configuration
@@ -51,10 +51,14 @@ Spring AI brings several benefits to Java developers:
 4. **Simplified development**: Reduces boilerplate code for AI integrations
 
 
+- [Spring AI](https://docs.spring.io/spring-ai/reference/index.html)
+- [Spring AI Github Page](https://github.com/spring-projects/spring-ai)
+
+
 ## Couchbase Embedding Store 
 Couchbase spring-ai integration stores each embedding in a separate document and uses an FTS vector index to perform
-queries against stored vectors. Currently, it supports storing embeddings and their metadata, as well as removing 
-embeddings.
+queries against stored vectors.
+- [Couchbase Integration with Spring AI Documentation](https://docs.spring.io/spring-ai/reference/api/vectordbs/couchbase.html)
 
 ## Project Structure
 
@@ -73,9 +77,9 @@ src/main/resources/
 
 ### Prerequisites
 - [Couchbase Capella](https://docs.couchbase.com/cloud/get-started/create-account.html) account or locally installed [Couchbase Server](/tutorial-couchbase-installation-options)
-- Java 21
+- Java 17
 - Maven
-- Couchbase Server running locally
+- Couchbase Server
 - OpenAI API key
 
 ### Configuration Details
@@ -199,6 +203,11 @@ return (List)results.stream()
 - The results, which are a list of Document objects, are processed using Java Streams. Each document is mapped to a simplified structure containing its text content and metadata. The final result is a list of maps, each representing a document with its content and metadata.
 
 ## Using the Application
+
+This is basically a Spring Boot project with two endpoints `tutorial/load` and `tutorial/search`.
+In order to run this application, use the following command:
+`./mvnw spring-boot:run`
+
 
 ### Loading Data
 
