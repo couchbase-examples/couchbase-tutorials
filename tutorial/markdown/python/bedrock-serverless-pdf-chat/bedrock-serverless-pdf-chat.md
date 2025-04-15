@@ -321,7 +321,7 @@ When a user asks a question or provides a prompt:
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
 - Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
-- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class, abstracting away the complexities of vector similarity calculations.
+- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseSearchVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class, abstracting away the complexities of vector similarity calculations.
 
 ### LangChain
 
@@ -332,7 +332,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
 - **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as OpenAI's embeddings, to convert the text chunks into embeddings.
-- **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
+- **Vector store integration**: LangChain provides a [_CouchbaseSearchVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
 
@@ -382,7 +382,7 @@ Lambda calls AWS Bedrock service to get embedding of a particular text. Bedrock 
 
 #### F. Send Embeddings To Couchbase
 
-Lambda uses Couchbase Python SDK to update the corresponding Couchbase Document. Embedding is added to the Document. Here LangChain's `CouchbaseVectorStore` is used to abstract multiple methods.
+Lambda uses Couchbase Python SDK to update the corresponding Couchbase Document. Embedding is added to the Document. Here LangChain's `CouchbaseSearchVectorStore` is used to abstract multiple methods.
 
 ### Chat with PDF Flow
 
@@ -496,10 +496,10 @@ embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image
 
 LangChain has a Couchbase Vector Store support. We use this vector store to abstract out all the internals of getting the embeddings and sending it back to couchbase.
 
-We will use `add_texts` method of CouchbaseVectorStore object to add text with appropriate embedding.
+We will use `add_texts` method of CouchbaseSearchVectorStore object to add text with appropriate embedding.
 
 ```python
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 
 cb_vector_store = get_vector_store(cluster, bucket_name, scope_name, collection_name, embedding, index_name)
 
@@ -528,7 +528,7 @@ embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image
 Similar to last section, We will create an object for couchbase vector store as part of langchain. However, now as we need to use Couchbase Vector Search feature, the vector store needs to act as a retriever. Therefore, Couchbase Vector Store Retriever as part LangChain Chain Expression Language (LCEL) will be used ahead.
 
 ```python
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 
 vector_store = get_vector_store(cluster, bucket_name, scope_name, collection_name, embedding, index_name)
 retriever = vector_store.as_retriever()
@@ -641,7 +641,7 @@ else:
     st.success("PDF processed and stored successfully!")
 ```
 
-> Note: Alternatively, `CouchbaseVectorStore` can be used for document ingestion with embeddings, eliminating the need for serverless architecture. The eventing method described in this tutorial is preferable for existing documents or when a dedicated server isn't used.
+> Note: Alternatively, `CouchbaseSearchVectorStore` can be used for document ingestion with embeddings, eliminating the need for serverless architecture. The eventing method described in this tutorial is preferable for existing documents or when a dedicated server isn't used.
 
 #### Ask Question
 

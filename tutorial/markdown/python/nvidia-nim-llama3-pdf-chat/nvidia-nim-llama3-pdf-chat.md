@@ -274,7 +274,7 @@ When a user asks a question or provides a prompt:
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
 - Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
-- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class, abstracting away the complexities of vector similarity calculations.
+- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseSearchVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class, abstracting away the complexities of vector similarity calculations.
 
 ### LangChain
 
@@ -285,7 +285,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
 - **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as [Nvidia QA Embedding Models](https://python.langchain.com/docs/integrations/text_embedding/nvidia_ai_endpoints/) embeddings, to convert the text chunks into embeddings.
-- **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
+- **Vector store integration**: LangChain provides a [_CouchbaseSearchVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
 
@@ -343,7 +343,7 @@ def connect_to_couchbase(connection_string, db_username, db_password):
 
 ## Initialize Embeddings and Couchbase Vector Store
 
-We will now initialize [Nvidia Embed QA 4 Model](https://build.nvidia.com/nvidia/embed-qa-4) powered by [langchain integration](https://python.langchain.com/docs/integrations/text_embedding/nvidia_ai_endpoints/) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
+We will now initialize [Nvidia Embed QA 4 Model](https://build.nvidia.com/nvidia/embed-qa-4) powered by [langchain integration](https://python.langchain.com/docs/integrations/text_embedding/nvidia_ai_endpoints/) which will be used by CouchbaseSearchVectorStore for converting the split docs defined above to vectors (embeddings).
 
 We will also initialize Couchbase vector store with Couchbase bucket info. Firstly we will connect to Couchbase cluster using [`connect_to_couchbase`](#connecting-to-couchbase) method.
 
@@ -368,7 +368,7 @@ vector_store = get_vector_store(
 )
 ```
 
-We are using `get_vector_store` method which initializes LangChain's [CouchbaseVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase)
+We are using `get_vector_store` method which initializes LangChain's [CouchbaseSearchVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase)
 
 ```python
 def get_vector_store(
@@ -380,7 +380,7 @@ def get_vector_store(
     index_name,
 ):
     """Return the Couchbase vector store"""
-    vector_store = CouchbaseVectorStore(
+    vector_store = CouchbaseSearchVectorStore(
         cluster=_cluster,
         bucket_name=db_bucket,
         scope_name=db_scope,
@@ -393,7 +393,7 @@ def get_vector_store(
 
 ## Uploading And Ingesting PDF
 
-`save_to_vector_store` function takes care of uploading the PDF file in vector format to Couchbase Database using CouchbaseVectorStore in LangChain. It splits text into small chunks, generate embeddings for those chunks, and ingest the chunks and their embeddings into a Couchbase vector store. Let's go step by step on how it does.
+`save_to_vector_store` function takes care of uploading the PDF file in vector format to Couchbase Database using CouchbaseSearchVectorStore in LangChain. It splits text into small chunks, generate embeddings for those chunks, and ingest the chunks and their embeddings into a Couchbase vector store. Let's go step by step on how it does.
 
 ### Upload PDF
 

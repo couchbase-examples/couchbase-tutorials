@@ -98,7 +98,7 @@ from couchbase.options import ClusterOptions
 from datasets import load_dataset
 from dotenv import load_dotenv
 from crewai.tools import tool
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from crewai import Agent, Crew, Process, Task
@@ -440,7 +440,7 @@ A vector store is where we'll keep our embeddings. Unlike the FTS index, which i
 
 ```python
 # Setup vector store
-vector_store = CouchbaseVectorStore(
+vector_store = CouchbaseSearchVectorStore(
     cluster=cluster,
     bucket_name=CB_BUCKET_NAME,
     scope_name=SCOPE_NAME,
