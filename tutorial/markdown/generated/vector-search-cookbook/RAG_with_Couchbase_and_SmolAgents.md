@@ -81,7 +81,7 @@ from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
 from dotenv import load_dotenv
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import OpenAIEmbeddings
 
 from smolagents import Tool, OpenAIServerModel, ToolCallingAgent
@@ -362,7 +362,7 @@ A vector store is where we'll keep our embeddings. Unlike the FTS index, which i
 
 ```python
 try:
-    vector_store = CouchbaseVectorStore(
+    vector_store = CouchbaseSearchVectorStore(
         cluster=cluster,
         bucket_name=CB_BUCKET_NAME,
         scope_name=SCOPE_NAME,
@@ -512,7 +512,7 @@ class RetrieverTool(Tool):
     }
     output_type = "string"
 
-    def __init__(self, vector_store: CouchbaseVectorStore, **kwargs):
+    def __init__(self, vector_store: CouchbaseSearchVectorStore, **kwargs):
         super().__init__(**kwargs)
         self.vector_store = vector_store
 
