@@ -256,7 +256,7 @@ When a user asks a question or provides a prompt:
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
 - Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
-- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseVectorStore](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class, abstracting away the complexities of vector similarity calculations.
+- Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseSearchVectorStore](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class, abstracting away the complexities of vector similarity calculations.
 
 ### LangChain.js
 
@@ -267,7 +267,7 @@ In the PDF Chat app, LangChain is used for several tasks:
 - **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://js.langchain.com/docs/integrations/document_loaders/file_loaders/pdf) is used to load the PDF files and convert them into text documents.
 - **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://js.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
 - **Embedding generation**: LangChain integrates with [various embedding models](https://js.langchain.com/docs/integrations/text_embedding), such as OpenAI's embeddings, to convert the text chunks into embeddings.
-- **Vector store integration**: LangChain provides a [_CouchbaseVectorStore_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
+- **Vector store integration**: LangChain provides a [_CouchbaseSearchVectorStore_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Chains**: LangChain provides various [chains](https://js.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
 - **Streaming Output**: LangChain integrates with the [_StreamingTextResponse_](https://js.langchain.com/docs/expression_language/streaming) class, allowing the app to stream the generated answer to the client in real-time.
 
@@ -414,7 +414,7 @@ const docs = await textSplitter.splitDocuments(rawDocs);
 
 ### Initialize OpenAI and Couchbase Vector Store
 
-We will now initialize [OpenAI embeddings](https://js.langchain.com/docs/integrations/text_embedding/openai) which will be used by CouchbaseVectorStore for converting the split docs defined above to vectors (embeddings).
+We will now initialize [OpenAI embeddings](https://js.langchain.com/docs/integrations/text_embedding/openai) which will be used by CouchbaseSearchVectorStore for converting the split docs defined above to vectors (embeddings).
 
 We will also initialize couchbase vector store with couchbase bucket info. Firstly we will connect to couchbase cluster using[`createCouchbaseCluster`](#connecting-to-couchbase).
 
@@ -438,7 +438,7 @@ const embeddingKey = "embedding";
 const scopedIndex = true;
 
 const cluster = await createCouchbaseCluster();
-const couchbaseConfig: CouchbaseVectorStoreArgs = {
+const couchbaseConfig: CouchbaseSearchVectorStoreArgs = {
   cluster,
   bucketName,
   scopeName,
@@ -452,10 +452,10 @@ const couchbaseConfig: CouchbaseVectorStoreArgs = {
 
 ### Create Vector Store From Documents
 
-With everything ready for initializing Vector store, we create it using [_CouchbaseVectorStore.fromDocuments_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) function in LangChain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
+With everything ready for initializing Vector store, we create it using [_CouchbaseSearchVectorStore.fromDocuments_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) function in LangChain. This function requires the documents which user wants to upload, details of couchbase vector store and an embeddings client which will create text to vector (embeddings).
 
 ```typescript
-await CouchbaseVectorStore.fromDocuments(docs, embeddings, couchbaseConfig);
+await CouchbaseSearchVectorStore.fromDocuments(docs, embeddings, couchbaseConfig);
 ```
 
 ### Save PDF File
@@ -532,7 +532,7 @@ const embeddings = new OpenAIEmbeddings({
 
 ### Initialize Couchbase Vector Store
 
-Just like in [PDF Ingest API](#Initialize-OpenAI-and-Couchbase-Vector-Store), we will initialize the couchbase vector store here. Use the same details here as well of couchbase collection and index. Now we will initialize the store using [_CouchbaseVectorStore.initialize()_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) method.
+Just like in [PDF Ingest API](#Initialize-OpenAI-and-Couchbase-Vector-Store), we will initialize the couchbase vector store here. Use the same details here as well of couchbase collection and index. Now we will initialize the store using [_CouchbaseSearchVectorStore.initialize()_](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) method.
 
 We also create the [retriever](https://js.langchain.com/docs/modules/data_connection/retrievers/vectorstore) of the couchbase vector store. This retriever will be used to retrieve the previously documents which are similar to current query. We also define a callback to get document details as well.
 
@@ -546,7 +546,7 @@ const embeddingKey = "embedding";
 const scopedIndex = true;
 
 const cluster = await createCouchbaseCluster();
-const couchbaseConfig: CouchbaseVectorStoreArgs = {
+const couchbaseConfig: CouchbaseSearchVectorStoreArgs = {
   cluster,
   bucketName,
   scopeName,
@@ -556,12 +556,12 @@ const couchbaseConfig: CouchbaseVectorStoreArgs = {
   embeddingKey,
   scopedIndex,
 };
-const couchbaseVectorStore = await CouchbaseVectorStore.initialize(
+const CouchbaseSearchVectorStore = await CouchbaseSearchVectorStore.initialize(
   embeddings,
   couchbaseConfig
 );
 
-const retriever = couchbaseVectorStore.asRetriever({
+const retriever = CouchbaseSearchVectorStore.asRetriever({
   callbacks: [
     {
       handleRetrieverEnd(documents) {

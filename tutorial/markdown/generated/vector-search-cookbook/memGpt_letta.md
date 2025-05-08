@@ -182,7 +182,7 @@ def ask_climate_search(
     from couchbase.auth import PasswordAuthenticator
     from datetime import timedelta
     from langchain_openai import OpenAIEmbeddings
-    from langchain_couchbase.vectorstores import CouchbaseVectorStore
+    from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
     import os
     from pydantic import SecretStr
 
@@ -202,7 +202,7 @@ def ask_climate_search(
     cluster = Cluster(conn_str, options)
     cluster.wait_until_ready(timedelta(seconds=5))
     embedding = OpenAIEmbeddings(api_key=SecretStr(openai_api_key))
-    cb_vector_store = CouchbaseVectorStore(
+    cb_vector_store = CouchbaseSearchVectorStore(
         cluster,
         bucket_name,
         scope_name,
