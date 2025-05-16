@@ -83,7 +83,7 @@ from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
 from dotenv import load_dotenv
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import OpenAIEmbeddings
 from tqdm import tqdm
 
@@ -334,7 +334,7 @@ The vector store is set up to manage the embeddings created in the previous step
 
 ```python
 try:
-    vector_store = CouchbaseVectorStore(
+    vector_store = CouchbaseSearchVectorStore(
         cluster=cluster,
         bucket_name=CB_BUCKET_NAME,
         scope_name=SCOPE_NAME,
@@ -443,7 +443,7 @@ PydanticAI allows us to define agents and tools easily to create Gen-AI apps in 
 
 PydanticAI makes heavy use of dependency injection to provide data and services to your agent's system prompts and tools. We define dependencies using a `dataclass`, which serves as a container for our dependencies.
 
-In our case, the only dependency for our agent to work in the `CouchbaseVectorStore` instance. However, we will still use a `dataclass` as it is good practice. In the future, in case we wish to add more dependencies, we can just add more fields to the `dataclass` `Deps`.
+In our case, the only dependency for our agent to work in the `CouchbaseSearchVectorStore` instance. However, we will still use a `dataclass` as it is good practice. In the future, in case we wish to add more dependencies, we can just add more fields to the `dataclass` `Deps`.
 
 We also initialize an agent as a GPT-4o model. PydanticAI supports many different LLM providers, including Anthropic, Google, Cohere, etc. which can also be used. While initializing the agent, we also pass the type of the dependencies. This is mainly used for type checking, and not actually used at runtime.
 
@@ -451,7 +451,7 @@ We also initialize an agent as a GPT-4o model. PydanticAI supports many differen
 ```python
 @dataclass
 class Deps:
-    vector_store: CouchbaseVectorStore
+    vector_store: CouchbaseSearchVectorStore
 
 agent = Agent("openai:gpt-4o", deps_type=Deps)
 ```
