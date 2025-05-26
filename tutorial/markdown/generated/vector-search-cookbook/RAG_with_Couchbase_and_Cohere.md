@@ -60,7 +60,7 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-%pip install --quiet datasets langchain-couchbase langchain-cohere python-dotenv
+%pip install --quiet datasets==3.5.0 langchain-couchbase==0.3.0 langchain-cohere==0.4.4 python-dotenv==1.1.0
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -205,6 +205,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
                 num_replicas=0
             )
             cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
             bucket = cluster.bucket(bucket_name)
             logging.info(f"Bucket '{bucket_name}' created successfully.")
 

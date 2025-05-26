@@ -59,10 +59,8 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-!pip install datasets langchain-couchbase langchain-openai
+!pip install datasets==3.5.0 langchain-couchbase==0.3.0 langchain-openai==0.3.13
 ```
-
-    [Output too long, omitted for brevity]
 
 # Importing Necessary Libraries
 The script starts by importing a series of libraries required for various tasks, including handling JSON, logging, time tracking, Couchbase connections, embedding generation, and dataset loading. These libraries provide essential functions for working with data, managing database connections, and processing machine learning models.
@@ -97,6 +95,10 @@ from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from tqdm import tqdm
 ```
+
+    /Users/aayush.tyagi/Documents/AI/vector-search-cookbook/.venv/lib/python3.12/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+
 
 # Setup Logging
 Logging is configured to track the progress of the script and capture any errors or warnings. This is crucial for debugging and understanding the flow of execution. The logging output includes timestamps, log levels (e.g., INFO, ERROR), and messages that describe what is happening in the script.
@@ -194,6 +196,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
             logging.info(f"Collection '{collection_name}' already exists.Skipping creation.")
 
         collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
 
         # Ensure primary index exists
         try:

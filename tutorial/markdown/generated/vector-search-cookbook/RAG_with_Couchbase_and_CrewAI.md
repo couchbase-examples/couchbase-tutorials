@@ -68,7 +68,7 @@ database integration, and agent-based RAG capabilities.
 
 
 ```python
-%pip install --quiet datasets langchain-couchbase langchain-openai crewai python-dotenv
+%pip install --quiet datasets==3.5.0 langchain-couchbase==0.3.0 langchain-openai==0.3.13 crewai==0.114.0 python-dotenv==1.1.0
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -119,7 +119,7 @@ logging.basicConfig(
 logging.getLogger('httpx').setLevel(logging.CRITICAL)
 ```
 
-# Loading Sensitive Informnation
+# Loading Sensitive Information
 In this section, we prompt the user to input essential configuration settings needed. These settings include sensitive information like database credentials, and specific configuration names. Instead of hardcoding these details into the script, we request the user to provide them at runtime, ensuring flexibility and security.
 
 The script uses environment variables to store sensitive information, enhancing the overall security and maintainability of your code by avoiding hardcoded values.
@@ -205,7 +205,7 @@ except Exception as e:
     raise
 ```
 
-    Search service is responding at: 18.209.43.8:18094
+    Search service is responding at: 3.235.224.172:18094
     Search service check passed successfully
 
 
@@ -255,6 +255,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
                 num_replicas=0
             )
             cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
             bucket = cluster.bucket(bucket_name)
             logging.info(f"Bucket '{bucket_name}' created successfully.")
 
@@ -310,16 +311,16 @@ setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 
 ```
 
-    2025-04-08 13:41:21 [INFO] Bucket 'vector-search-testing' exists.
-    2025-04-08 13:41:23 [INFO] Collection 'crew' already exists. Skipping creation.
-    2025-04-08 13:41:26 [INFO] Primary index present or created successfully.
-    2025-04-08 13:41:27 [INFO] All documents cleared from the collection.
+    2025-05-25 02:56:12 [INFO] Bucket 'vector-search-testing' exists.
+    2025-05-25 02:56:14 [INFO] Collection 'crew' already exists. Skipping creation.
+    2025-05-25 02:56:17 [INFO] Primary index present or created successfully.
+    2025-05-25 02:56:17 [INFO] All documents cleared from the collection.
 
 
 
 
 
-    <couchbase.collection.Collection at 0x314a4c410>
+    <couchbase.collection.Collection at 0x3131a9950>
 
 
 
@@ -382,8 +383,8 @@ except InternalServerFailureException as e:
     raise
 ```
 
-    2025-04-08 13:41:28 [INFO] Index 'vector_search_crew' found
-    2025-04-08 13:41:29 [INFO] Index 'vector_search_crew' already exists. Skipping creation/update.
+    2025-05-25 02:56:18 [INFO] Index 'vector_search_crew' found
+    2025-05-25 02:56:19 [INFO] Index 'vector_search_crew' already exists. Skipping creation/update.
 
 
 ## Setting Up OpenAI Components
@@ -471,7 +472,7 @@ except Exception as e:
     raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    2025-04-08 13:41:37 [INFO] Successfully loaded the BBC News dataset with 2687 rows.
+    2025-05-25 02:56:29 [INFO] Successfully loaded the BBC News dataset with 2687 rows.
 
 
     Loaded the BBC News dataset with 2687 rows
@@ -534,7 +535,7 @@ except Exception as e:
     raise ValueError(f"Failed to save documents to vector store: {str(e)}")
 ```
 
-    2025-04-08 13:43:34 [INFO] Document ingestion completed successfully.
+    2025-05-25 02:58:12 [INFO] Document ingestion completed successfully.
 
 
 ## Creating a Vector Search Tool
@@ -795,7 +796,7 @@ process_query(query, researcher, writer)
 <span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
 <span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">Crew Execution Started</span>                                                                                         <span style="color: #008080; text-decoration-color: #008080">│</span>
 <span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008080; text-decoration-color: #008080">crew</span>                                                                                                     <span style="color: #008080; text-decoration-color: #008080">│</span>
-<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008080; text-decoration-color: #008080">71d51fe0-03ce-476c-b29b-519bef06341d</span>                                                                       <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008080; text-decoration-color: #008080">d8b9aa65-b394-4caf-922d-4a4b5de60c7e</span>                                                                       <span style="color: #008080; text-decoration-color: #008080">│</span>
 <span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
 <span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
 <span style="color: #008080; text-decoration-color: #008080">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
@@ -810,12 +811,12 @@ process_query(query, researcher, writer)
 
 
      
-    [2025-04-08 13:43:34][INFO]: Planning the crew execution
+    [2025-05-25 02:58:12][INFO]: Planning the crew execution
 
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
 </pre>
 
@@ -829,40 +830,7 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
@@ -877,8 +845,35 @@ process_query(query, researcher, writer)
 
 
 
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+└── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
@@ -894,7 +889,7 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
@@ -907,7 +902,7 @@ process_query(query, researcher, writer)
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>                                                                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
@@ -924,12 +919,12 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
 </pre>
 
@@ -943,12 +938,12 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
@@ -963,91 +958,17 @@ process_query(query, researcher, writer)
 
 
     # Agent: Research Expert
-    ## Task: Research and analyze information relevant to: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.1. Begin by formulating a detailed search query to gather relevant information on the FA Cup third round draw, focusing specifically on Manchester United vs Arsenal, Tamworth vs Tottenham, and notable fixtures. 
-    2. Use the vector_search tool to input the query: 'FA Cup third round draw details including Manchester United vs Arsenal and Tamworth vs Tottenham.' This will initiate a search for documents that are indexed based on relevance to the query. 
-    3. Examine the list of returned document contents for key details such as match dates, locations, historical significance, and any pertinent statistics or analyses related to the teams involved. 
-    4. Collect findings from various sources, ensuring to note down key details and supporting evidence such as match previews, expert opinions, and historical clashes between the teams. 
-    5. Synthesizing all collected data, prepare a structured outline that allocates sections for each match to detail their unique contexts and relevance in the draw. 
-    6. Finish the task by compiling a comprehensive report featuring the analysis with all relevant data and evidence, ensuring it maintains clarity and accuracy, thus meeting the expectations set by the task description.
+    ## Task: Research and analyze information relevant to: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.1. The Research Expert will begin by defining the scope of research by identifying key aspects related to the FA Cup third round draw, including historical context, significance of the matches, and team statistics. 
+    2. The expert will formulate a specific query string that encapsulates the required information, focusing on Manchester United vs Arsenal, Tamworth vs Tottenham, and other relevant fixtures. 
+    3. Using the 'vector_search' tool, the expert will input the generated query string to initiate a search for relevant documents containing current and historical information regarding the FA Cup third round draw. 
+    4. The expert will analyze the retrieved documents, identifying key details such as match venue, date, historical performances, and recent form of each team involved. 
+    5. Key findings will be noted meticulously, ensuring each match's context is articulated accurately, particularly emphasizing the implications of the fixtures for the teams involved. 
+    6. The research will conclude with a summary of findings for each identified match, ensuring all relevant insights are captured for later stages.
 
 
 
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">🔧 </span><span style="color: #808000; text-decoration-color: #808000">Using vector_search (1)</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
 </pre>
 
 
@@ -1061,9 +982,10 @@ process_query(query, researcher, writer)
     
     
     # Agent: Research Expert
+    ## Thought: Thought: I need to gather detailed information about the FA Cup third round draw, focusing on the matches Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures. I will use the vector_search tool to find relevant documents that provide insights into these matches, including historical context, significance, and team statistics.
     ## Using tool: vector_search
     ## Tool Input: 
-    "{\"query\": \"FA Cup third round draw details including Manchester United vs Arsenal and Tamworth vs Tottenham\"}"
+    "{\"query\": \"FA Cup third round draw 2023 Manchester United vs Arsenal Tamworth vs Tottenham notable fixtures\"}"
     ## Tool Output: 
     Document 1:
     ----------------------------------------
@@ -1099,12 +1021,6 @@ process_query(query, researcher, writer)
     
     Document 3:
     ----------------------------------------
-    Watch a "lovely finish" from Isiah Noel-Williams as Kettering Town take a shock lead against Doncaster Rovers in the second round of the FA Cup.
-    
-    Available to UK users only.
-    
-    Document 4:
-    ----------------------------------------
     Man Utd are better with Rashford - Amorim
     
     This video can not be played To play this video you need to enable JavaScript in your browser. I just want to help Marcus - Amorim on Rashford
@@ -1119,21 +1035,20 @@ process_query(query, researcher, writer)
     Rashford has scored 138 goals in 426 appearances for United since his debut in 2016. His most prolific season was 2022-23, when he scored 30 times in 56 games in all competitions and was rewarded with a new five-year deal. Rashford's goals in that campaign account for more than one-fifth (21.7%) of his total tally across nine and a half seasons at Old Trafford. However, he has struggled for form in the past 18 months, with 15 goals in his past 67 appearances. The forward's shot conversion rate was 11.9% in the 2021-22 season, when he scored five goals in 32 matches. That rate increased to 18% the following season when he scored 30 times, but fell to just 9.4% last term - the worst rate of his career across a whole campaign - as he netted eight times in 43 matches. Since 2019-20, United have won 52.7% of their matches in all competitions with Rashford in the starting line-up (107 wins from 203 games), compared to 54.2% without (58 from 107).
     
     If Manchester United offered guidance to avoid creating even more turmoil around an already delicate situation, Ruben Amorim has followed it. We already know enough of Amorim to know he will not hold back just for the sake of it, but this is a case where actions will speak louder than words. Amorim says he wants "big talent" Rashford to stay. But also that players have to meet his standards. He says Rashford - and Alejandro Garnacho - will be assessed for selection on their training-ground performances. It is fair to assume therefore that if neither reaches the required standard, they will not travel to London for the EFL Cup tie at Tottenham - even if Rashford has shaken off the illness that prevented him from training on Monday. After Tottenham, United have Premier League games against Bournemouth, Wolves and Newcastle. We will know soon enough where Rashford fits in Amorim's plans. If he fails to reach the standards his new boss demands, the 27-year-old will not feature.
+    
+    Document 4:
+    ----------------------------------------
+    Leny Yoro signed for Manchester United from Lille for £52m in the summer
+    
+    Leny Yoro could make his Manchester United debut against Arsenal on Wednesday, with head coach Ruben Amorim saying he is "excited" to see the "special talent" in action for the club. United signed Yoro from Lille for £52m in the summer, but the Frenchman underwent surgery on a foot injury suffered during pre-season in the United States, coincidentally in a friendly against Arsenal. The 19-year-old has not featured since, but returned to training in October and is in line to make his first competitive appearance in the Premier League at Emirates Stadium (kick-off 20:15 GMT). "Maybe Leny Yoro is going be in the squad," Amorim said in his pre-match news conference. "I feel he is in a good moment now, his fitness is better." Yoro had been linked with Real Madrid, Paris St-Germain and Liverpool before signing for United in July, with the club's sporting director Dan Ashworth describing the centre-back as "one of the most exciting young defenders in world football". Amorim said: "He is a special talent, we have to be careful in the first moment. We didn't have too many training [sessions] together. He has been training with a small group of players. "He is really fast, a modern defender. He will be good when we want to press high and you leave a lot of strikers in this league one against one, he can manage that. He is very good with the ball so I am very excited. "We have to be careful, we have to manage the load and minute in the beginning but I am really excited to see Leny Yoro playing."
+    
+    United are unbeaten in three games since Amorim took charge, thrashing Everton 4-0 on Sunday, but said Arsenal are "by far" the biggest challenge he has faced in the job so far. Red Devils supporters seem to already be building a rapport with their new Portuguese boss, serenading him with chants that echoed around Old Trafford. “I don't like my chant," Amorim told BBC Sport when asked about the connection with the fans. "I don't feel embarrassed - but I am the coach, they have to chant for the players. It is not a good thing for me, "I understand and appreciate the connection with the supporters but I want them to support the team and the players because they are on the pitch, I am outside. "I am really honoured and I feel a connection with the supporters but we know we need results to maintain that."
 
 
 
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        ├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-        └── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+└── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
 </pre>
 
 
@@ -1145,17 +1060,8 @@ process_query(query, researcher, writer)
 
 
 
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
 </pre>
 
 
@@ -1170,45 +1076,42 @@ process_query(query, researcher, writer)
     
     # Agent: Research Expert
     ## Final Answer: 
-    **FA Cup Third Round Draw Analysis**
+    Document 1:
+    ----------------------------------------
+    Holders Manchester United have been drawn away to record 14-time winners Arsenal in the FA Cup third round.
     
-    The FA Cup third round draw has presented some intriguing fixtures, with notable matches including Manchester United vs Arsenal and Tamworth vs Tottenham. Below is a detailed analysis of these key fixtures and other notable matches in the draw.
+    Premier League leaders Liverpool will host League Two Accrington Stanley, while Manchester City welcome 'Class of 92'-owned Salford City.
     
-    1. **Manchester United vs Arsenal**
-       - **Match Details**: Manchester United, the holders of the FA Cup, have been drawn away to Arsenal, who are record 14-time winners of the competition. This fixture is one of the most anticipated in the third round due to the historical rivalry between the two clubs.
-       - **Historical Significance**: Both teams have a rich history in the FA Cup, with Manchester United having won the trophy 13 times and Arsenal 14 times. The match is expected to be a high-stakes encounter given the prestige associated with both clubs.
-       - **Fan Reactions**: There were audible groans from Manchester United supporters when the draw was announced, highlighting the challenging nature of the fixture.
+    Tamworth, one of only two non-league clubs remaining in the competition, are at home to Tottenham.
     
-    2. **Tamworth vs Tottenham**
-       - **Match Details**: Tamworth, one of only two non-league clubs remaining in the competition, will host Tottenham Hotspur. This match is particularly significant for Tamworth as they are the lowest-ranked team left in the cup.
-       - **Path to the Third Round**: Tamworth earned their place in the third round by defeating League One side Burton Albion in a penalty shootout, showcasing their resilience and determination.
-       - **Significance for Tamworth**: Hosting a Premier League team like Tottenham is a major event for Tamworth, providing them with an opportunity to showcase their talent on a larger stage.
+    The third-round ties will be played over the weekend of Saturday, 11 January.
     
-    3. **Other Notable Fixtures**
-       - **Liverpool vs Accrington Stanley**: Premier League leaders Liverpool will host League Two side Accrington Stanley, a match that could provide an opportunity for a classic FA Cup upset.
-       - **Manchester City vs Salford City**: Manchester City will welcome Salford City, a team owned by the 'Class of 92', adding an interesting narrative to the fixture.
-       - **Chelsea vs Morecambe**: Chelsea will face League Two's bottom club Morecambe, a match that could see Chelsea field a mix of youth and experience.
-       - **Everton vs Peterborough**: A unique storyline in this fixture is the potential face-off between Everton's Ashley Young and his 18-year-old son Tyler, who plays for Peterborough.
+    The third round is when the 44 Premier League and Championship clubs enter the competition, joining the 20 lower-league and non-league clubs who made it through last weekend's second-round ties.
     
-    **Conclusion**
+    There were audible groans from the watching supporters inside Old Trafford as Manchester United, who beat rivals Manchester City to lift the trophy for a 13th time in May, were confirmed as Arsenal's opponents.
     
-    The FA Cup third round draw has set the stage for several exciting matches, with Manchester United vs Arsenal and Tamworth vs Tottenham being standout fixtures. The draw not only highlights the competitive nature of the tournament but also the potential for underdog stories and historic rivalries to unfold. Each match offers its own unique context and significance, promising an engaging round of football for fans and teams alike.
+    Tamworth, the lowest-ranked team remaining in the cup, will host Ange Postecoglou's Spurs as reward for their penalty shootout win against League One side Burton Albion, while fellow National League outfit Dagenham & Redbridge will go to Championship Millwall.
+    
+    Everton full-back Ashley Young, 39, could face his 18-year-old son Tyler after the Toffees drew Peterborough at home.
+    
+    "Wow...dreams might come true," posted former England international Young on X.
+    
+    Elsewhere, Chelsea host League Two's bottom club Morecambe, whose fellow fourth-tier strugglers Bromley travel to face Newcastle United at St James' Park.
     
     
 
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-        └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
 </pre>
 
 
@@ -1221,17 +1124,16 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-        └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
 </pre>
 
 
@@ -1240,7 +1142,7 @@ process_query(query, researcher, writer)
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">9c1c88b4-2504-4e7b-8449-a485c2527938</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">6c97cf00-62f0-4478-8b01-7b677f6277c5</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>                                                                                         <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
@@ -1257,18 +1159,17 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
 </pre>
 
@@ -1282,18 +1183,17 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
@@ -1308,118 +1208,55 @@ process_query(query, researcher, writer)
 
 
     # Agent: Technical Writer
-    ## Task: Create a comprehensive and well-structured response1. Start by reviewing the comprehensive report produced in Task Number 1, ensuring that all information is accurate and relevant to the query about the FA Cup third round draw. 
-    2. Determine the key sections needed in the response, such as an introduction to the FA Cup, details of the Manchester United vs Arsenal match, highlights from the Tamworth vs Tottenham match, and notes on other notable fixtures. 
-    3. Organize the gathered findings into a coherent format, ensuring each section flows logically from one to another, thus providing a clear structure to the response. 
-    4. Write a concise yet informative introduction, setting the stage for the information that follows and explaining the significance of the FA Cup third round. 
-    5. In each section, clearly present the key findings, using well-defined paragraphs for each match and relevant fixtures, incorporating statistical data and historical context as necessary. 
-    6. Conclude the response by summarizing the importance of the draw and how it impacts the teams and fans, ensuring a summary resonates with the overall content of the report. 
-    7. Carefully proofread the response to eliminate any grammatical errors or unclear statements, solidifying a professional and polished final output.
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-        └── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
-│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
-    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
-    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
-        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
+    ## Task: Create a comprehensive and well-structured response1. The Technical Writer will begin by reviewing the key findings and detailed analysis provided by the Research Expert. 
+    2. The writer will outline the structure of the response, ensuring that it flows logically and covers all necessary topics. This may include sections for an introduction, match summaries, and conclusion. 
+    3. Each section will be filled with clear, concise information while ensuring technical accuracy and relevance to the query. 
+    4. The writer will ensure that the language used is appropriate for the audience, aiming to make complex information accessible. 
+    5. After drafting the response, the writer will review and refine the content for clarity, coherence, and completeness. 
+    6. Finally, the writer will verify that all key points regarding Manchester United vs Arsenal, Tamworth vs Tottenham, and notable fixtures are articulated clearly, providing comprehensive insights within the context of the FA Cup third round draw.
     
     
     # Agent: Technical Writer
     ## Final Answer: 
-    **FA Cup Third Round Draw Analysis**
+    **FA Cup Third Round Draw: Comprehensive Overview**
     
-    The FA Cup third round draw has presented some intriguing fixtures, with notable matches including Manchester United vs Arsenal and Tamworth vs Tottenham. Below is a detailed analysis of these key fixtures and other notable matches in the draw.
+    **Introduction**
     
-    1. **Introduction to the FA Cup Third Round**
-       The FA Cup is one of the oldest and most prestigious football competitions in the world, renowned for its history of thrilling matches and unexpected outcomes. The third round is particularly significant as it marks the entry of Premier League and Championship clubs into the tournament, often leading to exciting matchups between top-tier teams and lower-league or non-league clubs. This stage of the competition is eagerly anticipated by fans and teams alike, as it often sets the tone for the rest of the tournament.
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
     
-    2. **Manchester United vs Arsenal**
-       - **Match Details**: Manchester United, the holders of the FA Cup, have been drawn away to Arsenal, who are record 14-time winners of the competition. This fixture is one of the most anticipated in the third round due to the historical rivalry between the two clubs.
-       - **Historical Significance**: Both teams have a rich history in the FA Cup, with Manchester United having won the trophy 13 times and Arsenal 14 times. The match is expected to be a high-stakes encounter given the prestige associated with both clubs.
-       - **Fan Reactions**: There were audible groans from Manchester United supporters when the draw was announced, highlighting the challenging nature of the fixture.
+    **Key Match Summaries**
     
-    3. **Tamworth vs Tottenham**
-       - **Match Details**: Tamworth, one of only two non-league clubs remaining in the competition, will host Tottenham Hotspur. This match is particularly significant for Tamworth as they are the lowest-ranked team left in the cup.
-       - **Path to the Third Round**: Tamworth earned their place in the third round by defeating League One side Burton Albion in a penalty shootout, showcasing their resilience and determination.
-       - **Significance for Tamworth**: Hosting a Premier League team like Tottenham is a major event for Tamworth, providing them with an opportunity to showcase their talent on a larger stage.
+    1. **Manchester United vs Arsenal**
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
-    4. **Other Notable Fixtures**
-       - **Liverpool vs Accrington Stanley**: Premier League leaders Liverpool will host League Two side Accrington Stanley, a match that could provide an opportunity for a classic FA Cup upset.
-       - **Manchester City vs Salford City**: Manchester City will welcome Salford City, a team owned by the 'Class of 92', adding an interesting narrative to the fixture.
-       - **Chelsea vs Morecambe**: Chelsea will face League Two's bottom club Morecambe, a match that could see Chelsea field a mix of youth and experience.
-       - **Everton vs Peterborough**: A unique storyline in this fixture is the potential face-off between Everton's Ashley Young and his 18-year-old son Tyler, who plays for Peterborough.
+    2. **Tamworth vs Tottenham**
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
+    
+    3. **Other Notable Fixtures**
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The FA Cup third round draw has set the stage for several exciting matches, with Manchester United vs Arsenal and Tamworth vs Tottenham being standout fixtures. The draw not only highlights the competitive nature of the tournament but also the potential for underdog stories and historic rivalries to unfold. Each match offers its own unique context and significance, promising an engaging round of football for fans and teams alike. The anticipation surrounding these fixtures underscores the enduring allure of the FA Cup, as it continues to captivate audiences with its blend of tradition, drama, and unpredictability.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     
     
 
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
         <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
@@ -1435,18 +1272,17 @@ process_query(query, researcher, writer)
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 1ef78588-777d-4a4c-8564-f0ab9fb215f3</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9c1c88b4-2504-4e7b-8449-a485c2527938</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
 │   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
 │       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
-│       └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🔧 </span><span style="color: #008000; text-decoration-color: #008000">Used vector_search (1)</span>
-└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: d08f30b4-2a40-4334-9906-ba6718108593</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
     <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
     └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
@@ -1459,7 +1295,7 @@ process_query(query, researcher, writer)
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">d08f30b4-2a40-4334-9906-ba6718108593</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">9a2f521d-7197-4900-9dd5-3f28e67cba96</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>                                                                                        <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
@@ -1479,7 +1315,7 @@ process_query(query, researcher, writer)
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Crew Execution Completed</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">crew</span>                                                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008000; text-decoration-color: #008000">71d51fe0-03ce-476c-b29b-519bef06341d</span>                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008000; text-decoration-color: #008000">d8b9aa65-b394-4caf-922d-4a4b5de60c7e</span>                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
 <span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
@@ -1494,36 +1330,32 @@ process_query(query, researcher, writer)
 
 
     
-    Query completed in 33.00 seconds
+    Query completed in 20.01 seconds
     ================================================================================
     RESPONSE
     ================================================================================
-    **FA Cup Third Round Draw Analysis**
+    **FA Cup Third Round Draw: Comprehensive Overview**
     
-    The FA Cup third round draw has presented some intriguing fixtures, with notable matches including Manchester United vs Arsenal and Tamworth vs Tottenham. Below is a detailed analysis of these key fixtures and other notable matches in the draw.
+    **Introduction**
     
-    1. **Introduction to the FA Cup Third Round**
-       The FA Cup is one of the oldest and most prestigious football competitions in the world, renowned for its history of thrilling matches and unexpected outcomes. The third round is particularly significant as it marks the entry of Premier League and Championship clubs into the tournament, often leading to exciting matchups between top-tier teams and lower-league or non-league clubs. This stage of the competition is eagerly anticipated by fans and teams alike, as it often sets the tone for the rest of the tournament.
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
     
-    2. **Manchester United vs Arsenal**
-       - **Match Details**: Manchester United, the holders of the FA Cup, have been drawn away to Arsenal, who are record 14-time winners of the competition. This fixture is one of the most anticipated in the third round due to the historical rivalry between the two clubs.
-       - **Historical Significance**: Both teams have a rich history in the FA Cup, with Manchester United having won the trophy 13 times and Arsenal 14 times. The match is expected to be a high-stakes encounter given the prestige associated with both clubs.
-       - **Fan Reactions**: There were audible groans from Manchester United supporters when the draw was announced, highlighting the challenging nature of the fixture.
+    **Key Match Summaries**
     
-    3. **Tamworth vs Tottenham**
-       - **Match Details**: Tamworth, one of only two non-league clubs remaining in the competition, will host Tottenham Hotspur. This match is particularly significant for Tamworth as they are the lowest-ranked team left in the cup.
-       - **Path to the Third Round**: Tamworth earned their place in the third round by defeating League One side Burton Albion in a penalty shootout, showcasing their resilience and determination.
-       - **Significance for Tamworth**: Hosting a Premier League team like Tottenham is a major event for Tamworth, providing them with an opportunity to showcase their talent on a larger stage.
+    1. **Manchester United vs Arsenal**
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
-    4. **Other Notable Fixtures**
-       - **Liverpool vs Accrington Stanley**: Premier League leaders Liverpool will host League Two side Accrington Stanley, a match that could provide an opportunity for a classic FA Cup upset.
-       - **Manchester City vs Salford City**: Manchester City will welcome Salford City, a team owned by the 'Class of 92', adding an interesting narrative to the fixture.
-       - **Chelsea vs Morecambe**: Chelsea will face League Two's bottom club Morecambe, a match that could see Chelsea field a mix of youth and experience.
-       - **Everton vs Peterborough**: A unique storyline in this fixture is the potential face-off between Everton's Ashley Young and his 18-year-old son Tyler, who plays for Peterborough.
+    2. **Tamworth vs Tottenham**
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
+    
+    3. **Other Notable Fixtures**
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The FA Cup third round draw has set the stage for several exciting matches, with Manchester United vs Arsenal and Tamworth vs Tottenham being standout fixtures. The draw not only highlights the competitive nature of the tournament but also the potential for underdog stories and historic rivalries to unfold. Each match offers its own unique context and significance, promising an engaging round of football for fans and teams alike. The anticipation surrounding these fixtures underscores the enduring allure of the FA Cup, as it continues to captivate audiences with its blend of tradition, drama, and unpredictability.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     
     ================================================================================
     DETAILED TASK OUTPUTS
@@ -1531,59 +1363,53 @@ process_query(query, researcher, writer)
     
     Task: Research and analyze information relevant to: What are the key details about the FA Cup third round ...
     ----------------------------------------
-    Output: **FA Cup Third Round Draw Analysis**
+    Output: Document 1:
+    ----------------------------------------
+    Holders Manchester United have been drawn away to record 14-time winners Arsenal in the FA Cup third round.
     
-    The FA Cup third round draw has presented some intriguing fixtures, with notable matches including Manchester United vs Arsenal and Tamworth vs Tottenham. Below is a detailed analysis of these key fixtures and other notable matches in the draw.
+    Premier League leaders Liverpool will host League Two Accrington Stanley, while Manchester City welcome 'Class of 92'-owned Salford City.
+    
+    Tamworth, one of only two non-league clubs remaining in the competition, are at home to Tottenham.
+    
+    The third-round ties will be played over the weekend of Saturday, 11 January.
+    
+    The third round is when the 44 Premier League and Championship clubs enter the competition, joining the 20 lower-league and non-league clubs who made it through last weekend's second-round ties.
+    
+    There were audible groans from the watching supporters inside Old Trafford as Manchester United, who beat rivals Manchester City to lift the trophy for a 13th time in May, were confirmed as Arsenal's opponents.
+    
+    Tamworth, the lowest-ranked team remaining in the cup, will host Ange Postecoglou's Spurs as reward for their penalty shootout win against League One side Burton Albion, while fellow National League outfit Dagenham & Redbridge will go to Championship Millwall.
+    
+    Everton full-back Ashley Young, 39, could face his 18-year-old son Tyler after the Toffees drew Peterborough at home.
+    
+    "Wow...dreams might come true," posted former England international Young on X.
+    
+    Elsewhere, Chelsea host League Two's bottom club Morecambe, whose fellow fourth-tier strugglers Bromley travel to face Newcastle United at St James' Park.
+    ----------------------------------------
+    
+    Task: Create a comprehensive and well-structured response1. The Technical Writer will begin by reviewing t...
+    ----------------------------------------
+    Output: **FA Cup Third Round Draw: Comprehensive Overview**
+    
+    **Introduction**
+    
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
+    
+    **Key Match Summaries**
     
     1. **Manchester United vs Arsenal**
-       - **Match Details**: Manchester United, the holders of the FA Cup, have been drawn away to Arsenal, who are record 14-time winners of the competition. This fixture is one of the most anticipated in the third round due to the historical rivalry between the two clubs.
-       - **Historical Significance**: Both teams have a rich history in the FA Cup, with Manchester United having won the trophy 13 times and Arsenal 14 times. The match is expected to be a high-stakes encounter given the prestige associated with both clubs.
-       - **Fan Reactions**: There were audible groans from Manchester United supporters when the draw was announced, highlighting the challenging nature of the fixture.
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
     2. **Tamworth vs Tottenham**
-       - **Match Details**: Tamworth, one of only two non-league clubs remaining in the competition, will host Tottenham Hotspur. This match is particularly significant for Tamworth as they are the lowest-ranked team left in the cup.
-       - **Path to the Third Round**: Tamworth earned their place in the third round by defeating League One side Burton Albion in a penalty shootout, showcasing their resilience and determination.
-       - **Significance for Tamworth**: Hosting a Premier League team like Tottenham is a major event for Tamworth, providing them with an opportunity to showcase their talent on a larger stage.
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
     
     3. **Other Notable Fixtures**
-       - **Liverpool vs Accrington Stanley**: Premier League leaders Liverpool will host League Two side Accrington Stanley, a match that could provide an opportunity for a classic FA Cup upset.
-       - **Manchester City vs Salford City**: Manchester City will welcome Salford City, a team owned by the 'Class of 92', adding an interesting narrative to the fixture.
-       - **Chelsea vs Morecambe**: Chelsea will face League Two's bottom club Morecambe, a match that could see Chelsea field a mix of youth and experience.
-       - **Everton vs Peterborough**: A unique storyline in this fixture is the potential face-off between Everton's Ashley Young and his 18-year-old son Tyler, who plays for Peterborough.
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The FA Cup third round draw has set the stage for several exciting matches, with Manchester United vs Arsenal and Tamworth vs Tottenham being standout fixtures. The draw not only highlights the competitive nature of the tournament but also the potential for underdog stories and historic rivalries to unfold. Each match offers its own unique context and significance, promising an engaging round of football for fans and teams alike.
-    ----------------------------------------
-    
-    Task: Create a comprehensive and well-structured response1. Start by reviewing the comprehensive report pr...
-    ----------------------------------------
-    Output: **FA Cup Third Round Draw Analysis**
-    
-    The FA Cup third round draw has presented some intriguing fixtures, with notable matches including Manchester United vs Arsenal and Tamworth vs Tottenham. Below is a detailed analysis of these key fixtures and other notable matches in the draw.
-    
-    1. **Introduction to the FA Cup Third Round**
-       The FA Cup is one of the oldest and most prestigious football competitions in the world, renowned for its history of thrilling matches and unexpected outcomes. The third round is particularly significant as it marks the entry of Premier League and Championship clubs into the tournament, often leading to exciting matchups between top-tier teams and lower-league or non-league clubs. This stage of the competition is eagerly anticipated by fans and teams alike, as it often sets the tone for the rest of the tournament.
-    
-    2. **Manchester United vs Arsenal**
-       - **Match Details**: Manchester United, the holders of the FA Cup, have been drawn away to Arsenal, who are record 14-time winners of the competition. This fixture is one of the most anticipated in the third round due to the historical rivalry between the two clubs.
-       - **Historical Significance**: Both teams have a rich history in the FA Cup, with Manchester United having won the trophy 13 times and Arsenal 14 times. The match is expected to be a high-stakes encounter given the prestige associated with both clubs.
-       - **Fan Reactions**: There were audible groans from Manchester United supporters when the draw was announced, highlighting the challenging nature of the fixture.
-    
-    3. **Tamworth vs Tottenham**
-       - **Match Details**: Tamworth, one of only two non-league clubs remaining in the competition, will host Tottenham Hotspur. This match is particularly significant for Tamworth as they are the lowest-ranked team left in the cup.
-       - **Path to the Third Round**: Tamworth earned their place in the third round by defeating League One side Burton Albion in a penalty shootout, showcasing their resilience and determination.
-       - **Significance for Tamworth**: Hosting a Premier League team like Tottenham is a major event for Tamworth, providing them with an opportunity to showcase their talent on a larger stage.
-    
-    4. **Other Notable Fixtures**
-       - **Liverpool vs Accrington Stanley**: Premier League leaders Liverpool will host League Two side Accrington Stanley, a match that could provide an opportunity for a classic FA Cup upset.
-       - **Manchester City vs Salford City**: Manchester City will welcome Salford City, a team owned by the 'Class of 92', adding an interesting narrative to the fixture.
-       - **Chelsea vs Morecambe**: Chelsea will face League Two's bottom club Morecambe, a match that could see Chelsea field a mix of youth and experience.
-       - **Everton vs Peterborough**: A unique storyline in this fixture is the potential face-off between Everton's Ashley Young and his 18-year-old son Tyler, who plays for Peterborough.
-    
-    **Conclusion**
-    
-    The FA Cup third round draw has set the stage for several exciting matches, with Manchester United vs Arsenal and Tamworth vs Tottenham being standout fixtures. The draw not only highlights the competitive nature of the tournament but also the potential for underdog stories and historic rivalries to unfold. Each match offers its own unique context and significance, promising an engaging round of football for fans and teams alike. The anticipation surrounding these fixtures underscores the enduring allure of the FA Cup, as it continues to captivate audiences with its blend of tradition, drama, and unpredictability.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     ----------------------------------------
 
 

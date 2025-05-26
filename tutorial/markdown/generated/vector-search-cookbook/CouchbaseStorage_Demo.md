@@ -116,7 +116,7 @@ This section installs the necessary Python packages:
 
 
 ```python
-%pip install --quiet crewai langchain-couchbase langchain-openai python-dotenv
+%pip install --quiet crewai==0.114.0 langchain-couchbase==0.3.0 langchain-openai==0.3.13 python-dotenv==1.1.0
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -424,8 +424,32 @@ for result in results:
     print(f"Found: {result['context']}\nScore: {result['score']}\nMetadata: {result['metadata']}")
 ```
 
-    Found: Pep Guardiola praised Manchester City's current form, saying 'The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased.'
-    Score: 0.6598483920097351
+    Found: Pep Guardiola has said Manchester City will be his final managerial job in club football before he "maybe" coaches a national team.
+    
+    The former Barcelona and Bayern Munich boss has won 15 major trophies since taking charge of City in 2016.
+    
+    The 53-year-old Spaniard was approached in the summer about the possibility of becoming England manager, but last month signed a two-year contract extension with City until 2027.
+    
+    Speaking to celebrity chef Dani Garcia on YouTube, Guardiola did not indicate when he intends to step down at City but said he would not return to club football - in the Premier League or overseas.
+    
+    "I'm not going to manage another team," he said.
+    
+    "I'm not talking about the long-term future, but what I'm not going to do is leave Manchester City, go to another country, and do the same thing as now.
+    
+    "I wouldn't have the energy. The thought of starting somewhere else, all the process of training and so on. No, no, no. Maybe a national team, but that's different.
+    
+    "I want to leave it and go and play golf, but I can't [if he takes a club job]. I think stopping would do me good."
+    
+    City have won just once since Guardiola extended his contract - and once in nine games since beating Southampton on 26 October.
+    
+    That victory came at home to Nottingham Forest last Wednesday, but was followed by a 2-2 draw at Crystal Palace at the weekend.
+    
+    The Blues visit Juventus next in the Champions League on Wednesday (20:00 GMT), before hosting Manchester United in the Premier League on Sunday (16:30).
+    
+    "Right now we are not in the position - when we have had the results of the last seven, eight games - to talk about winning games in plural," said Guardiola at his pre-match news conference.
+    
+    "We have to win the game and not look at what happens in the next one yet."
+    Score: 0.7207486629486084
     Metadata: {}
 
 
@@ -496,70 +520,311 @@ print(result)
 print("-" * 80)
 ```
 
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080">╭──────────────────────────────────────────── Crew Execution Started ─────────────────────────────────────────────╮</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">Crew Execution Started</span>                                                                                         <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008080; text-decoration-color: #008080">crew</span>                                                                                                     <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008080; text-decoration-color: #008080">8246706c-6e28-4e21-8805-4b3985c3d811</span>                                                                       <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     # Agent: Sports Analyst
     ## Task: Analyze Manchester City's recent performance based on Pep Guardiola's comments: "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased."
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+└── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     
     
     # Agent: Sports Analyst
     ## Final Answer: 
-    Analyzing Manchester City's recent performance based on Pep Guardiola's comments, it is clear that the team is operating at a high level. Guardiola's statement, "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased," gives insight into both the current form and the overall environment within the squad.
+    Based on Pep Guardiola's comments, Manchester City's recent performance can be described as a complex blend of challenges and optimism. Guardiola's assertion that "the team is playing well" and "we are in a good moment" highlights his satisfaction with the team's current training and playing style. However, the broader context reveals a more nuanced picture.
     
-    Historically, Manchester City under Guardiola has been known for their possession-based style, high pressing, and tactical flexibility. Comparing their current form to past performances, City appears to be continuing their trend of dominance, especially in terms of controlling matches and creating goal-scoring opportunities. Recent match statistics highlight their effectiveness; for example, in their last few games, City has consistently maintained possession percentages above 60%, showcasing their ability to control the tempo of the game.
+    Guardiola's positive remarks come amid a challenging period for the team, marked by a significant downturn in results. Manchester City has experienced an unprecedented run of poor form, with nine losses in their past 12 matches. This stretch has been characterized by self-doubt, errors, and the need for significant changes within the squad. Despite these struggles, Guardiola maintains a positive outlook on the team's efforts and potential.
     
-    Key players such as Kevin De Bruyne, Erling Haaland, and Phil Foden have been pivotal in their recent successes. De Bruyne's vision and passing ability have been instrumental in breaking down defenses, while Haaland's goal-scoring prowess has added a new dimension to City's attacking threat. Foden's versatility and creativity have also been crucial, providing Guardiola with multiple tactical options.
+    One of the critical issues facing the team is the absence of key midfielder Rodri, whose injury has severely impacted City's performance. The reliance on Rodri as a central figure in the team's strategy is akin to a Jenga tower losing a crucial piece, leading to a collapse in form. The injuries to other key players, such as Nathan Ake and Manuel Akanji, have compounded these challenges, leaving Guardiola with limited options in defense.
     
-    Despite the positive comments from Guardiola, there are still areas where City can improve. Defensive lapses have occasionally been a concern, as seen in matches where they conceded goals due to individual errors or lapses in concentration. Addressing these issues will be critical for maintaining their form throughout the season.
+    Guardiola's comments underscore his belief in the team's ability to turn things around, despite the current crisis. He has been protective of his players, refraining from public criticism and instead opting to give them time to reset and recover. This approach reflects his long-term vision for the club, as he plans to use the remaining years of his contract to rebuild and reshape the team.
     
-    Guardiola's satisfaction with the team's training and performance indicates a harmonious and focused squad, which is essential for sustained success. His comments also reflect the strategic innovations he has implemented, such as adapting formations and player roles to maximize the team's strengths and exploit opponents' weaknesses.
+    The analysis of City's form within the club suggests that there have only been three matches where they deserved to lose, indicating that the team is not far off from regaining its competitive edge. However, the immediate goal has shifted to securing a top-four finish and restoring the defensive and offensive intensity that has been the hallmark of Guardiola's City.
     
-    In conclusion, Manchester City's current form is a testament to Guardiola's tactical expertise and the players' execution on the pitch. While there are minor areas for improvement, the overall outlook is positive, and they are well-positioned to compete for titles this season. The combination of Guardiola's strategic leadership and the team's depth and quality suggests that City will continue to be a formidable force in football.
+    Looking ahead, Guardiola and the club's management are preparing for a new era. This involves potential changes to the squad, with plans to replace several regular starters and bring in new talent, particularly in the holding midfielder position. The anticipated arrival of sporting director Hugo Viana and possible transfers, such as Spain's Martin Zubimendi, signal a strategic effort to revitalize the team.
+    
+    In conclusion, while Guardiola's comments reflect his pleasure with the current training and playing style, the broader context reveals a team in transition. Manchester City is navigating a challenging period, but with Guardiola's leadership and forthcoming changes, there is optimism for a resurgence and a new chapter in the club's storied history.
     
     
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">7dc4c834-1c24-4483-8e8b-58b49981c32d</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>                                                                                          <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: f8a05679-fb2b-4379-8484-582aab6a99d0</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: f8a05679-fb2b-4379-8484-582aab6a99d0</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Journalist</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     # Agent: Sports Journalist
     ## Task: Write a sports article about Manchester City's form using the analysis and Guardiola's comments.
     
     
     # Agent: Sports Journalist
     ## Final Answer: 
-    **Manchester City: A Blueprint of Excellence in Current Form Under Guardiola**
+    **Manchester City: Navigating the Storm with Guardiola's Optimism and Strategic Vision**
     
-    In the ever-dynamic world of Premier League football, Manchester City’s form this season stands as a testament to their consistent excellence and tactical acuity under the stewardship of Pep Guardiola. As the footballing world watches, City’s recent performances have not only reasserted their domestic dominance but have also sent a signal of their intent on the European stage.
+    In the annals of Premier League history, few teams have enjoyed the dominance that Manchester City has under the stewardship of Pep Guardiola. Yet, as the current season unfolds, the sky-blue juggernaut has encountered unforeseen turbulence. Guardiola's recent comments, however, reflect a blend of cautious optimism and a recognition of the challenges that lie ahead.
     
-    Pep Guardiola, the cerebral architect behind Manchester City’s success, recently voiced his satisfaction with the team’s current standing. "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased," he remarked, encapsulating the harmony and precision that have become synonymous with his tenure at the club.
+    Guardiola, whose tactical genius has been the cornerstone of City's success, remains steadfast in his belief that "the team is playing well" and "we are in a good moment." Yet, these affirmations come during a period marked by an astonishing downturn in results. With nine losses in their last 12 matches, City finds itself in unfamiliar territory, grappling with self-doubt and uncharacteristic errors.
     
-    Historically, Guardiola's sides have been renowned for their possession-based play and tactical flexibility. This season, City continues to exemplify these principles, maintaining an impressive average possession of over 60% in recent matches. This ability to control the game’s tempo has been pivotal in their recent string of victories and is indicative of their strategic dominance on the pitch.
+    One cannot discuss City's recent struggles without acknowledging the absence of midfield maestro Rodri. His injury has been akin to pulling out a crucial Jenga piece, leading to a collapse in form that has left the team vulnerable. The injuries to key players such as Nathan Ake and Manuel Akanji have further exacerbated Guardiola's selection headaches, particularly in defense.
     
-    Key to this success are the stellar performances from City’s roster of world-class talent. Kevin De Bruyne, with his unparalleled vision and precision passing, has been instrumental in orchestrating play and dismantling defenses. Erling Haaland, a new addition to the squad, has bolstered City’s attacking threat with his prolific goal-scoring ability, adding a new dimension to their already potent offensive setup. Meanwhile, Phil Foden’s versatility and creativity on the field provide Guardiola with a plethora of tactical options, making him an invaluable asset.
+    Guardiola's approach to this crisis, however, has been one of resilience and long-term planning. Rather than publicly chastising his players, he has opted for a protective stance, giving them the space to reset and recover. This reflects his vision not just for the immediate season but for the future of the club. With two years left on his contract, Guardiola is set on rebuilding and reshaping the squad, preparing for a new era at Manchester City.
     
-    Despite the glowing appraisal, Guardiola remains pragmatic, acknowledging areas for refinement. Defensive lapses, often due to individual errors or brief lapses in concentration, have been points of concern. Addressing these issues is crucial for maintaining their momentum and ensuring that they remain competitive across all fronts.
+    The internal analysis at City suggests that only three of their recent defeats were thoroughly deserved, indicating that the team's competitive edge is not entirely lost. However, the immediate objective has shifted towards securing a top-four finish and reinstating the defensive and offensive intensity that has been synonymous with Guardiola's tenure.
     
-    Guardiola’s comments reflect not only a satisfied manager but also a strategic thinker constantly innovating to maximize the team’s strengths. His ability to adapt formations and player roles is a hallmark of his managerial prowess, ensuring that City not only plays to their strengths but also exploits the weaknesses of their opponents.
+    Looking forward, changes are anticipated both in the squad and the club's management structure. The potential arrival of sporting director Hugo Viana and the pursuit of new talent, such as Spain's Martin Zubimendi, highlight a strategic effort to inject fresh energy and skills into the team. These moves are aimed at addressing specific weaknesses, particularly in the holding midfielder position.
     
-    Looking ahead, Manchester City faces a challenging fixture schedule, with both domestic and European competitions testing their resolve. However, with Guardiola at the helm and the squad’s depth and quality, they are well-positioned to surmount these challenges. The combination of strategic leadership and player execution suggests that City will continue to be a formidable force in football.
-    
-    In conclusion, Manchester City’s current form is a masterclass in footballing excellence, driven by Guardiola’s tactical expertise and the players’ execution on the pitch. While there are minor areas for improvement, the overall outlook is positive, and they are poised to compete for titles this season. As the season progresses, fans and pundits alike will watch with anticipation to see if City can translate their current form into silverware.
+    In conclusion, while Manchester City is navigating a challenging period, Guardiola's comments and strategic vision offer a beacon of hope. His leadership, coupled with forthcoming squad changes, promises a resurgence and a new chapter in the club's illustrious history. The road ahead may be daunting, but with Guardiola at the helm, City supporters can remain hopeful of a return to the pinnacle of English football.
     
     
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: f8a05679-fb2b-4379-8484-582aab6a99d0</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Journalist</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 7dc4c834-1c24-4483-8e8b-58b49981c32d</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Analyst</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: f8a05679-fb2b-4379-8484-582aab6a99d0</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Sports Journalist</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Journalist</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">f8a05679-fb2b-4379-8484-582aab6a99d0</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Sports Journalist</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Crew Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Crew Execution Completed</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">crew</span>                                                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008000; text-decoration-color: #008000">8246706c-6e28-4e21-8805-4b3985c3d811</span>                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     
     Crew Result:
     --------------------------------------------------------------------------------
-    **Manchester City: A Blueprint of Excellence in Current Form Under Guardiola**
+    **Manchester City: Navigating the Storm with Guardiola's Optimism and Strategic Vision**
     
-    In the ever-dynamic world of Premier League football, Manchester City’s form this season stands as a testament to their consistent excellence and tactical acuity under the stewardship of Pep Guardiola. As the footballing world watches, City’s recent performances have not only reasserted their domestic dominance but have also sent a signal of their intent on the European stage.
+    In the annals of Premier League history, few teams have enjoyed the dominance that Manchester City has under the stewardship of Pep Guardiola. Yet, as the current season unfolds, the sky-blue juggernaut has encountered unforeseen turbulence. Guardiola's recent comments, however, reflect a blend of cautious optimism and a recognition of the challenges that lie ahead.
     
-    Pep Guardiola, the cerebral architect behind Manchester City’s success, recently voiced his satisfaction with the team’s current standing. "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased," he remarked, encapsulating the harmony and precision that have become synonymous with his tenure at the club.
+    Guardiola, whose tactical genius has been the cornerstone of City's success, remains steadfast in his belief that "the team is playing well" and "we are in a good moment." Yet, these affirmations come during a period marked by an astonishing downturn in results. With nine losses in their last 12 matches, City finds itself in unfamiliar territory, grappling with self-doubt and uncharacteristic errors.
     
-    Historically, Guardiola's sides have been renowned for their possession-based play and tactical flexibility. This season, City continues to exemplify these principles, maintaining an impressive average possession of over 60% in recent matches. This ability to control the game’s tempo has been pivotal in their recent string of victories and is indicative of their strategic dominance on the pitch.
+    One cannot discuss City's recent struggles without acknowledging the absence of midfield maestro Rodri. His injury has been akin to pulling out a crucial Jenga piece, leading to a collapse in form that has left the team vulnerable. The injuries to key players such as Nathan Ake and Manuel Akanji have further exacerbated Guardiola's selection headaches, particularly in defense.
     
-    Key to this success are the stellar performances from City’s roster of world-class talent. Kevin De Bruyne, with his unparalleled vision and precision passing, has been instrumental in orchestrating play and dismantling defenses. Erling Haaland, a new addition to the squad, has bolstered City’s attacking threat with his prolific goal-scoring ability, adding a new dimension to their already potent offensive setup. Meanwhile, Phil Foden’s versatility and creativity on the field provide Guardiola with a plethora of tactical options, making him an invaluable asset.
+    Guardiola's approach to this crisis, however, has been one of resilience and long-term planning. Rather than publicly chastising his players, he has opted for a protective stance, giving them the space to reset and recover. This reflects his vision not just for the immediate season but for the future of the club. With two years left on his contract, Guardiola is set on rebuilding and reshaping the squad, preparing for a new era at Manchester City.
     
-    Despite the glowing appraisal, Guardiola remains pragmatic, acknowledging areas for refinement. Defensive lapses, often due to individual errors or brief lapses in concentration, have been points of concern. Addressing these issues is crucial for maintaining their momentum and ensuring that they remain competitive across all fronts.
+    The internal analysis at City suggests that only three of their recent defeats were thoroughly deserved, indicating that the team's competitive edge is not entirely lost. However, the immediate objective has shifted towards securing a top-four finish and reinstating the defensive and offensive intensity that has been synonymous with Guardiola's tenure.
     
-    Guardiola’s comments reflect not only a satisfied manager but also a strategic thinker constantly innovating to maximize the team’s strengths. His ability to adapt formations and player roles is a hallmark of his managerial prowess, ensuring that City not only plays to their strengths but also exploits the weaknesses of their opponents.
+    Looking forward, changes are anticipated both in the squad and the club's management structure. The potential arrival of sporting director Hugo Viana and the pursuit of new talent, such as Spain's Martin Zubimendi, highlight a strategic effort to inject fresh energy and skills into the team. These moves are aimed at addressing specific weaknesses, particularly in the holding midfielder position.
     
-    Looking ahead, Manchester City faces a challenging fixture schedule, with both domestic and European competitions testing their resolve. However, with Guardiola at the helm and the squad’s depth and quality, they are well-positioned to surmount these challenges. The combination of strategic leadership and player execution suggests that City will continue to be a formidable force in football.
-    
-    In conclusion, Manchester City’s current form is a masterclass in footballing excellence, driven by Guardiola’s tactical expertise and the players’ execution on the pitch. While there are minor areas for improvement, the overall outlook is positive, and they are poised to compete for titles this season. As the season progresses, fans and pundits alike will watch with anticipation to see if City can translate their current form into silverware.
+    In conclusion, while Manchester City is navigating a challenging period, Guardiola's comments and strategic vision offer a beacon of hope. His leadership, coupled with forthcoming squad changes, promises a resurgence and a new chapter in the club's illustrious history. The road ahead may be daunting, but with Guardiola at the helm, City supporters can remain hopeful of a return to the pinnacle of English football.
     --------------------------------------------------------------------------------
 
 
@@ -635,53 +900,83 @@ for result in interaction_results:
     
     Memory Search Results:
     --------------------------------------------------------------------------------
-    Context: Analyzing Manchester City's recent performance based on Pep Guardiola's comments, it is clear that the team is operating at a high level. Guardiola's statement, "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased," gives insight into both the current form and the overall environment within the squad.
+    Context: Based on Pep Guardiola's comments, Manchester City's recent performance can be described as a complex blend of challenges and optimism. Guardiola's assertion that "the team is playing well" and "we are in a good moment" highlights his satisfaction with the team's current training and playing style. However, the broader context reveals a more nuanced picture.
     
-    Historically, Manchester City under Guardiola has been known for their possession-based style, high pressing, and tactical flexibility. Comparing their current form to past performances, City appears to be continuing their trend of dominance, especially in terms of controlling matches and creating goal-scoring opportunities. Recent match statistics highlight their effectiveness; for example, in their last few games, City has consistently maintained possession percentages above 60%, showcasing their ability to control the tempo of the game.
+    Guardiola's positive remarks come amid a challenging period for the team, marked by a significant downturn in results. Manchester City has experienced an unprecedented run of poor form, with nine losses in their past 12 matches. This stretch has been characterized by self-doubt, errors, and the need for significant changes within the squad. Despite these struggles, Guardiola maintains a positive outlook on the team's efforts and potential.
     
-    Key players such as Kevin De Bruyne, Erling Haaland, and Phil Foden have been pivotal in their recent successes. De Bruyne's vision and passing ability have been instrumental in breaking down defenses, while Haaland's goal-scoring prowess has added a new dimension to City's attacking threat. Foden's versatility and creativity have also been crucial, providing Guardiola with multiple tactical options.
+    One of the critical issues facing the team is the absence of key midfielder Rodri, whose injury has severely impacted City's performance. The reliance on Rodri as a central figure in the team's strategy is akin to a Jenga tower losing a crucial piece, leading to a collapse in form. The injuries to other key players, such as Nathan Ake and Manuel Akanji, have compounded these challenges, leaving Guardiola with limited options in defense.
     
-    Despite the positive comments from Guardiola, there are still areas where City can improve. Defensive lapses have occasionally been a concern, as seen in matches where they conceded goals due to individual errors or lapses in concentration. Addressing these issues will be critical for maintaining their form throughout the season.
+    Guardiola's comments underscore his belief in the team's ability to turn things around, despite the current crisis. He has been protective of his players, refraining from public criticism and instead opting to give them time to reset and recover. This approach reflects his long-term vision for the club, as he plans to use the remaining years of his contract to rebuild and reshape the team.
     
-    Guardiola's satisfaction with the team's training and performance indicates a harmonious and focused squad, which is essential for sustained success. His comments also reflect the strategic innovations he has implemented, such as adapting formations and player roles to maximize the team's strengths and exploit opponents' weaknesses.
+    The analysis of City's form within the club suggests that there have only been three matches where they deserved to lose, indicating that the team is not far off from regaining its competitive edge. However, the immediate goal has shifted to securing a top-four finish and restoring the defensive and offensive intensity that has been the hallmark of Guardiola's City.
     
-    In conclusion, Manchester City's current form is a testament to Guardiola's tactical expertise and the players' execution on the pitch. While there are minor areas for improvement, the overall outlook is positive, and they are well-positioned to compete for titles this season. The combination of Guardiola's strategic leadership and the team's depth and quality suggests that City will continue to be a formidable force in football.
-    Score: 0.7799903154373169
+    Looking ahead, Guardiola and the club's management are preparing for a new era. This involves potential changes to the squad, with plans to replace several regular starters and bring in new talent, particularly in the holding midfielder position. The anticipated arrival of sporting director Hugo Viana and possible transfers, such as Spain's Martin Zubimendi, signal a strategic effort to revitalize the team.
+    
+    In conclusion, while Guardiola's comments reflect his pleasure with the current training and playing style, the broader context reveals a team in transition. Manchester City is navigating a challenging period, but with Guardiola's leadership and forthcoming changes, there is optimism for a resurgence and a new chapter in the club's storied history.
+    Score: 0.7326797246932983
     --------------------------------------------------------------------------------
     Context: Pep Guardiola praised Manchester City's current form, saying 'The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased.'
-    Score: 0.7145987749099731
+    Score: 0.7146205306053162
     --------------------------------------------------------------------------------
-    Context: **Manchester City: A Blueprint of Excellence in Current Form Under Guardiola**
+    Context: **Manchester City: Navigating the Storm with Guardiola's Optimism and Strategic Vision**
     
-    In the ever-dynamic world of Premier League football, Manchester City’s form this season stands as a testament to their consistent excellence and tactical acuity under the stewardship of Pep Guardiola. As the footballing world watches, City’s recent performances have not only reasserted their domestic dominance but have also sent a signal of their intent on the European stage.
+    In the annals of Premier League history, few teams have enjoyed the dominance that Manchester City has under the stewardship of Pep Guardiola. Yet, as the current season unfolds, the sky-blue juggernaut has encountered unforeseen turbulence. Guardiola's recent comments, however, reflect a blend of cautious optimism and a recognition of the challenges that lie ahead.
     
-    Pep Guardiola, the cerebral architect behind Manchester City’s success, recently voiced his satisfaction with the team’s current standing. "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased," he remarked, encapsulating the harmony and precision that have become synonymous with his tenure at the club.
+    Guardiola, whose tactical genius has been the cornerstone of City's success, remains steadfast in his belief that "the team is playing well" and "we are in a good moment." Yet, these affirmations come during a period marked by an astonishing downturn in results. With nine losses in their last 12 matches, City finds itself in unfamiliar territory, grappling with self-doubt and uncharacteristic errors.
     
-    Historically, Guardiola's sides have been renowned for their possession-based play and tactical flexibility. This season, City continues to exemplify these principles, maintaining an impressive average possession of over 60% in recent matches. This ability to control the game’s tempo has been pivotal in their recent string of victories and is indicative of their strategic dominance on the pitch.
+    One cannot discuss City's recent struggles without acknowledging the absence of midfield maestro Rodri. His injury has been akin to pulling out a crucial Jenga piece, leading to a collapse in form that has left the team vulnerable. The injuries to key players such as Nathan Ake and Manuel Akanji have further exacerbated Guardiola's selection headaches, particularly in defense.
     
-    Key to this success are the stellar performances from City’s roster of world-class talent. Kevin De Bruyne, with his unparalleled vision and precision passing, has been instrumental in orchestrating play and dismantling defenses. Erling Haaland, a new addition to the squad, has bolstered City’s attacking threat with his prolific goal-scoring ability, adding a new dimension to their already potent offensive setup. Meanwhile, Phil Foden’s versatility and creativity on the field provide Guardiola with a plethora of tactical options, making him an invaluable asset.
+    Guardiola's approach to this crisis, however, has been one of resilience and long-term planning. Rather than publicly chastising his players, he has opted for a protective stance, giving them the space to reset and recover. This reflects his vision not just for the immediate season but for the future of the club. With two years left on his contract, Guardiola is set on rebuilding and reshaping the squad, preparing for a new era at Manchester City.
     
-    Despite the glowing appraisal, Guardiola remains pragmatic, acknowledging areas for refinement. Defensive lapses, often due to individual errors or brief lapses in concentration, have been points of concern. Addressing these issues is crucial for maintaining their momentum and ensuring that they remain competitive across all fronts.
+    The internal analysis at City suggests that only three of their recent defeats were thoroughly deserved, indicating that the team's competitive edge is not entirely lost. However, the immediate objective has shifted towards securing a top-four finish and reinstating the defensive and offensive intensity that has been synonymous with Guardiola's tenure.
     
-    Guardiola’s comments reflect not only a satisfied manager but also a strategic thinker constantly innovating to maximize the team’s strengths. His ability to adapt formations and player roles is a hallmark of his managerial prowess, ensuring that City not only plays to their strengths but also exploits the weaknesses of their opponents.
+    Looking forward, changes are anticipated both in the squad and the club's management structure. The potential arrival of sporting director Hugo Viana and the pursuit of new talent, such as Spain's Martin Zubimendi, highlight a strategic effort to inject fresh energy and skills into the team. These moves are aimed at addressing specific weaknesses, particularly in the holding midfielder position.
     
-    Looking ahead, Manchester City faces a challenging fixture schedule, with both domestic and European competitions testing their resolve. However, with Guardiola at the helm and the squad’s depth and quality, they are well-positioned to surmount these challenges. The combination of strategic leadership and player execution suggests that City will continue to be a formidable force in football.
+    In conclusion, while Manchester City is navigating a challenging period, Guardiola's comments and strategic vision offer a beacon of hope. His leadership, coupled with forthcoming squad changes, promises a resurgence and a new chapter in the club's illustrious history. The road ahead may be daunting, but with Guardiola at the helm, City supporters can remain hopeful of a return to the pinnacle of English football.
+    Score: 0.6574390530586243
+    --------------------------------------------------------------------------------
+    Context: Manchester City boss Pep Guardiola has won 18 trophies since he arrived at the club in 2016
     
-    In conclusion, Manchester City’s current form is a masterclass in footballing excellence, driven by Guardiola’s tactical expertise and the players’ execution on the pitch. While there are minor areas for improvement, the overall outlook is positive, and they are poised to compete for titles this season. As the season progresses, fans and pundits alike will watch with anticipation to see if City can translate their current form into silverware.
-    Score: 0.6959875822067261
+    Manchester City boss Pep Guardiola says he is "fine" despite admitting his sleep and diet are being affected by the worst run of results in his entire managerial career. In an interview with former Italy international Luca Toni for Amazon Prime Sport before Wednesday's Champions League defeat by Juventus, Guardiola touched on the personal impact City's sudden downturn in form has had. Guardiola said his state of mind was "ugly", that his sleep was "worse" and he was eating lighter as his digestion had suffered. City go into Sunday's derby against Manchester United at Etihad Stadium having won just one of their past 10 games. The Juventus loss means there is a chance they may not even secure a play-off spot in the Champions League. Asked to elaborate on his comments to Toni, Guardiola said: "I'm fine. "In our jobs we always want to do our best or the best as possible. When that doesn't happen you are more uncomfortable than when the situation is going well, always that happened. "In good moments I am happier but when I get to the next game I am still concerned about what I have to do. There is no human being that makes an activity and it doesn't matter how they do." Guardiola said City have to defend better and "avoid making mistakes at both ends". To emphasise his point, Guardiola referred back to the third game of City's current run, against a Sporting side managed by Ruben Amorim, who will be in the United dugout at the weekend. City dominated the first half in Lisbon, led thanks to Phil Foden's early effort and looked to be cruising. Instead, they conceded three times in 11 minutes either side of half-time as Sporting eventually ran out 4-1 winners. "I would like to play the game like we played in Lisbon on Sunday, believe me," said Guardiola, who is facing the prospect of only having three fit defenders for the derby as Nathan Ake and Manuel Akanji try to overcome injury concerns. If there is solace for City, it comes from the knowledge United are not exactly flying. Their comeback Europa League victory against Viktoria Plzen on Thursday was their third win of Amorim's short reign so far but only one of those successes has come in the Premier League, where United have lost their past two games against Arsenal and Nottingham Forest. Nevertheless, Guardiola can see improvements already on the red side of the city. "It's already there," he said. "You see all the patterns, the movements, the runners and the pace. He will do a good job at United, I'm pretty sure of that."
+    
+    Guardiola says skipper Kyle Walker has been offered support by the club after the City defender highlighted the racial abuse he had received on social media in the wake of the Juventus trip. "It's unacceptable," he said. "Not because it's Kyle - for any human being. "Unfortunately it happens many times in the real world. It is not necessary to say he has the support of the entire club. It is completely unacceptable and we give our support to him."
+    Score: 0.6334313750267029
+    --------------------------------------------------------------------------------
+    Context: 'I am not good enough' - Guardiola faces daunting and major rebuild
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. 'I am not good enough' - Guardiola says he must find a 'solution' after derby loss
+    
+    Pep Guardiola says his sleep has suffered during Manchester City's deepening crisis, so he will not be helped by a nightmarish conclusion to one of the most stunning defeats of his long reign. Guardiola looked agitated, animated and on edge even after City led the Manchester derby through Josko Gvardiol's 36th-minute header, his reaction to the goal one of almost disdain that it came via a deflected cross as opposed to in his purist style. He sat alone with his eyes closed sipping from a water bottle before the resumption of the second half, then was denied even the respite of victory when Manchester United gave this largely dismal derby a dramatic conclusion it barely deserved with a remarkable late comeback. First, with 88 minutes on the clock, Matheus Nunes presented Amad Diallo with the ball before compounding his error by flattening the forward as he made an attempt to recover his mistake. Bruno Fernandes completed the formalities from the penalty spot. Worse was to come two minutes later when Lisandro Martinez's routine long ball caught City's defence inexplicably statuesque. Goalkeeper Ederson's positioning was awry, allowing the lively Diallo to pounce from an acute angle to leave Guardiola and his players stunned. It was the latest into any game, 88 minutes, that reigning Premier League champions had led then lost. It was also the first time City had lost a game they were leading so late on. And in a sign of City's previous excellence that is now being challenged, they have only lost four of 105 Premier League home games under Guardiola in which they have been ahead at half-time, winning 94 and drawing seven. Guardiola delivered a brutal self-analysis as he told Match of the Day: "I am not good enough. I am the boss. I am the manager. I have to find solutions and so far I haven't. That's the reality. "Not much else to say. No defence. Manchester United were incredibly persistent. We have not lost eight games in two seasons. We can't defend that."
+    
+    Manchester City manager Pep Guardiola in despair during the derby defeat to Manchester United
+    
+    Guardiola suggested the serious renewal will wait until the summer but the red flags have been appearing for weeks in the sudden and shocking decline of a team that has lost the aura of invincibility that left many opponents beaten before kick-off in previous years. He has had stated City must "survive" this season - whatever qualifies as survival for a club of such rich ambition - but the quest for a record fifth successive Premier League title is surely over as they lie nine points behind leaders Liverpool having played a game more. Their Champions League aspirations are also in jeopardy after another loss, this time against Juventus in Turin. City's squad has been allowed to grow too old together. The insatiable thirst for success seems to have gone, the scales of superiority have fallen away and opponents now sense vulnerability right until the final whistle, as United did here. The manner in which United were able, and felt able, to snatch this victory drove right to the heart of how City, and Guardiola, are allowing opponents to prey on their downfall. Guardiola has every reason to cite injuries, most significantly to Rodri and also John Stones as well as others, but this cannot be used an excuse for such a dramatic decline in standards, allied to the appearance of a soft underbelly that is so easily exploited. And City's rebuild will not be a quick fix. With every performance, every defeat, the scale of what lies in front of Guardiola becomes more obvious - and daunting. Manchester City's fans did their best to reassure Guardiola of their faith in him with a giant Barcelona-inspired banner draped from the stands before kick-off emblazoned with his image reading "Més que un entrenador" - "More Than A Coach". And Guardiola will now need to be more than a coach than at any time in his career. He will have the finances but it will be done with City's challengers also strengthening. Kevin de Bruyne, 34 in June, lasted 68 minutes here before he was substituted. Age and injuries are catching up with one of the greatest players of the Premier League era and he is unlikely to be at City next season. Mateo Kovacic, who replaced De Bruyne, is also 31 in May. Kyle Walker, 34, is being increasingly exposed. His most notable contribution here was an embarrassing collapse to the ground after the mildest head-to-head collision with Rasmus Hojlund. Ilkay Gundogan, another 34-year-old and a previous pillar of Guardiola's great successes, no longer has the legs or energy to exert influence. This looks increasingly like a season too far following his return from Barcelona. Flaws are also being exposed elsewhere, with previously reliable performers failing to hit previous standards. Phil Foden scored 27 goals and had 12 assists when he was Premier League Player of the Season last term. This year he has just three goals and two assists in 18 appearances in all competitions. He has no goals and just one assist in 11 Premier League games. Jack Grealish, who came on after 77 minutes against United, has not scored in a year for Manchester City, his last goal coming in a 2-2 draw against Crystal Palace on 16 December last year. He has, in the meantime, scored twice for England. Erling Haaland is also struggling as City lack creativity and cutting edge. He has three goals in his past 11 Premier League games after scoring 10 in his first five. And in another indication of City's impotence, and their reliance on Haaland, defender Gvardiol's goal against United was his fourth this season, making him their second highest scorer in all competitions behind the Norwegian striker, who has 18. Goalkeeper Ederson, so reliable for so long, has already been dropped once this season and did not cover himself in glory for United's winner. Guardiola, with that freshly signed two-year contract, insists he "wants it" as he treads on this alien territory of failure. He will be under no illusions about the size of the job in front of him as he placed his head in his hands in anguish after yet another damaging and deeply revealing defeat. City and Guardiola are in new, unforgiving territory.
+    Score: 0.6280660033226013
     --------------------------------------------------------------------------------
     
     Agent Interaction Memory Results:
     --------------------------------------------------------------------------------
-    Context: Analyzing Manchester City's recent performance based on Pep Guardiola's comments, it is clear that the team is operating at a high level. Guardiola's statement, "The team is playing well, we are in a ...
-    Score: 0.6829519271850586
+    Context: Based on Pep Guardiola's comments, Manchester City's recent performance can be described as a complex blend of challenges and optimism. Guardiola's assertion that "the team is playing well" and "we ar...
+    Score: 0.6600019335746765
     --------------------------------------------------------------------------------
-    Context: **Manchester City: A Blueprint of Excellence in Current Form Under Guardiola**
+    Context: **Manchester City: Navigating the Storm with Guardiola's Optimism and Strategic Vision**
     
-    In the ever-dynamic world of Premier League football, Manchester City’s form this season stands as a testament to their ...
-    Score: 0.6269127130508423
+    In the annals of Premier League history, few teams have enjoyed the dominance that Manchester City has under t...
+    Score: 0.6010371446609497
     --------------------------------------------------------------------------------
-    Context: Pep Guardiola praised Manchester City's current form, saying 'The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased.'...
-    Score: 0.5217782855033875
+    Context: 'Self-doubt, errors & big changes' - inside the crisis at Man City
+    
+    Pep Guardiola has not been through a moment like this in his managerial career. Manchester City have lost nine matches in their past...
+    Score: 0.5708299875259399
+    --------------------------------------------------------------------------------
+    Context: 'I am not good enough' - Guardiola faces daunting and major rebuild
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. 'I am not good enough' - Guardiola s...
+    Score: 0.5522488355636597
+    --------------------------------------------------------------------------------
+    Context: Manchester City boss Pep Guardiola has won 18 trophies since he arrived at the club in 2016
+    
+    Manchester City boss Pep Guardiola says he is "fine" despite admitting his sleep and diet are being affecte...
+    Score: 0.5451104044914246
     --------------------------------------------------------------------------------
 

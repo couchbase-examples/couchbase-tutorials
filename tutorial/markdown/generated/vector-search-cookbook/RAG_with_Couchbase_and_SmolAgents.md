@@ -56,7 +56,7 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-%pip install --quiet -U datasets langchain-couchbase langchain-openai python-dotenv smolagents ipywidgets
+%pip install --quiet -U datasets==3.5.0 langchain-couchbase==0.3.0 langchain-openai==0.3.13 python-dotenv==1.1.0 smolagents==1.13.0 ipywidgets==8.1.6
 ```
 
 # Importing Necessary Libraries
@@ -187,6 +187,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
                 num_replicas=0
             )
             cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
             bucket = cluster.bucket(bucket_name)
             logging.info(f"Bucket '{bucket_name}' created successfully.")
 
@@ -606,8 +607,11 @@ more uncomfortable than when the situation is going well, always that happened. 
 Sporting side managed by Ruben Amorim, who will be in the United dugout at the weekend. City dominated the first 
 half in Lisbon, led thanks to Phil Foden's early effort and looked to be cruising. Instead, they conceded three 
 times in <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">11</span> minutes either side of half-time as Sporting eventually ran out <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">4</span>-<span style="color: #008080; text-decoration-color: #008080; font-weight: bold">1</span> winners.
+
 ...
+
 ...
+
 Afterwards Guardiola was calm, so much so it was difficult to hear him in the news conference, a contrast to the 
 frustrated figure he cut on the touchline. He said: <span style="color: #008000; text-decoration-color: #008000">"It depends on us. The solution is bring the players back. We </span>
 <span style="color: #008000; text-decoration-color: #008000">have just one central defender fit, that is difficult. We are going to try next game - another opportunity and we </span>

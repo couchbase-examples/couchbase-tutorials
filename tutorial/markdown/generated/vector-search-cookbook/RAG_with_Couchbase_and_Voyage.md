@@ -60,7 +60,7 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-%pip install --quiet datasets langchain-couchbase langchain-voyageai langchain-openai
+%pip install --quiet datasets==3.5.0 langchain-couchbase==0.3.0 langchain-voyageai==0.1.4 langchain-openai==0.3.13
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -98,6 +98,10 @@ from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import ChatOpenAI
 from langchain_voyageai import VoyageAIEmbeddings
 ```
+
+    /Users/aayush.tyagi/Documents/AI/vector-search-cookbook/.venv/lib/python3.12/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+
 
 # Setup Logging
 Logging is configured to track the progress of the script and capture any errors or warnings. This is crucial for debugging and understanding the flow of execution. The logging output includes timestamps, log levels (e.g., INFO, ERROR), and messages that describe what is happening in the script.
@@ -205,6 +209,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
                 num_replicas=0
             )
             cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
             bucket = cluster.bucket(bucket_name)
             logging.info(f"Bucket '{bucket_name}' created successfully.")
 
@@ -357,8 +362,8 @@ except InternalServerFailureException as e:
     raise
 ```
 
-    2025-02-24 01:02:28,490 - INFO - Index 'vector_search_voyage' found
-    2025-02-24 01:02:29,789 - INFO - Index 'vector_search_voyage' already exists. Skipping creation/update.
+    2025-04-21 13:43:33,489 - INFO - Index 'vector_search_voyage' found
+    2025-04-21 13:43:33,505 - INFO - Index 'vector_search_voyage' already exists. Skipping creation/update.
 
 
 # Create Embeddings

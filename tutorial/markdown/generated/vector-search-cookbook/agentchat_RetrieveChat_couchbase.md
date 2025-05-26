@@ -36,7 +36,7 @@ Some extra dependencies are needed for this notebook, which can be installed via
 
 
 ```python
-!pip install "pyautogen[openai,retrievechat-couchbase]" "flaml[automl]" couchbase==4.3.3
+%pip install "pyautogen[openai,retrievechat-couchbase]==0.8.7" "flaml[automl]==2.3.4" couchbase==4.3.3
 # For more information, please refer to the [installation guide](/docs/installation/).
 ```
 
@@ -201,7 +201,7 @@ sys.path.append(os.path.abspath("/workspaces/autogen/autogen/agentchat/contrib")
 
 from autogen.agentchat.contrib.retrieve_user_proxy_agent import RetrieveUserProxyAgent
 
-# Accepted file formats for that can be stored in
+# Accepted file formats that can be stored in
 # a vector database instance
 from autogen.retrieve_utils import TEXT_FORMATS
 
@@ -418,6 +418,13 @@ docs_file_paths = save_content_to_files(docs_links, "./docs", 12)
 ```python
 len(docs_file_paths), len(docs_links)
 ```
+
+
+
+
+    (454, 454)
+
+
 
 ## Using RetrieveChat
 
