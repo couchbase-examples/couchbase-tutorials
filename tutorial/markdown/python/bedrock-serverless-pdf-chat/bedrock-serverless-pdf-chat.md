@@ -40,8 +40,7 @@ This tutorial will demonstrate how to -
 
 ## Prerequisites
 
-- [Python](https://www.python.org/downloads/) 3.10 or higher installed.
-- Ensure that the Python version is [compatible](https://docs.couchbase.com/python-sdk/current/project-docs/compatibility.html#python-version-compat) with the Couchbase SDK.
+- Ensure [`uv`](https://docs.astral.sh/uv/) installed. `uv` helps us manage Python versions and create a lockfile for all the project's dependencies for ease of use.
 - Couchbase Cluster (Self Managed or Capella) version 7.6.2+ with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html) and [Eventing Service](https://docs.couchbase.com/server/current/eventing/eventing-overview.html)
 
 > Note that this tutorial is designed to work with the latest Python SDK version (4.3.0+) for Couchbase. It will not work with the older Python SDK versions.
@@ -58,10 +57,10 @@ git clone https://github.com/couchbase-examples/rag-aws-bedrock-serverless.git
 
 ### Install Dependencies
 
-Any dependencies should be installed through `pip`, the default package manager for Python. You may use [virtual environment](https://docs.python.org/3/tutorial/venv.html) as well.
+Dependencies for the project are installed via `uv` as mentioned earlier. You can install the dependencies using the following command:
 
 ```shell
-python -m pip install -r requirements.txt
+uv sync
 ```
 
 ### Setup Database Configuration
@@ -199,7 +198,7 @@ CB_COLLECTION=name_of_collection_to_store_documents
 INDEX_NAME=name_of_fts_index_with_vector_support
 ```
 
-> The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
+> The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part. Furthermore, append `?tls_verify=none` to the connection string. In the end, the connection string must look something like this: `couchbases://capella.connection.string.com?tls_verify=none`.
 
 > For this tutorial, `CB_BUCKET = pdf-chat`, `CB_SCOPE = shared`, `CB_COLLECTION = docs` and `INDEX_NAME = pdf_search`.
 
@@ -209,7 +208,7 @@ We need to set up our AWS Environment and run all the necessary services.
 
 #### Deploy Lambdas to ECR
 
-We will need to use Lambdas deployed as docker container in the [AWS Elastic Container Registry Service](https://aws.amazon.com/ecr/). We have two lambdas in the application at directory `src/lambads`. For Each of the lambdas a new ECR Repository needs to be created.
+We will need to use Lambdas deployed as docker container in the [AWS Elastic Container Registry Service](https://aws.amazon.com/ecr/). We have two lambdas in the application at directory `src/lambdas`. For Each of the lambdas a new ECR Repository needs to be created.
 
 Firstly build the docker image for the two of them using `docker build` in the respective folder
 
@@ -217,14 +216,14 @@ Firstly build the docker image for the two of them using `docker build` in the r
 docker build -t <lambda name> .
 ```
 
-Lambda name will be chat and ingest for the respective folders. 
+Lambda name will be `chat` and `ingest` for the respective folders. 
 Then use [this guide from AWS](https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html) to understand how to push an image to ECR.
 
 Once it's pushed, we are ready for the next steps.
 
 #### Enable Bedrock
 
-You may need to allow access to models used in this example via [Amazon Bedrock](https://console.aws.amazon.com/bedrock). Click on get started to open Bedrock console. in the sidebar, there will be option of `Bedrock configurations`. Click on model access inside it. For this tutorial we are using models `Titan Multimodal Embeddings G1` and `Llama 3 70B Instruct`. You can change the lambda named chat if you need any other models. Click on modify model access and select models required. Accept terms and conditions and now the AI Model will be ready to use.
+You may need to allow access to models used in this example via [Amazon Bedrock](https://console.aws.amazon.com/bedrock). Click on get started to open Bedrock console. in the sidebar, there will be option of `Bedrock configurations`. Click on model access inside it. For this tutorial we are using models `Titan Text Embedding v2` and `Llama 3 70B Instruct`. You can change the lambda named chat if you need any other models. Click on modify model access and select models required. Accept terms and conditions and now the AI Model will be ready to use.
 
 #### Setup AWS CLI
 
@@ -247,10 +246,10 @@ You may enter a couple of `y` to approve the deployment. This step will ensure 2
 We will need to update the environment file to include one more variable at the end of `.env` file we created at [Setup Environment Config](#setup-environment-config). The variable name is `CHAT_URL`
 
 ```bash
-CHAT_URL=API_Gateway_Endpoint_of_ChatBedrockStack
+CHAT_URL=API_Gateway_Endpoint_of_CouchbaseChatStack
 ```
 
-This variable must have the API gateway endpoint of the ChatBedrockStack which came as part of cdk deploy. The exact endpoint also includes `/chat` so append it to the back of URL.
+This variable must have the API gateway endpoint of the CouchbaseChatStack which came as part of cdk deploy. The exact endpoint also includes `/chat` so append it to the back of URL.
 
 ### Setup Couchbase Eventing
 
@@ -260,7 +259,7 @@ We will use import function feature of couchbase eventing. Go to eventing tab in
 
 > We are using _default scope and _default collection for storing eventing temp files, you may use some other collection of your choice. 
 
-Now, in the create bindings step, Change the `API_URL` variable to URL of the API gateway endpoint of `IngestBedrockStack`. The URL should be appended with `/send` to indicate exact endpoint of the function. 
+Now, in the create bindings step, Change the `API_URL` variable to URL of the API gateway endpoint of `CouchbaseBedrockStack`. The URL should be appended with `/send` to indicate exact endpoint of the function. 
 
 Once it's updated, click next, and you can see your JS eventing function. You may add any logging or any features you may require here. The default function sends data to API gateway which inside AWS calls SQS and Lambda which will update the file with necessary embeddings.
 
@@ -462,34 +461,30 @@ The first step will be connecting to Couchbase. Couchbase Vector Store is requir
 The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `.env`, and then proceed to connect to the Couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
 
 ```python
-def connect_to_couchbase(connection_string, db_username, db_password):
-    """Connect to Couchbase"""
-    from couchbase.cluster import Cluster
-    from couchbase.auth import PasswordAuthenticator
-    from couchbase.options import ClusterOptions
-    from datetime import timedelta
-
-    auth = PasswordAuthenticator(db_username, db_password)
-    options = ClusterOptions(auth)
-    connect_string = connection_string
-    cluster = Cluster(connect_string, options)
-
-    # Wait until the cluster is ready for use.
-    cluster.wait_until_ready(timedelta(seconds=5))
-
-    return cluster
+def connect_to_couchbase(connection_string, username, password):
+    try:
+        auth = PasswordAuthenticator(username, password)
+        options = ClusterOptions(auth)
+        options.apply_profile("wan_development")
+        cluster = Cluster(connection_string, options)
+        cluster.wait_until_ready(timedelta(seconds=5))
+        logging.info("Cluster is ready")
+        return cluster
+    except Exception as e:
+        logging.error(f'Error while connecting: {str(e)}')
+        raise e
 ```
 
 #### Get bedrock embeddings
 
-This part of code uses AWS SDK to get bedrock. Then initializes the embedding object. For this example we are using `amazon.titan-embed-image-v1` embedding model.
+This part of code uses AWS SDK to get bedrock. Then initializes the embedding object. For this example we are using `amazon.titan-embed-text-v2` embedding model.
 
 ```python
 from langchain_aws.embeddings import BedrockEmbeddings
 
 bedrock = boto3.client('bedrock-runtime')
 cluster = connect_to_couchbase(connection_string, username, password)
-embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image-v1")
+embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-text-v2:0")
 ```
 
 #### Use LangChain to get embeddings and store text
@@ -520,7 +515,7 @@ Similar to the last section, here again we will set up Couchbase Cluster using P
 ```python
 cluster = connect_to_couchbase(connection_string, username, password)
 bedrock = boto3.client('bedrock-runtime')
-embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-image-v1")
+embedding = BedrockEmbeddings(client=bedrock, model_id="amazon.titan-embed-text-v2:0")
 ```
 
 #### Create Vector Store Retriever
