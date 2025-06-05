@@ -156,7 +156,7 @@ Follow these steps to set up and run the application locally on the same machine
 
 * **Clone the Repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/couchbase-examples/edge-server-meal-order-sample-app
    cd edge-server-sko-demo
    ```
 
