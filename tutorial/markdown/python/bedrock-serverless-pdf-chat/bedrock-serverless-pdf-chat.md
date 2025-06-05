@@ -198,7 +198,7 @@ CB_COLLECTION=name_of_collection_to_store_documents
 INDEX_NAME=name_of_fts_index_with_vector_support
 ```
 
-> The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part. Furthermore, append `?tls_verify=none` to the connection string. In the end, the connection string must look something like this: `couchbases://capella.connection.string.com?tls_verify=none`.
+> The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part. In the end, the connection string must look something like this: `couchbases://capella.connection.string.com`.
 
 > For this tutorial, `CB_BUCKET = pdf-chat`, `CB_SCOPE = shared`, `CB_COLLECTION = docs` and `INDEX_NAME = pdf_search`.
 
