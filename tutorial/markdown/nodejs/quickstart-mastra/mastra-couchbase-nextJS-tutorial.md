@@ -11,8 +11,8 @@ description:
 content_type: quickstart
 filter: sdk
 technology:
-  - ai
   - vector-search
+  - react
 tags:
   - Next.js
   - mastra
