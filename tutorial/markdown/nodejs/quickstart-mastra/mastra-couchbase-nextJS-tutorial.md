@@ -15,8 +15,7 @@ technology:
   - vector-search
 tags:
   - Next.js
-  - RAG
-  - Mastra
+  - mastra
 sdk_language: 
   - nodejs
 length: 60 Mins
