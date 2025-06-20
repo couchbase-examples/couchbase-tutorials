@@ -23,7 +23,7 @@ length: 60 Mins
 
 # Building a RAG Application with Mastra and Couchbase: A Step-by-Step Tutorial
 
-This tutorial will guide you through building a complete Retrieval-Augmented Generation (RAG) application from scratch using Next.js, the Mastra AI framework, and Couchbase for vector search. We'll start by getting the pre-built application running and then break down how each part works so you can build it yourself.
+This tutorial will guide you through building a complete Retrieval-Augmented Generation (RAG) application from scratch using [Next.js](https://nextjs.org/), the [Mastra AI framework](https://mastra.ai/), and [Couchbase](https://www.couchbase.com/) for [vector search](https://www.couchbase.com/products/vector-search/). We'll start by getting the pre-built application running and then break down how each part works so you can build it yourself.
 
 ## Part 1: Quick Start
 
@@ -44,7 +44,7 @@ npm install
 Before running, you need to configure your environment.
 
 1.  **Couchbase:**
-    *   Sign up for a free Couchbase Capella account or run a local Couchbase cluster.
+    *   Sign up for a free [Couchbase Capella account](https://docs.couchbase.com/home/cloud.html) or run a [local Couchbase cluster](https://docs.couchbase.com/home/server.html).
     *   Create a Bucket, Scope, and Collection. Note down the names.
     *   Get your database credentials (connection string, username, and password).
 
