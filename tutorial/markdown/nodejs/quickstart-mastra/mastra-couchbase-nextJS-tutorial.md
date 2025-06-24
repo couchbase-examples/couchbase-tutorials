@@ -25,6 +25,19 @@ length: 60 Mins
 
 This tutorial will guide you through building a complete Retrieval-Augmented Generation (RAG) application from scratch using [Next.js](https://nextjs.org/), the [Mastra AI framework](https://mastra.ai/), and [Couchbase](https://www.couchbase.com/) for [vector search](https://www.couchbase.com/products/vector-search/). We'll start by getting the pre-built application running and then break down how each part works so you can build it yourself.
 
+
+## About Mastra
+
+Mastra is an open-source TypeScript agent framework designed to provide the necessary primitives for building AI applications and features. It allows you to create AI agents with memory, execute functions, and chain LLM calls in deterministic workflows. Here are some key features of Mastra:
+
+- **Model Routing:** Utilizes the Vercel AI SDK for model routing, offering a unified interface to interact with various LLM providers like OpenAI, Anthropic, and Google Gemini.
+- **Agent Memory and Tool Calling:** Agents can be equipped with tools (functions) they can call, and their memory can be persisted and retrieved based on recency, semantic similarity, or conversation thread.
+- **Workflow Graphs:** Provides a graph-based workflow engine for executing LLM calls deterministically, with simple syntax for control flow.
+- **Retrieval-Augmented Generation (RAG):** Offers APIs to process documents into chunks, create embeddings, and store them in a vector database, retrieving relevant chunks at query time to ground LLM responses in your data.
+- **Deployment:** Supports bundling agents and workflows within existing applications or as standalone endpoints, with easy deployment to platforms like Vercel, Cloudflare Workers, or Netlify.
+
+This framework is integral to the tutorial, as it powers the AI orchestration and workflow management, enabling the creation of a robust RAG application with Couchbase and Next.js.
+
 ## Part 1: Quick Start
 
 First, let's get the completed application running to see what we're building.
@@ -328,15 +341,15 @@ This separation of concerns allows the backend to focus on the heavy lifting of 
 
 ---
 
-## Part 6: Customization and Extensions
+## Appendix: Customization and Extensions
 
-### 7.1 Supporting Different Document Types
+### Supporting Different Document Types
 You can extend the `readDocument` function in `ingestPdf/route.ts` to support other file types like `.docx` or `.txt` by using different parsing libraries.
 
-### 7.2 Advanced Mastra Features
+### Advanced Mastra Features
 Explore more of Mastra's capabilities by creating multi-agent workflows, adding more custom tools (e.g., a tool to perform web searches), or implementing more sophisticated memory strategies.
 
-### 7.3 Enhanced Vector Search
+### Enhanced Vector Search
 Improve retrieval by experimenting with hybrid search (combining vector search with traditional keyword search), filtering by metadata, or implementing more advanced chunking and embedding strategies.
 
 ---
