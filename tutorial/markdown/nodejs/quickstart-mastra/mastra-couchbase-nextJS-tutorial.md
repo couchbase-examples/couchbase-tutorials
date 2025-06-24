@@ -149,7 +149,17 @@ export const researchAgent = new Agent({
     }),
 });
 ```
-Here, we define an `Agent` that uses the `gpt-4o-mini` model, has a clear set of instructions for its personality and task, and is equipped with a `vectorQueryTool` to find information. It also uses `LibSQLStore` for memory, allowing it to remember conversation history.
+Here, we define an `Agent` with several key components that work together to create an intelligent research assistant:
+
+- **Model**: Uses OpenAI's `gpt-4o-mini` for generating responses. This is a cost-effective model that provides good performance for question-answering tasks while keeping API costs manageable.
+
+- **Instructions**: Clear personality and task guidelines that shape how the agent behaves. These instructions tell the agent to act as a research assistant, focus only on information from the uploaded documents, and always cite sources when providing answers.
+
+- **Tools**: Equipped with `vectorQueryTool` to search through your uploaded documents. When a user asks a question, the agent automatically uses this tool to find relevant chunks of text from the PDFs you've uploaded, then bases its answer on that retrieved content.
+
+- **Memory**: Uses `LibSQLStore` to remember conversation history across chat sessions. This creates a local SQLite database file (`memory.db`) that persists all chat messages, allowing the agent to reference earlier parts of the conversation and maintain context.
+
+The LibSQL database automatically handles storing and retrieving chat messages in the background. This means users can ask follow-up questions like "Can you elaborate on that?" or "What did you say about X earlier?" and the agent will understand what they're referring to from the conversation history.
 
 ### 2.3 Creating a Mastra Tool for Vector Search
 
@@ -199,7 +209,17 @@ export const vectorQueryTool = createTool({
     },
 });
 ```
-This tool uses the `ai` SDK to create an embedding for the search query and then uses our Couchbase vector store to find the most relevant text chunks.
+This tool leverages the `ai` SDK to generate embeddings for user search queries and then utilizes our Couchbase vector store to perform semantic search and retrieve the most relevant text chunks. The process involves:
+
+1. **Query Embedding**: The tool takes the user's natural language query and converts it into a high-dimensional vector representation using the same embedding model that was used to process the original documents.
+
+2. **Vector Search**: The embedded query is then used to search the Couchbase vector database, which compares the query vector against all stored document embeddings using similarity metrics (cosine similarity, euclidean distance, or dot product).
+
+3. **Result Ranking**: Couchbase returns the most similar document chunks ranked by their similarity scores, allowing the tool to identify the most relevant information for the user's query.
+
+4. **Score Filtering**: The tool applies a minimum similarity threshold (defaulting to 0.1) to ensure only sufficiently relevant results are returned, filtering out low-quality matches.
+
+This vector search capability is what enables the RAG system to ground AI responses in specific, relevant information from the uploaded documents rather than relying solely on the model's pre-trained knowledge.
 
 ---
 
@@ -347,7 +367,7 @@ This separation of concerns allows the backend to focus on the heavy lifting of 
 You can extend the `readDocument` function in `ingestPdf/route.ts` to support other file types like `.docx` or `.txt` by using different parsing libraries.
 
 ### Advanced Mastra Features
-Explore more of Mastra's capabilities by creating multi-agent workflows, adding more custom tools (e.g., a tool to perform web searches), or implementing more sophisticated memory strategies.
+Explore more of Mastra's capabilities by creating [multi-agent workflows](https://mastra.ai/en/docs/workflows/using-with-agents-and-tools), adding more [custom tools](https://mastra.ai/en/docs/tools-mcp/overview) (e.g., a tool to perform web searches), or implementing more sophisticated [memory strategies](https://mastra.ai/en/docs/memory/overview).
 
 ### Enhanced Vector Search
 Improve retrieval by experimenting with hybrid search (combining vector search with traditional keyword search), filtering by metadata, or implementing more advanced chunking and embedding strategies.
