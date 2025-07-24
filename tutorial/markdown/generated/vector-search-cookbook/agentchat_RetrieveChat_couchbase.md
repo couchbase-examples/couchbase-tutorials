@@ -36,7 +36,7 @@ Some extra dependencies are needed for this notebook, which can be installed via
 
 
 ```python
-%pip install "pyautogen[openai,retrievechat-couchbase]==0.8.7" "flaml[automl]==2.3.4" couchbase==4.3.3
+%pip install "ag2[openai,retrievechat-couchbase]==0.8.7" "flaml[automl]==2.3.4" couchbase==4.3.3
 # For more information, please refer to the [installation guide](/docs/installation/).
 ```
 
