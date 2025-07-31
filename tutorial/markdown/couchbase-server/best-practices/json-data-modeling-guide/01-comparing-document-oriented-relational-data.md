@@ -8,7 +8,7 @@ description:
   - Learn the different characteristics of each and explore the flexibility of Couchbase
   - See an example dataset get mapped from relational to document-based
 content_type: tutorial
-filter: n1ql
+filter: sql++
 technology:
   - kv
   - capella

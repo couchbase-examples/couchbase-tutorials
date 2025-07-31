@@ -8,7 +8,7 @@ description:
   - Compare embedded documents to referenced documents and learn when to use each method
   - See best practices for building your data model
 content_type: tutorial
-filter: n1ql
+filter: sql++
 technology:
   - kv
   - capella
@@ -189,7 +189,6 @@ Referring to canonical instances of documents is a good default when modeling wi
 - You want to ensure your cache is used efficiently.
 - The embedded version would be unwieldy.
 
-
 That last point is particularly important where your documents have an unbound potential for growth.
 
 Imagine we were storing activity logs related to each user of our system. Embedding those logs in the user profile could lead to a rather large document.
@@ -211,17 +210,18 @@ It's unlikely we'd breach Couchbase's 20 MB upper limit for an individual docume
 
 The physical data model takes the logical data model and maps the entities and relationships to physical containers.
 
-In Couchbase Server, items are used to store associated values that can be accessed with a unique key. Couchbase Server also provides buckets to group items. Based on the access patterns, performance requirements, and atomicity and consistency requirements, you can choose the type of container(s) to use to represent your logical data model.
+In Couchbase, items are used to store associated values that can be accessed with a unique key. Couchbase also provides buckets to group items. Based on the access patterns, performance requirements, and atomicity and consistency requirements, you can choose the type of container(s) to use to represent your logical data model.
 
-The data representation and containment in Couchbase Server is drastically different from relational databases. The following table provides a high level comparison to help you get familiar with Couchbase Server containers.
+The data representation and containment in Couchbase is drastically different from relational databases. The following table provides a high level comparison to help you get familiar with Couchbase containers.
 
-**Data representation and containment in Couchbase Server versus relational databases:**
+**Data representation and containment in Couchbase versus relational databases:**
 
-| Couchbase Server  | Relational databases  |
+| Couchbase  | Relational databases  |
 |:------------------------------------  |:--------------------- |
-| Buckets | Databases |        
-| Buckets or Items (with type designator attribute)  | Tables |
-| Items (key-value or document) | Rows |
+| Buckets | Databases |
+| Scopes | Schema/namespace |
+| Collections | Tables |
+| Documents/Items | Rows |
 | Index | Index |
 
 ### Items
@@ -230,8 +230,8 @@ Items consist of a key and a value. A key is a unique identifier within the buck
 
 - **Keys**: Each value (binary or JSON) is identified by a unique key. The key is typically a surrogate key generated using a counter or a UUID generator. Keys are immutable. Thus, if you use composite or compound keys, ensure that you use attributes that don't change over time.
 - **Values**
-  - **Binary values**: Binary values can be used for high performance access to compact data through keys. Encrypted secrets, IoT instrument measurements, session states, or other non-human-readable data are typical cases for binary data. _Binary_ data may not necessarily be binary, but could be non-JSON formatted text like XML, String, etc. However, using binary values limits the functionality your application can take advantage of, ruling out indexing and querying in Couchbase Server as binary values have a proprietary representation.
-  - **JSON values**: JSON provides rich representation for entities. Couchbase Server can parse, index and query JSON values. JSON provide a name and a value for each attribute. You can find the JSON definition at [RFC 7159](https://tools.ietf.org/html/rfc7159) or at [ECMA 404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+  - **Binary values**: Binary values can be used for high performance access to compact data through keys. Encrypted secrets, IoT instrument measurements, session states, or other non-human-readable data are typical cases for binary data. _Binary_ data may not necessarily be binary, but could be non-JSON formatted text like XML, String, etc. However, using binary values limits the functionality your application can take advantage of, ruling out indexing and querying in Couchbase as binary values have a proprietary representation.
+  - **JSON values**: JSON provides rich representation for entities. Couchbase can parse, index and query JSON values. JSON provide a name and a value for each attribute. You can find the JSON definition at [RFC 7159](https://tools.ietf.org/html/rfc7159) or at [ECMA 404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). These type of items are typically called "documents"
 
 The JSON document attributes can represent both basic types such as number, string, Boolean, and complex types including embedded documents and arrays. In the examples below, a1 and a2 represent attributes that have a numeric and string value respectively, a3 represents an embedded document, and a4 represents an array of embedded documents.
 

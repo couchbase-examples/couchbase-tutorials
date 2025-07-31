@@ -8,7 +8,7 @@ description:
   - Explore important design considerations to keep in mind when designing JSON documents
   - See how you can use Couchbase's built-in Compare and Swap (CAS) functionality to maintain data consistency
 content_type: tutorial
-filter: n1ql
+filter: sql++
 technology:
   - kv
   - capella
@@ -34,17 +34,15 @@ While you can choose any structure for your documents, the JSON model in particu
 
 There are several considerations to have in mind when you design your JSON document:
 
-- Whether you want to use a type field at the highest level of your JSON document in order to group and filter object types.
 - What particular keys, ids, prefixes or conventions you want to use for items, for instance **beer\_My\_Brew**.
 - When you want a document to expire, if at all, and what expiration would be best.
 - If want to use a document to access other documents. In other words, you can store keys that refer other documents in a JSON document and get the keys through this document. In the NoSQL database jargon, this is often known as using _composite keys_.
 
-You can use a _type_ field to group together sets of records. For example, the following JSON document contains a _type_ field with the value _beer_ to indicate that the document represents a beer. A document that represents another kind of beverage would use a different value in the type field, such as _ale_ or _cider_.
+You can group together sets of records into collections. For example, the following JSON document could be in the "beers" collection. A document that represents another kind of entity would be in a different collection, such as _brewery_ or _user_.
 
 ```json
 {
   "beer_id": "beer_Hoptimus_Prime",
-  "type": "beer",
   "abv": 10,
   "category": "North American Ale",
   "name": "Hoptimus Prime",
@@ -52,24 +50,22 @@ You can use a _type_ field to group together sets of records. For example, the f
 }
 ```
 
-Here is another _type_ of document in our application which we use to represent breweries. As in the case of beers, we have a type field we can use now or later to group and categorize our beer producers:
+Here is another document in the _breweries_ collection:
 
 ```json
 {
   "brewery_id": "brewery_Legacy_Brewing_Co",
-  "type": "brewery",
   "name": "Legacy Brewing Co.",
   "address": "525 Canal Street, Reading, Pennsylvania, 19601 United States",
   "updated": "2010-07-22 20:00:20"
 }
 ```
 
-What happens if we want to change the fields we store for a brewery? In this case we just add the fields to brewery documents. In this case we decide later that we want to include GPS location of the brewery:
+What happens if we want to change the fields we store for a brewery? Add the fields to brewery documents. In this case we decide later that we want to include GPS location of the brewery:
 
 ```json
 {
   "brewery_id": "brewery_Legacy_Brewing_Co",
-  "type": "brewery",
   "name": "Legacy Brewing Co.",
   "address": "525 Canal Street, Reading, Pennsylvania, 19601 United States",
   "updated": "2010-07-22 20:00:20",
@@ -78,7 +74,7 @@ What happens if we want to change the fields we store for a brewery? In this cas
 }
 ```
 
-So in the case of document-based data, we extend the record by just adding the two new fields for _latitude_ and _longitude_. When we add other breweries after this one, we would include these two new fields. For older breweries we can update them with the new fields or provide programming logic that shows a default for older breweries. The best approach for adding new fields to a document is to perform a compare and swap operation on the document to change it; with this type of operation, Couchbase Server will send you a message that the data has already changed if someone has already changed the record. For more information about compare and swap methods with Couchbase, see [Compare and Swap (CAS)](https://developer.couchbase.com/documentation/server/3.x/developer/dev-guide-3.0/update-info.html#concept29631__cas).
+In the case of document-based data, we extend the record by just adding the two new fields for _latitude_ and _longitude_. When we add other breweries after this one, we would include these two new fields. For older breweries we can update them with the new fields or provide programming logic that shows a default for older breweries. The best approach for adding new fields to a document is to perform a compare and swap operation on the document to change it; with this type of operation, Couchbase will send you a message that the data has already changed if someone has already changed the record. For more information about compare and swap methods with Couchbase, see [Compare and Swap (CAS)](https://docs.couchbase.com/java-sdk/current/howtos/concurrent-document-mutations.html).
 
 To create relationships between items, we again use fields. In this example we create a logical connection between beers and breweries using the _brewery_ field in our beer document which relates to the _ID_ field in the brewery document. This is analogous to the idea of using a foreign key in traditional relational database design.
 
@@ -87,7 +83,6 @@ This first document represents a beer, Hoptimus Prime:
 ```json
 {
   "beer_id": "beer_Hoptimus_Prime",
-  "type": "beer",
   "abv": 10,
   "brewery": "brewery_Legacy_Brewing_Co",
   "category": "North American Ale",
@@ -101,7 +96,6 @@ This second document represents the brewery which brews Hoptimus Prime:
 ```json
 {
   "brewery_id": "brewery_Legacy_Brewing_Co",
-  "type": "brewery",
   "name": "Legacy Brewing Co.",
   "address": "525 Canal Street Reading, Pennsylvania, 19601 United States",
   "updated": "2010-07-22 20:00:20",
