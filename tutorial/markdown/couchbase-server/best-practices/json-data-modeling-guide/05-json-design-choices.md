@@ -166,7 +166,7 @@ Array values may be _simple_ or _object_.
 
 - Another approach is to nest a summary (copy some of the attributes from other documents) to avoid a lookup/join
   - There are lot of advantages in this approach over the first one. In this choice, only _one_ get is required to retrieve all the information that we need regarding the playlist.
-  - However, is this copied data is changed often, it might not be worth duplicating data
+  - However, if this copied data is changed often, it might not be worth duplicating data
 
 ```json
 {
