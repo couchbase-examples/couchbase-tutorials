@@ -33,7 +33,7 @@ For more information about creating valid JSON documents, please refer to [http:
 
 When you use JSON documents to represent your application data, you should think about the document as a logical container for information. In Couchbase, JSON documents are organized into collections within scopes, which are similar in concept to tables and schemas in relational databases. Collections help isolate types of documents (e.g., `beers`, `breweries`, `users`) within a bucket, improving data organization, access control, and query performance. You should plan your document modeling with collections in mind.
 
- This involves thinking about how data from your application fits into natural groups. It also requires thinking about the information you want to manage in your application. Data modeling for Couchbase is a similar process that you would do for traditional relational databases; there is however much more flexibility and you can change your mind later on your data structures. During your data/document design phase, you should evaluate:
+This involves thinking about how data from your application fits into natural groups. It also requires thinking about the information you want to manage in your application. Data modeling for Couchbase is a similar process that you would do for traditional relational databases; there is however much more flexibility and you can change your mind later on your data structures. During your data/document design phase, you should evaluate:
 
 - What are the _**things**_ you want to manage in your applications, for instance, _users_, _breweries_, _beers_ and so forth.
 - What do you want to store about the _**things**_. For example, this could be _alcohol percentage_, _aroma_, _location_, etc.
