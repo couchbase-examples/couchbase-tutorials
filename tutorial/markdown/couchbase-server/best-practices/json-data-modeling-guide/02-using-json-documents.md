@@ -7,7 +7,7 @@ description:
   - A brief introduction to the JSON data format that illustrates the readability and ease of use
   - Learn about the basic data types supported in JSON and view a few example documents
 content_type: tutorial
-filter: n1ql
+filter: sql++
 technology:
   - kv
   - capella
@@ -31,7 +31,9 @@ The following are basic data types supported in JSON:
 
 For more information about creating valid JSON documents, please refer to [http://www.json.org](http://www.json.org).
 
-When you use JSON documents to represent your application data, you should think about the document as a logical container for information. This involves thinking about how data from your application fits into natural groups. It also requires thinking about the information you want to manage in your application. Doing data modeling for Couchbase Server is a similar process that you would do for traditional relational databases; there is however much more flexibility and you can change your mind later on your data structures. As a best practice, during your data/document design phase, you want to evaluate:
+When you use JSON documents to represent your application data, you should think about the document as a logical container for information. In Couchbase, JSON documents are organized into collections within scopes, which are similar in concept to tables and schemas in relational databases. Collections help isolate types of documents (e.g., `beers`, `breweries`, `users`) within a bucket, improving data organization, access control, and query performance. You should plan your document modeling with collections in mind.
+
+This involves thinking about how data from your application fits into natural groups. It also requires thinking about the information you want to manage in your application. Data modeling for Couchbase is a similar process that you would do for traditional relational databases; there is however much more flexibility and you can change your mind later on your data structures. During your data/document design phase, you should evaluate:
 
 - What are the _**things**_ you want to manage in your applications, for instance, _users_, _breweries_, _beers_ and so forth.
 - What do you want to store about the _**things**_. For example, this could be _alcohol percentage_, _aroma_, _location_, etc.
@@ -48,7 +50,7 @@ For instance, if you are creating a beer application, you might want a particula
 }
 ```
 
-For each of the keys in this JSON document you would provide unique values to represent individual beers. If you want to provide more detailed information in your beer application about the actual breweries, you could create a JSON structure to represent a brewery:
+For each of the keys in this JSON document, you would provide unique values to represent individual beers. If you want to provide more detailed information in your beer application about the breweries, you could create a JSON structure to represent a brewery:
 
 ```json
 {
@@ -61,7 +63,9 @@ For each of the keys in this JSON document you would provide unique values to re
 }
 ```
 
-Performing data modeling for a document-based application is no different than the work you would need to do for a relational database. For the most part it can be much more flexible, it can provide a more realistic representation or your application data, and it also enables you to change your mind later about data structure. For more complex items in your application, one option is to use nested pairs to represent the information:
+Performing data modeling for a document-based application is no different than the work you would need to do for a relational database. However, it can be much more flexible, it can provide a more realistic representation or your application data, and it also enables you to more easily change your mind later about data structure.
+
+For more complex items in your application, one option is to use nested objects to represent the information:
 
 ```json
 {
@@ -85,6 +89,6 @@ Performing data modeling for a document-based application is no different than t
 }
 ```
 
-In this case we added a nested attribute for the geolocation of the brewery and for beers. Within the location, we provide an exact longitude and latitude, as well as level of accuracy for plotting it on a map. The level of nesting you provide is your decision; as long as a document is under the maximum storage size for Couchbase Server, you can provide any level of nesting that you can handle in your application.
+In this case we added a nested attribute for the geolocation of the brewery and a nested attribute of its beers. The level of nesting you provide is your decision; as long as a document is under the maximum storage size (20MB per document), you can provide any level of nesting that you can handle in your application.
 
 In traditional relational database modeling, you would create tables that contain a subset of information for an item. For instance a _brewery_ may contain types of beers which are stored in a separate table and referenced by the _beer ID_. In the case of JSON documents, you use key-values pairs, or even nested key-value pairs.
