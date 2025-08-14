@@ -33,7 +33,7 @@ length: 30 Mins
 
 To run this prebuilt project, you will need:
 
-- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
+- [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/php-sdk/current/ref/travel-app-data-model.html) bucket loaded.
     - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
 - PHP installed
 - Code Editor installed (Visual Studio Code, PhpStorm, or Sublime Text)
@@ -48,6 +48,7 @@ git clone https://github.com/couchbase-examples/php-laravel-quickstart.git
 ### Install Dependencies
 
 ```shell
+cd php-laravel-quickstart
 composer install
 ```
 
@@ -100,6 +101,12 @@ php artisan serve
 
 > Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `config/couchbase.php` file.
 
+> Tip: If Swagger UI loads without endpoints, generate the docs:
+> 
+> ```sh
+> php artisan l5-swagger:generate
+> ```
+
 ### Docker
 
 Build the Docker image
@@ -111,20 +118,25 @@ docker build -t php-laravel-quickstart .
 Run the Docker image
 
 ```sh
-docker run -d --name laravel-container -p 8000:8000 php-laravel-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
+docker run -d --name laravel-container -p 8000:8000 \
+  -e DB_CONN_STR=<connection_string> \
+  -e DB_USERNAME=<username> \
+  -e DB_PASSWORD=<password> \
+  -e DB_BUCKET=travel-sample \
+  php-laravel-quickstart
 ```
 
 Note: The `config/couchbase.php` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
 If you choose not to pass the environment variables, you can update the `config/couchbase.php` file in the root directory.
 
-Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000).
+Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000). Swagger UI is available at [http://localhost:8000/api/documentation](http://localhost:8000/api/documentation).
 
 ### Verifying the Application
 
 Once the application starts, you can see the details of the application on the logs.
 ![Application Startup](./php-quickstart-app-startup.png)
 
-The application will run on port 8000 of your local machine (http://localhost:8000). You will find the Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API endpoints and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+The application will run on port 8000 of your local machine (http://localhost:8000). Open Swagger UI at [http://localhost:8000/api/documentation](http://localhost:8000/api/documentation) to try the API endpoints. Swagger documentation is used in this demo to showcase the different API endpoints and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
 ![Swagger Documentation](./php-quickstart-swagger.png)
 
@@ -400,14 +412,14 @@ If you are running this quickstart with a self-managed Couchbase cluster, you ne
 You need to update the connection string and the credentials in the `config/couchbase.php` file:
 
 ```env
-DB_CONN_STR_=couchbase://<your-couchbase-server>
+DB_CONN_STR=couchbase://<your-couchbase-server>
 DB_USERNAME=<your-username>
 DB_PASSWORD=<your-password>
 DB_BUCKET=travel-sample
 ```
 
 Replace `<your-couchbase-server>`, `<your-username>`, and `<your-password>` with your actual Couchbase server details and credentials.
-> **NOTE:** Couchbase must be installed and running prior to running the Spring Boot app.
+> **NOTE:** Couchbase must be installed and running prior to running the Laravel app.
 
 ### Swagger Documentation
 
