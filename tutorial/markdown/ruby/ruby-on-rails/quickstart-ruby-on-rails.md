@@ -104,9 +104,9 @@ DB_PASSWORD=<password_for_user>
 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
-The application will run on port 8080 of your local machine (http://localhost:8080). You will find the Swagger documentation of the API which you can use to try the API endpoints.
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the Swagger UI to try the API endpoints.
 
-The Swagger Page will be available at [http://localhost:8080/api-docs](http://localhost:8080/api-docs).
+The Swagger Page will be available at http://localhost:3000/api-docs.
 
 ```shell
 rails s
@@ -119,7 +119,6 @@ If you prefer to run this quick start using Docker, we have provided the Dockerf
 - Build the Docker image
 
 ```sh
-cd src
 docker build -t ruby-on-rails-quickstart .
 ```
 
@@ -131,7 +130,7 @@ docker run --env-file dev.env -p 3000:3000 ruby-on-rails-quickstart
 
 > Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
 
-Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
+Once the app is up and running, open http://localhost:3000/api-docs to test the APIs.
 
 ### Verifying the Application
 
@@ -139,7 +138,7 @@ Once the application starts, you can see the details of the application on the l
 
 ![Application Startup](app_startup.png)
 
-The application will run on port 8080 of your local machine (http://localhost:8080). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
 ![Swagger Documentation](swagger_documentation.png)
 
