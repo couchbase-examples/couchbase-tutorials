@@ -60,7 +60,7 @@ git clone https://github.com/couchbase-examples/ruby-couchbase-orm-quickstart.gi
 The dependencies for the application are specified in the `Gemfile` file in the source folder. Dependencies can be installed through `bundler` the default package manager for Ruby.
 
 ```shell
-cd ruby-on-rails-quickstart
+cd ruby-couchbase-orm-quickstart
 gem install bundler
 bundle install
 ```
@@ -73,6 +73,7 @@ gem install rspec
 gem install rubocop
 gem install rswag
 gem install couchbase
+gem install couchbase-orm
 ```
 
 > Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info. -->
@@ -108,14 +109,14 @@ To use Couchbase ORM in your Ruby application, you need to configure the connect
 
    Replace the values for `connection_string`, `bucket`, `username`, and `password` with your actual Couchbase Server connection details.
 
-   Couchbase ORM will automatically load the configuration based on the current Rails environment.
+   CouchbaseOrm will automatically load the configuration based on the current Rails environment.
 
 2. **Non-Rails Applications**:
 
    For non-Rails applications, you can configure the connection settings programmatically. Add the following code to your application's initialization file or before you start using Couchbase ORM:
 
    ```ruby
-   Couchbase ORM.configure do |config|
+   CouchbaseOrm.configure do |config|
      config.connection_string = 'couchbase://localhost'
      config.bucket = 'my_app'
      config.username = 'my_username'
@@ -131,9 +132,9 @@ To use Couchbase ORM in your Ruby application, you need to configure the connect
 
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
-The application will run on port 8080 of your local machine (http://localhost:8080). You will find the Swagger documentation of the API which you can use to try the API endpoints.
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the Swagger documentation of the API which you can use to try the API endpoints.
 
-The Swagger Page will be available at [http://localhost:8080/api-docs](http://localhost:8080/api-docs).
+The Swagger Page will be available at http://localhost:3000/api-docs.
 
 ```shell
 rails s
@@ -146,7 +147,6 @@ If you prefer to run this quick start using Docker, we have provided the Dockerf
 - Build the Docker image
 
 ```sh
-cd src
 docker build -t ruby-couchbase-orm-quickstart .
 ```
 
@@ -156,9 +156,9 @@ docker build -t ruby-couchbase-orm-quickstart .
 docker run --env-file dev.env -p 3000:3000 ruby-couchbase-orm-quickstart
 ```
 
-> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
+> Note: This app reads Couchbase connection settings from `config/couchbase.yml`. Ensure this file is included in the image (COPY) or mount it into the container at runtime.
 
-Once the app is up and running, you can launch your browser and go to the [Swagger documentation](https://localhost:8080/) to test the APIs.
+Once the app is up and running, open http://localhost:3000/api-docs to test the APIs.
 
 ### Verifying the Application
 
@@ -166,7 +166,7 @@ Once the application starts, you can see the details of the application on the l
 
 ![Application Startup](app_startup.png)
 
-The application will run on port 8080 of your local machine (http://localhost:8080). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
+The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
 ![Swagger Documentation](swagger_documentation.png)
 
