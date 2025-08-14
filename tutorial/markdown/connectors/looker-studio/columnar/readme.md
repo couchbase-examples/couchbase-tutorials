@@ -2,11 +2,11 @@
 # frontmatter
 path: "/tutorial-looker-studio-columnar"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Looker Studio with Couchbase Columnar (Views-only)
-short_title: Columnar (Views-only)
+title: Looker Studio with Couchbase Columnar (Views-only with Tabular Analytics Views)
+short_title: Columnar (Views-only TAVs)
 description:
-  - Connect Google Looker Studio to Couchbase Columnar using views only
-  - Create views in Capella and use them as stable, optimized datasets
+  - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs) only
+  - Create Tabular Analytics Views in Capella and use them as stable, optimized datasets
   - Learn authentication, configuration, schema inference, and troubleshooting
 content_type: tutorial
 filter: connectors
@@ -27,14 +27,14 @@ length: 20 Mins
 
 ## Overview
 
-This is a views-only connector for Google Looker Studio and Couchbase Columnar. It exclusively accesses data through views in Couchbase Capella. Create one or more views first, then connect Looker Studio to those views for analysis.
+This is a views-only connector for Google Looker Studio and Couchbase Columnar. It exclusively reads from Couchbase Tabular Analytics Views (TAVs) in Capella. Create one or more TAVs first, then connect Looker Studio to those views for analysis.
 
 The connector authenticates with Basic Auth to the Columnar API (`/api/v1/request`) and infers schema automatically using `array_infer_schema` so Looker Studio fields are created with reasonable types.
 
 ## Prerequisites
 
 - A Couchbase Columnar deployment reachable from Looker Studio.
-- A database user with permissions to read from the target Views and execute queries.
+- A database user with permissions to read from the target Tabular Analytics Views (TAVs) and execute queries.
 - Network access from Looker Studio to your Columnar host.
 
 ## Authentication
@@ -48,22 +48,24 @@ When adding the data source, provide:
 
 The connector validates credentials by running a lightweight test query (`SELECT 1 AS test;`).
 
-## Create Views in Capella (Required)
+## Create Tabular Analytics Views (TAVs) in Capella (Required)
 
-Before connecting, create views in Capella Columnar Workbench:
+Before connecting, create Tabular Analytics Views in Capella:
 
-1. Open Capella, navigate to the Columnar tab, and launch the Workbench for your cluster.
-2. Create a view using SQL++:
+1. Open your Capella cluster, go to the Analytics tab, and launch the Analytics Workbench.
+2. Prepare a SQL++ query that returns a flat, tabular result (flatten nested objects where needed). For example:
 
 ```sql
-CREATE VIEW my_airports AS
-SELECT airportname, city, country
+SELECT airportname AS airportname,
+       city AS city,
+       country AS country
 FROM `travel-sample`.`inventory`.`airport`
 WHERE country = 'United States';
 ```
 
-- Replace names as needed. Views are stable datasets optimized for BI.
-- For more, see the Couchbase docs on [Views and Tabular Views](https://docs.couchbase.com/columnar/sqlpp/5a_views.html) and on [Buckets, Scopes, and Collections](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html).
+3. Run the query, then click Save as View → Annotate for Tabular View. Define the schema (column names, data types, and primary keys) and save with a descriptive name.
+
+- For details, see [Tabular Analytics Views](https://docs.couchbase.com/columnar/query/views-tavs.html) and [Buckets, Scopes, and Collections](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html).
 
 ## Configuration
 
@@ -71,7 +73,7 @@ Choose your mode in the configuration screen:
 
 - Configuration Mode: `By View` (views-only connector).
 
-### Mode: By View
+### Mode: By View (TAV)
 
 - Couchbase Database, Scope, View: Selected from dropdowns populated from metadata.
 - Maximum Rows: Optional limit for returned rows; leave blank for no limit.
@@ -81,7 +83,7 @@ What runs:
 - Data: `SELECT <requested fields or *> FROM \`database\`.\`scope\`.\`view\` [LIMIT n]`
 - Schema: `SELECT array_infer_schema((SELECT VALUE t FROM \`database\`.\`scope\`.\`view\` [LIMIT n])) AS inferred_schema;`
 
-> Note: This connector does not query collections directly and does not accept custom queries. It reads through views only.
+> Note: This connector does not query collections directly and does not accept custom queries. It reads through Tabular Analytics Views (TAVs) only.
 
 ## Schema and Field Types
 
@@ -99,7 +101,7 @@ What runs:
 
 ## Tips and Best Practices
 
-- Prefer views for BI tooling; they offer a stable, optimized interface.
+- Prefer Tabular Analytics Views for BI tooling; they offer a stable, optimized interface.
 - Keep datasets scoped and use `LIMIT` while exploring.
 
 ## Troubleshooting
@@ -110,11 +112,11 @@ What runs:
 
 ## Future Scope (Prototype)
 
-- Collections and custom query support are in prototype and not available in this views-only connector. As support expands, you’ll be able to query collections directly from Looker Studio in addition to views.
+- Collections and custom query support are in prototype and not available in this views-only connector. As support expands, you’ll be able to query collections directly from Looker Studio in addition to TAVs.
 
 ## Next Steps
 
-- Build charts in Looker Studio using your View-backed fields.
+- Build charts in Looker Studio using your TAV-backed fields.
 - Iterate on Views/queries to shape the dataset for analytics.
 
 
