@@ -19,7 +19,7 @@ tags:
   - Connector
   - Views-only
 sdk_language:
-  - javascript
+  - nodejs
 length: 20 Mins
 ---
 
@@ -34,7 +34,7 @@ The connector authenticates with Basic Auth to the Columnar API (`/api/v1/reques
 ## Prerequisites
 
 - A Couchbase Columnar deployment reachable from Looker Studio.
-- A database user with permissions to read from the target Views/Collections and execute queries.
+- A database user with permissions to read from the target Views and execute queries.
 - Network access from Looker Studio to your Columnar host.
 
 ## Authentication
@@ -114,7 +114,7 @@ What runs:
 
 ## Next Steps
 
-- Build charts in Looker Studio using your View- or Collection-backed fields.
+- Build charts in Looker Studio using your View-backed fields.
 - Iterate on Views/queries to shape the dataset for analytics.
 
 

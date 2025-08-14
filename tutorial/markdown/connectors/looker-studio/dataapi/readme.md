@@ -19,7 +19,7 @@ tags:
   - Data API
   - Connector
 sdk_language:
-  - javascript
+  - nodejs
 length: 20 Mins
 ---
 
@@ -64,16 +64,16 @@ After authentication, choose a configuration mode:
 
 What runs:
 
-- Data: `SELECT RAW \`collection\` FROM \`bucket\`.\`scope\`.\`collection\` LIMIT <maxRows>`
+- Data: `SELECT RAW collection FROM \`bucket\`.\`scope\`.\`collection\` LIMIT <maxRows>`
 - Schema: `INFER \`bucket\`.\`scope\`.\`collection\` WITH {"sample_size": 100, "num_sample_values": 3, "similarity_metric": 0.6}`
 
 ### Mode: Use Custom Query
 
-- Custom N1QL Query: Paste any valid SQL++ statement. Include a `LIMIT` for performance.
+- Custom SQL++ Query: Paste any valid SQL++ statement. Include a `LIMIT` for performance.
 
 What runs:
 
-- Schema inference first attempts: `INFER (<yourQuery [LIMIT 100 if absent]>) WITH {"sample_size": 10000, "num_sample_values": 2, "similarity_metric": 0.1}`
+- Schema inference first attempts to run `INFER` on your query (a `LIMIT 100` is added if absent): `INFER (<yourQuery>) WITH {"sample_size": 10000, "num_sample_values": 2, "similarity_metric": 0.1}`
 - If that fails, it runs your query with `LIMIT 1` and infers the schema from one sample document.
 
 ## Schema and Field Types
