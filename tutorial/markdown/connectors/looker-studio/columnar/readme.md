@@ -2,7 +2,7 @@
 # frontmatter
 path: "/tutorial-looker-studio-columnar"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Looker Studio with Couchbase Columnar (Views-only with Tabular Analytics Views)
+title: Connect Looker Studio to Couchbase Columnar using Tabular Analytics Views
 short_title: Columnar (Views-only TAVs)
 description:
   - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs) only
@@ -27,13 +27,15 @@ length: 20 Mins
 
 ## Overview
 
-This is a views-only connector for Google Looker Studio and Couchbase Columnar. It exclusively reads from Couchbase Tabular Analytics Views (TAVs) in Capella. Create one or more TAVs first, then connect Looker Studio to those views for analysis.
+Connect Looker Studio to Couchbase Columnar for data analysis and visualization. This connector exclusively uses Tabular Analytics Views (TAVs) as stable, optimized data sources. 
+
+**Workflow**: First, create TAVs in Couchbase Capella from your Columnar data. Then connect Looker Studio to those views for powerful business intelligence and reporting. TAVs provide a stable, schema-defined interface that's optimized for BI tools like Looker Studio.
 
 The connector authenticates with Basic Auth to the Columnar API (`/api/v1/request`) and infers schema automatically using `array_infer_schema` so Looker Studio fields are created with reasonable types.
 
 ## Prerequisites
 
-- A Couchbase Columnar deployment reachable from Looker Studio.
+- A Couchbase Columnar deployment reachable from Looker Studio. For setup information, see [Getting Started with Couchbase Columnar](https://docs.couchbase.com/columnar/current/get-started/index.html).
 - A database user with permissions to read from the target Tabular Analytics Views (TAVs) and execute queries.
 - Network access from Looker Studio to your Columnar host.
 
@@ -41,9 +43,8 @@ The connector authenticates with Basic Auth to the Columnar API (`/api/v1/reques
 
 When adding the data source, provide:
 
-- Path: The Columnar host (optionally with port). Examples:
-  - Capella-style host: `cb.<your-host>.cloud.couchbase.com`
-  - Self-managed: `my.host:18095` (port recommended if not 443)
+- Path: The Columnar host. Example:
+  - Capella host: `cb.<your-host>.cloud.couchbase.com`
 - Username and Password: Database credentials.
 
 The connector validates credentials by running a lightweight test query (`SELECT 1 AS test;`).
@@ -53,7 +54,7 @@ The connector validates credentials by running a lightweight test query (`SELECT
 Before connecting, create Tabular Analytics Views in Capella:
 
 1. Open your Capella cluster, go to the Analytics tab, and launch the Analytics Workbench.
-2. Prepare a SQL++ query that returns a flat, tabular result (flatten nested objects where needed). For example:
+2. Prepare a SQL++ query that returns a tabular result. For simple, flat data structures, basic SELECT statements work well. For nested objects, consider flattening them for better BI tool compatibility. For example:
 
 ```sql
 SELECT airportname AS airportname,
@@ -83,7 +84,39 @@ What runs:
 - Data: `SELECT <requested fields or *> FROM \`database\`.\`scope\`.\`view\` [LIMIT n]`
 - Schema: `SELECT array_infer_schema((SELECT VALUE t FROM \`database\`.\`scope\`.\`view\` [LIMIT n])) AS inferred_schema;`
 
-> Note: This connector does not query collections directly and does not accept custom queries. It reads through Tabular Analytics Views (TAVs) only.
+### Mode: By Custom Query
+
+- Custom Columnar Query: Enter your own SQL++ query directly in a text area.
+- Maximum Rows: Not applicable (control limits within your query using `LIMIT`).
+
+**Use this mode when**:
+- You need more complex queries than simple TAV selection
+- You want to join multiple TAVs or apply advanced filtering
+- You need aggregations or transformations not available in your existing TAVs
+
+**Query requirements**:
+- Must be valid SQL++ syntax for Couchbase Columnar
+- Include `LIMIT` clause for performance (recommended during testing)
+- Use proper escaping for database, scope, and view names with backticks
+
+**Example custom query**:
+```sql
+SELECT airline.name AS airline_name,
+       airline.iata AS iata_code,
+       airline.country AS country,
+       COUNT(*) AS route_count
+FROM `travel-sample`.`inventory`.`airline` AS airline
+JOIN `travel-sample`.`inventory`.`route` AS route 
+  ON airline.iata = route.airline
+WHERE airline.country = "United States"
+GROUP BY airline.name, airline.iata, airline.country
+LIMIT 100;
+```
+
+What runs:
+- Data: Your exact custom query as entered
+- Schema: `SELECT array_infer_schema((your_custom_query)) AS inferred_schema;`
+
 
 ## Schema and Field Types
 
@@ -93,30 +126,32 @@ What runs:
   - string/objects/arrays/null → STRING/TEXT (dimension)
 - Nested fields are flattened using dot and array index notation where possible (for example, `address.city`, `schedule[0].day`). Unstructured values may be stringified.
 
+> **⚠️ Schema Inference Notes**: Field types are inferred from sampled data and may miss variations (e.g., fields containing both text and numbers). Some fields present in unsampled documents may not be detected. If schema inference fails, ensure your TAV contains data and try adding a `LIMIT` clause to sample fewer rows.
+
 ## Data Retrieval
 
-- Only requested fields are projected. For nested fields, the connector fetches the required base fields and extracts values client-side.
+- Only requested fields are projected. For nested fields, the connector fetches the required base fields and extracts values server-side within the Apps Script environment.
 - Row limits:
   - View mode: `Maximum Rows` controls `LIMIT` (blank = no limit).
 
 ## Tips and Best Practices
 
-- Prefer Tabular Analytics Views for BI tooling; they offer a stable, optimized interface.
-- Keep datasets scoped and use `LIMIT` while exploring.
+- **Prefer Tabular Analytics Views for BI tooling**: TAVs provide a stable, optimized interface with predefined schemas, making them ideal for consistent reporting and visualization. They also offer better performance than ad-hoc queries.
+- **Use `LIMIT` while exploring**: Start with smaller datasets (e.g., `LIMIT 1000`) to test connectivity and schema inference quickly. Remove or increase limits once you're satisfied with the data structure.
 
 ## Troubleshooting
 
-- Authentication failure: Check host/port, credentials, and network reachability to Columnar.
-- Schema inference errors: Ensure your entity or query returns rows; consider adding `LIMIT` for faster sampling.
-- API error from Columnar: Review the response message surfaced in Looker Studio and verify entity names, permissions, and syntax.
-
-## Future Scope (Prototype)
-
-- Collections and custom query support are in prototype and not available in this views-only connector. As support expands, you’ll be able to query collections directly from Looker Studio in addition to TAVs.
+- **Authentication failure**: Check host, credentials, and network reachability to Columnar.
+- **Schema inference errors**: Ensure your TAV exists and contains data. Try adding a `LIMIT` clause for faster sampling (e.g., `LIMIT 100`).
+- **API error from Columnar**: Review the response message in Looker Studio and verify TAV names, permissions, and that the view is properly created in Capella.
+- **Empty or missing TAV**: Verify that your Tabular Analytics View was saved correctly in the Analytics Workbench and contains data.
+- **Mixed data types**: If fields appear as STRING when they should be NUMBER, your data may have mixed types. Consider data cleanup in your TAV query.
 
 ## Next Steps
 
 - Build charts in Looker Studio using your TAV-backed fields.
 - Iterate on Views/queries to shape the dataset for analytics.
+
+> **Note**: Screenshots and step-by-step visual guides for creating charts and configuring the connector will be added to this section.
 
 
