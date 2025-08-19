@@ -85,6 +85,13 @@ What runs:
 - Nested fields use dot notation (for example, `address.city`). Arrays and objects not expanded become stringified values.
 - If the collection has no documents or your query returns no rows, schema inference will fail.
 
+> **⚠️ Schema Inference Limitations**: Field types are inferred from sampled data and may not capture all variations in your dataset. Common issues include:
+> - **Mixed data types**: Fields containing both numbers and text will be typed as STRING
+> - **Incomplete sampling**: Fields present only in unsampled documents may not be detected
+> - **Array complexity**: Arrays of objects become stringified JSON rather than individual fields
+> - **Nested object depth**: Very deep object hierarchies may not be fully expanded
+> - **Empty or null values**: Fields with only null values may not be detected or may be typed incorrectly
+
 ## Data Retrieval
 
 - Only the fields requested by Looker Studio are returned. Nested values are extracted using dot paths where possible.
@@ -94,15 +101,54 @@ What runs:
 
 ## Tips and Best Practices
 
-- Prefer `Query by Collection` for quick starts and simpler schemas.
-- Always add a `LIMIT` when exploring with custom queries.
-- Ensure your user has at least query and read access on the target collections.
+- **Prefer `Query by Collection` for quick starts and simpler schemas**: Collection mode provides more predictable schema inference than custom queries.
+- **Always add a `LIMIT` when exploring with custom queries**: Use `LIMIT 100-1000` for initial testing to ensure fast schema inference and data retrieval.
+- **Ensure your user has at least query and read access** on the target collections and system catalogs for metadata discovery.
+- **For consistent schema inference**: Structure your data with consistent field types across documents. Avoid mixing numbers and strings in the same field.
+- **Handle complex nested data**: Consider flattening deeply nested objects in your SQL++ queries for better Looker Studio compatibility.
+- **Test schema inference separately**: Use small LIMIT clauses first to verify schema detection before processing large datasets.
 
 ## Troubleshooting
 
-- Authentication error: Check host/port, credentials, and that the Data API is reachable from Looker Studio.
-- Empty schema or no fields: Ensure the collection has data; for custom queries, verify the statement and add `LIMIT` to improve sampling.
-- Query errors from the service: Review the error text surfaced in Looker Studio; fix syntax, permissions, or keyspace names.
+### Authentication and Connection Issues
+- **Authentication error**: Check host/port, credentials, and that the Data API is reachable from Looker Studio.
+- **Timeout or network errors**: Verify network connectivity and firewall settings between Looker Studio and your Couchbase cluster.
+
+### Schema Inference Problems
+- **Empty schema or no fields detected**: 
+  - Ensure the collection contains documents and is not empty
+  - For custom queries, verify the statement returns results and add appropriate `LIMIT` clauses
+  - Check that your user has permissions to read the collection and execute queries
+  
+- **INFER statement failures**:
+  - The connector first attempts `INFER collection` or `INFER (customQuery)` with sampling options
+  - If INFER fails, it falls back to executing your query with `LIMIT 1` and inferring from a single document
+  - INFER may fail on very large collections or complex queries - the fallback usually resolves this
+  
+- **Fields appear as STRING when they should be NUMBER**:
+  - Your data has mixed types (some documents have numbers, others have strings) in the same field
+  - The connector defaults to STRING for safety when types are inconsistent
+  - Consider data cleanup or use SQL++ functions to cast types consistently
+  
+- **Missing fields that exist in your data**:
+  - Schema inference is sample-based - fields present only in unsampled documents may not be detected
+  - Try increasing the collection size or adjusting your query to ensure representative sampling
+  - For custom queries, ensure your query includes all the fields you want to expose
+  
+- **Nested fields not working correctly**:
+  - Very deep object hierarchies may not be fully expanded by the INFER process
+  - Arrays of objects become stringified JSON instead of individual fields
+  - Consider flattening complex structures in your SQL++ query for better field detection
+  
+- **"No properties in any INFER flavors" error**:
+  - The INFER statement succeeded but found no recognizable field structures
+  - This typically happens with collections containing only primitive values or very inconsistent document structures
+  - Try a custom query that shapes the data into a more consistent structure
+
+### Query and Data Issues  
+- **Query errors from the service**: Review the error text surfaced in Looker Studio; fix syntax, permissions, or keyspace names.
+- **Permission errors during schema inference**: Ensure your user can execute INFER statements and read from system catalogs.
+- **Performance issues**: Add appropriate `LIMIT` clauses and avoid very complex JOINs for better connector performance.
 
 ## Next Steps
 
