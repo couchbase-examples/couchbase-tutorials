@@ -35,7 +35,7 @@ The connector authenticates with Basic Auth to the Columnar API (`/api/v1/reques
 
 ## Prerequisites
 
-- A Couchbase Columnar deployment reachable from Looker Studio. For setup information, see [Getting Started with Couchbase Columnar](https://docs.couchbase.com/columnar/current/get-started/index.html).
+- A Couchbase Columnar deployment reachable from Looker Studio. For setup information, see [Getting Started with Couchbase Columnar](https://www.couchbase.com/products/analytics/).
 - A database user with permissions to read from the target Tabular Analytics Views (TAVs) and execute queries.
 - Network access from Looker Studio to your Columnar host.
 
