@@ -3,9 +3,9 @@
 path: "/tutorial-looker-studio-columnar"
 # title and description do not need to be added to markdown, start with H2 (##)
 title: Connect Looker Studio to Couchbase Columnar using Tabular Analytics Views
-short_title: Columnar (Views-only TAVs)
+short_title: Columnar Looker Studio Connector
 description:
-  - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs) only
+  - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs)
   - Create Tabular Analytics Views in Capella and use them as stable, optimized datasets
   - Learn authentication, configuration, schema inference, and troubleshooting
 content_type: tutorial
