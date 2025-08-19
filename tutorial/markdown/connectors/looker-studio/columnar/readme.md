@@ -49,6 +49,10 @@ When adding the data source, provide:
 
 The connector validates credentials by running a lightweight test query (`SELECT 1 AS test;`).
 
+When you add the Couchbase Columnar connector in Looker Studio, you'll see the authentication screen:
+
+![Authentication Screen](step-0.png "Couchbase Columnar connector authentication screen in Looker Studio")
+
 ## Create Tabular Analytics Views (TAVs) in Capella (Required)
 
 Before connecting, create Tabular Analytics Views in Capella:
@@ -117,6 +121,9 @@ What runs:
 - Data: Your exact custom query as entered
 - Schema: `SELECT array_infer_schema((your_custom_query)) AS inferred_schema;`
 
+After authentication, configure the connector by selecting your database, scope, and view:
+
+![Database Scope View Configuration](step-1.png "Configuring database, scope, and view selection in Looker Studio")
 
 ## Schema and Field Types
 
@@ -127,6 +134,10 @@ What runs:
 - Nested fields are flattened using dot and array index notation where possible (for example, `address.city`, `schedule[0].day`). Unstructured values may be stringified.
 
 > **⚠️ Schema Inference Notes**: Field types are inferred from sampled data and may miss variations (e.g., fields containing both text and numbers). Some fields present in unsampled documents may not be detected. If schema inference fails, ensure your TAV contains data and try adding a `LIMIT` clause to sample fewer rows.
+
+Once your schema is configured, you can customize the fields in your Looker Studio dashboard:
+
+![Field Configuration in Dashboard](step-2.png "Configuring fields in Looker Studio dashboard before creating reports")
 
 ## Data Retrieval
 
@@ -149,9 +160,12 @@ What runs:
 
 ## Next Steps
 
+Once your connector is configured and fields are set up, create reports by dragging and dropping tables from the side pane onto the main canvas:
+
+![Creating Reports in Looker Studio](step-3.png "Creating reports by dragging and dropping tables onto the canvas in Looker Studio")
+
 - Build charts in Looker Studio using your TAV-backed fields.
 - Iterate on Views/queries to shape the dataset for analytics.
-
-> **Note**: Screenshots and step-by-step visual guides for creating charts and configuring the connector will be added to this section.
+- Explore the rich visualization options available in Looker Studio to create compelling dashboards from your Columnar data.
 
 
