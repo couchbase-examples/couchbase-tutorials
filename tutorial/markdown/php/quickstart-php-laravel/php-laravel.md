@@ -35,7 +35,8 @@ To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/php-sdk/current/ref/travel-app-data-model.html) bucket loaded.
     - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
-- PHP installed
+- [PHP](https://www.php.net/downloads.php) 8.2 or higher installed
+  - Ensure that the PHP version is [compatible](https://docs.couchbase.com/php-sdk/current/project-docs/compatibility.html#php-version-compat) with the Couchbase SDK.
 - Code Editor installed (Visual Studio Code, PhpStorm, or Sublime Text)
 - Composer command line
 
@@ -43,6 +44,12 @@ To run this prebuilt project, you will need:
 
 ```shell
 git clone https://github.com/couchbase-examples/php-laravel-quickstart.git
+```
+
+### Change Directory
+
+```shell
+cd php-laravel-quickstart
 ```
 
 ### Install Dependencies
@@ -54,27 +61,39 @@ composer install
 
 > Note: Composer automatically installs the required dependencies when building the project.
 
-### Database Server Configuration
+### Initial Configuration
 
-The `CouchbaseServiceProvider` class is a Laravel service provider class responsible for setting up the connection to a Couchbase database in a Laravel application. It defines the following configurations:
+After installing dependencies, you need to set up the basic Laravel configuration:
 
- - `couchbase.cluster`: This configuration specifies the Couchbase cluster connection using the provided hostname, username, and password.
- - `couchbase.bucket`: This configuration specifies the Couchbase bucket connection using the provided bucket name.
- - `couchbase.airlineCollection`: This configuration specifies the airline collection in the Couchbase bucket.
- - `couchbase.airportCollection`: This configuration specifies the airport collection in the Couchbase bucket.
- - `couchbase.routeCollection`: This configuration specifies the route collection in the Couchbase bucket.
- - `couchbase.hotelCollection`: This configuration specifies the hotel collection in the Couchbase bucket.
+1. Create the environment file:
+
+```sh
+cp .env.example .env
+```
+
+2. Generate application key:
+
+```sh
+php artisan key:generate
+```
+
+### Couchbase Service Provider
+
+The `CouchbaseServiceProvider` class is a Laravel service provider class responsible for setting up the connection to a Couchbase database in a Laravel application.
 
 
 ### Application Environment
-You need to configure the connection details to your Couchbase Server in the `config/couchbase.php` file located in the root directory of the project.
 
-In the `config/couchbase.php` file, update the following variables:
-- `DB_CONN_STR`: Replace with the connection string of your Couchbase cluster.
-- `DB_USERNAME`: Replace with the username of a Couchbase user with access to the bucket.
-- `DB_PASSWORD`: Replace with the password of the Couchbase user.
+All configuration for communication with the database is read from environment variables. As a security best practice, you should set these values in your `.env` file:
 
-Make sure to save the changes after updating the variables in the `config/couchbase.php` file.
+```env
+DB_CONN_STR=<connection_string>
+DB_USERNAME=<username>
+DB_PASSWORD=<password>
+DB_BUCKET=travel-sample
+```
+
+Replace the placeholder values with your actual Couchbase cluster details.
 
 The connection string should be in the following format:
 
@@ -126,8 +145,7 @@ docker run -d --name laravel-container -p 8000:8000 \
   php-laravel-quickstart
 ```
 
-Note: The `config/couchbase.php` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
-If you choose not to pass the environment variables, you can update the `config/couchbase.php` file in the root directory.
+Note: Environment variables passed to the Docker container will override the default values in the configuration.
 
 Once the application is running, you can access it in your browser at [http://localhost:8000](http://localhost:8000). Swagger UI is available at [http://localhost:8000/api/documentation](http://localhost:8000/api/documentation).
 
@@ -162,136 +180,83 @@ Our airline document will have a structure similar to the following example:
 }
 ```
 
-## Let's Review the Code
+## Code Structure
 
-To begin, open the repository in an IDE of your choice to learn about how to create, read, update, and delete documents in your Couchbase Server.
+### Project Structure
 
-### Code Organization
+```
+.
+├── app/
+│   ├── Http/
+│   │   └── Controllers/
+│   │       ├── AirlineController.php
+│   │       ├── AirportController.php
+│   │       ├── RouteController.php
+│   │       └── HotelController.php
+│   ├── Models/
+│   │   ├── Airline.php
+│   │   ├── Airport.php
+│   │   ├── Route.php
+│   │   └── Hotel.php
+│   └── Providers/
+│       └── CouchbaseServiceProvider.php
+├── config/
+│   └── couchbase.php
+├── routes/
+│   └── api.php
+└── tests/
+    └── Feature/
+        ├── AirlineTest.php
+        ├── AirportTest.php
+        ├── RouteTest.php
+        └── HotelTest.php
+```
 
-- `tests/Feature`: Contains integration tests.
-- `app/Http/Controllers`: Contains the controller classes.
-- `app/Models`: Contains the model classes.
+### Key Components
 
-## API Endpoints Documentation
+- **Controllers**: Handle HTTP requests and responses for each entity
+- **Models**: Define data structures and business logic for Couchbase operations
+- **Service Provider**: Configures Couchbase connection and collection references
+- **Tests**: Integration tests for all API endpoints
 
-### 1. Get List of Airlines
+### Airline Entity
 
-**Endpoint:**
+For this tutorial, we will focus on the airline entity to demonstrate CRUD operations and SQL++ queries.
 
-`GET /api/v1/airlines/list`
+We will be setting up a REST API to manage airline documents:
 
-**Description:**
+- [POST Airline](#post-airline) – Create a new airline
+- [GET Airline](#get-airline) – Read specified airline
+- [PUT Airline](#put-airline) – Update specified airline
+- [DELETE Airline](#delete-airline) – Delete airline
+- [List Airlines](#list-airlines) – Get all airlines. Optionally filter the list by country
+- [Airlines to Destination](#airlines-to-destination) – Get airlines flying to a destination airport
 
-This endpoint retrieves a list of airlines from the database. Clients can optionally filter the results by country and paginate through the results using the `offset` and `limit` query parameters. This helps in managing large datasets by breaking them into smaller, manageable chunks.
+For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/php-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other endpoints, we will use [SQL++](https://docs.couchbase.com/php-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
 
-**Steps:**
+### POST Airline
 
-1. The client sends a GET request to the endpoint `/api/v1/airlines/list`.
-2. Optionally, the client includes query parameters:
-   - `offset` specifies the number of items to skip before starting to collect the result set.
-   - `limit` specifies the number of items to return.
-   - `country` filters the results to only include airlines from a specific country.
-3. The server processes the request and queries the database for airlines that match the given criteria.
-4. The server returns a list of airlines. If no airlines match the criteria, an appropriate error message is returned.
+Create a new airline document using the POST endpoint.
 
----
+### GET Airline
 
-### 2. Get Airline by ID
+Retrieve a specific airline document by its ID using the GET endpoint.
 
-**Endpoint:**
+### PUT Airline
 
-`GET /api/v1/airlines/{id}`
+Update an existing airline document or create a new one if it doesn't exist using the PUT endpoint.
 
-**Description:**
+### DELETE Airline
 
-This endpoint retrieves detailed information about a specific airline by its ID. This is useful for getting the full profile of an airline, including its callsign, country, IATA code, ICAO code, and name.
+Delete an airline document by its ID using the DELETE endpoint.
 
-**Steps:**
+### List Airlines
 
-1. The client sends a GET request to the endpoint `/api/v1/airlines/{id}`.
-2. The client includes the airline ID in the path of the request.
-3. The server searches the database for an airline with the specified ID.
-4. If the airline is found, the server returns the airline's details. If the airline is not found, an error message is returned.
+Retrieve a list of airlines with optional filtering by country and pagination using query parameters.
 
----
+### Airlines to Destination
 
-### 3. Create a New Airline
-
-**Endpoint:**
-
-`POST /api/v1/airlines/{id}`
-
-**Description:**
-
-This endpoint allows the creation of a new airline with the specified ID. The client must provide all required airline details in the request body, such as callsign, country, IATA code, ICAO code, and name.
-
-**Steps:**
-
-1. The client sends a POST request to the endpoint `/api/v1/airlines/{id}`.
-2. The client includes the airline ID in the path and provides the airline details in the request body.
-3. The server validates the provided data to ensure all required fields are present and correctly formatted.
-4. If validation passes, the server saves the new airline in the database. If validation fails, an error message is returned.
-
----
-
-### 4. Update an Existing Airline
-
-**Endpoint:**
-
-`PUT /api/v1/airlines/{id}`
-
-**Description:**
-
-This endpoint updates an existing airline or creates a new one if it does not exist. The client must provide the necessary airline details in the request body. This allows updating airline information or adding new airlines to the database.
-
-**Steps:**
-
-1. The client sends a PUT request to the endpoint `/api/v1/airlines/{id}`.
-2. The client includes the airline ID in the path and provides the updated airline details in the request body.
-3. The server validates the provided data to ensure all required fields are present and correctly formatted.
-4. If the airline exists, the server updates the existing record with the new data. If the airline does not exist, the server creates a new airline with the provided details.
-5. The server returns a success message indicating whether the airline was updated or created. If validation fails, an error message is returned.
-
----
-
-### 5. Delete an Airline
-
-**Endpoint:**
-
-`DELETE /api/v1/airlines/{id}`
-
-**Description:**
-
-This endpoint deletes a specific airline from the database by its ID. This is useful for removing outdated or incorrect airline records.
-
-**Steps:**
-
-1. The client sends a DELETE request to the endpoint `/api/v1/airlines/{id}`.
-2. The client includes the airline ID in the path of the request.
-3. The server searches the database for an airline with the specified ID.
-4. If the airline is found, the server deletes the airline from the database. If the airline is not found, an error message is returned.
-
----
-
-### 6. Get Airlines Flying to a Destination Airport
-
-**Endpoint:**
-
-`GET /api/v1/airlines/to-airport/{destinationAirportCode}`
-
-**Description:**
-
-This endpoint retrieves a list of airlines that fly to a specific destination airport. This can be useful for travelers or systems that need to display available airlines for a particular route.
-
-**Steps:**
-
-1. The client sends a GET request to the endpoint `/api/v1/airlines/to-airport/{destinationAirportCode}`.
-2. The client includes the destination airport code in the path of the request.
-3. Optionally, the client includes query parameters:
-   - `offset` specifies the number of items to skip before starting to collect the result set.
-   - `limit` specifies the number of items to return.
-4. The server processes the request and queries the database for airlines that fly to the specified airport.
-5. The server returns a list of airlines. If no airlines are found, an appropriate error message is returned.
+Find airlines that fly to a specific destination airport using SQL++ queries to join collections.
 
 ## Running The Tests
 
@@ -301,25 +266,6 @@ This command will execute all the test cases in your project.
 php artisan test
 ```
 
-### Run Individual Tests:
-
-Additionally, you can run individual test classes or methods using the following commands:
-
-To run the tests for the AirlineTest class:
-```sh
-php artisan test --filter AirlineTest
-```
-
-To run the tests for the AirportTest class:
-
-```sh
-php artisan test --filter AirportTest
-```
-
-To run the tests for the RouteTest class:
-
-```sh
-php artisan test --filter RouteTest
 ```
 
 ## Project Setup Notes
@@ -341,22 +287,18 @@ If you would like to add another entity to the APIs, follow these steps:
 
 - **Create the new entity (collection) in the Couchbase bucket:** You can create the collection using the [SDK](https://docs.couchbase.com/php-sdk/current/howtos/provisioning-cluster-resources.html#collection-management) or via the [Couchbase Server interface](https://docs.couchbase.com/cloud/n1ql/n1ql-language-reference/createcollection.html).
   
-- **Define the model:** Create a new model in the `app/Models` directory, similar to the existing `Airline` model. For example, you can create a file `Hotel.php`:
+- **Define the model:** Create a new model in the `app/Models` directory, similar to the existing `Airline` model. Note that this quickstart already includes a `Hotel` model as an example. For a new entity, you would create a similar structure:
   ```php
   namespace App\Models;
 
   use Illuminate\Database\Eloquent\Model;
 
-  class Hotel extends Model
+  class YourEntity extends Model
   {
       protected $bucket;
 
       protected $fillable = [
-          'name',
-          'address',
-          'city',
-          'country',
-          'stars'
+          // Define your entity fields here
       ];
 
       public function __construct(array $attributes = [])
@@ -365,7 +307,7 @@ If you would like to add another entity to the APIs, follow these steps:
           $this->bucket = app('couchbase.bucket');
       }
 
-      // Add methods for querying, saving, and deleting Hotel data
+      // Add methods for querying, saving, and deleting data
   }
   ```
 
