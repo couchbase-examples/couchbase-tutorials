@@ -256,7 +256,7 @@ When a user asks a question or provides a prompt:
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
 - Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
-- Couchbase's Vector Search integrates seamlessly with Haystack's [CouchbaseVectorStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class, abstracting away the complexities of vector similarity calculations.
+- Couchbase's Vector Search integrates seamlessly with Haystack's [CouchbaseSearchVectorStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class, abstracting away the complexities of vector similarity calculations.
 
 ### Haystack
 

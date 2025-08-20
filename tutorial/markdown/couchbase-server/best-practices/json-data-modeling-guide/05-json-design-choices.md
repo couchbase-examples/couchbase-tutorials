@@ -8,7 +8,7 @@ description:
   - Explore versioning and document structure in more depth
   - Learn the difference between objects and object arrays
 content_type: tutorial
-filter: n1ql
+filter: sql++
 technology:
   - kv
   - capella
@@ -20,7 +20,7 @@ sdk_language:
 length: 20 Mins
 ---
 
-Couchbase Server neither enforces nor validates for any particular document structure. Below are the design choices that impact JSON document design.
+Couchbase neither enforces nor validates for any particular document structure. Below are the design choices that impact JSON document design.
 
 - **Document typing and versioning**
   - Key Prefixing
@@ -33,21 +33,23 @@ Couchbase Server neither enforces nor validates for any particular document stru
   - Timestamp format
   - Valued, Missing, Empty, and Null attribute values
 
-## Document Key Prefixing
+## Document Collections
 
-The document ID is the primary identifier of a document in the database. Multiple data sets are expected to share a common bucket in Couchbase. To ensure each data set has an isolated keyspace, it is a best practice to include a type/class/use-case/sub-domain prefix in all document keys.  As an example of a User Model, you might have a property called `"userId": 123`, the document key might look like `user:123`, `user_123`, or `user::123`. Every Document ID is a combination of two or more parts/values, that should be delimited by a character such as a colon or an underscore.  Pick a delimiter, and be consistent throughout your enterprise.
+In Couchbase, different types of documents should be stored in separate collections. For example, users, orders, and products should each have their own collection within a scope.
 
-Just as each Document ID should contain a prefix of the type/model, it is also a best practice to include that same value in the body of the document.  This allows for efficient filtering by document type at query time or filtered XDCR replications.  This property can be named many different names: `type`, `docType`, `_type`, and `_class` are all common choices, choose one that fits your organization's standards.
+Each document key only needs to be unique within its collection. You do not need to include prefixes or type indicators in the key. For instance, a document in the users collection might simply use the key "123":
 
 ```json
+key: "123"
 {
-  "_type": "user",
-  "userId": 123
+  "firstName": "Leslie",
+  "lastName": "Knope"
+}
 ```
 
 ## Document Management Fields
 
-At a minimum, every JSON document should contain a type and version property.  Depending on your application requirements, use case, the line of business, etc. other common properties to consider at:
+It may be helpful for documents to contain a version property and other document management fields.  Depending on your application requirements, use case, the line of business, etc. other common properties to consider at:
 
 - `_created` - A timestamp of when the document was created in epoch time (milliseconds or seconds if millisecond precision is not required)  
 - `_createdBy` - A user ID/name of the person or application that created the document
@@ -60,10 +62,8 @@ The use of a leading `_` creates a standardized approach to global attributes ac
 
 ```json
 {
-  "_type": "user",
   "_schema": "1.2",
   "_created": 1544734688923
-  "userId": 123
 }
 ```
 
@@ -72,19 +72,16 @@ The same can be applied through a top-level property i.e. `"meta": {}`.
 ```json
 {
   "meta": {
-    "type": "user",
     "schema": "1.2",
     "created": 1544734688923
   },
-  "userId": 123
+  "shoeSize": 13
 }
 ```
 
 Choose an approach that works within your organization and be consistent throughout your applications.
 
-{% hint style="info" %}
-**Note**: There is not a right or wrong property name, however, if you're application will leverage Couchbase Mobile (in particular Sync-Gateway), the use of a leading underscore should be avoided, as any document that contains root level properties with a leading underscore will fail to replicate.  This is not a bug, and it meant to facilitate backward compatibility with v1.0 of the replication protocol.  
-{% endhint %}
+> **Note**: There is not a right or wrong property name. However, if your application will be using Couchbase Mobile (in particular Sync-Gateway / Capella App Services), the use of a leading underscore should be avoided, as any document that contains [root level properties of reserved property names](https://docs.couchbase.com/sync-gateway/current/data-modeling.html) will be rejected. This is not a bug, and it meant to support backward compatibility with v1.0 of the replication protocol.
 
 ## Field name length, style, consistency
 
@@ -92,84 +89,8 @@ Choose an approach that works within your organization and be consistent through
 - Self-documenting names reduce doc effort/maintenance `userName vs usyslogintxt`
 - Consistent patterns reduce bugs (pick and stick to a standard) `firstName or first_name or firstname`, but pick one.
 - Use plural names for array fields, and singular for others `"phones": [ ... ], "address": { ... }, "genre": " ... ", "scale": 2.3`.
-- Avoid words that are reserved in N1QL (else, escape in N1QL) `user, bucket, cluster, role, select, insert` etc., Please refer [N1QL Reserved Word](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/reservedwords.html) for more details on how to escape reserved words in N1QL.
-- Use letters, numbers, or underscore (else, escape in N1QL) `first_name vs first-name`.
-
-## Root Attributes vs. Embedded Attributes
-
-The query model changes based on the choice of having a single root attribute or the `type` attribute embedded. Lets take a look at the `track` document as an example.
-
-### Root Attributes
-
-_Root_ attribute is a single, top-level attribute with all other attributes encapsulated as an object value of the root attribute. In the below example, the root element of the JSON document is `track`.
-
-```json
-{
-  "track": {
-    "artist": "Paul Lekakis",
-    "created": "2015-08-18T19:57:07",
-    "genre": "Hi-NRG",
-    "id": "3305311F4A0FAAFEABD001D324906748B18FB24A",
-    "mp3": "https://goo.gl/KgKoR7",
-    "ver": "1.0",
-    "ratings": [
-      {
-        "created": "2015-08-20T12:24:44",
-        "rating": 4,
-        "username": "sublimatingraga37014"
-      },
-      {
-        "created": "2015-08-21T09:23:57",
-        "rating": 4,
-        "username": "untillableshowings34122"
-      }
-    ],
-    "title": "My House",
-    "modified": "2015-08-18T19:57:07"
-  }
-}
-```
-
-### Embedded Attributes
-
-In this example, the JSON document is in a flat structure but there is an attribute called `type` embedded within the document.
-
-```json
-{
-  "artist": "Paul Lekakis",
-  "created": "2015-08-18T19:57:07",
-  "genre": "Hi-NRG",
-  "id": "3305311F4A0FAAFEABD001D324906748B18FB24A",
-  "mp3": "https://goo.gl/KgKoR7",
-  "ver": "1.0",
-  "ratings": [
-    {
-      "created": "2015-08-20T12:24:44",
-      "rating": 4,
-      "username": "sublimatingraga37014"
-    },
-    {
-      "created": "2015-08-21T09:23:57",
-      "rating": 4,
-      "username": "untillableshowings34122"
-    }
-  ],
-  "title": "My House",
-  "modified": "2015-08-18T19:57:07",
-  "_type": "track"
-}
-```
-
-This is the recommended approach since we can use the `type` field to create index.
-
-```sql
-CREATE INDEX cb2_type ON couchmusic2(_type);
-
-SELECT COUNT(*) AS count
-FROM couchmusic2
-WHERE _type = "track"
-GROUP BY genre;
-```
+- Avoid words that are reserved in SQL++: `user, bucket, cluster, role, select, insert` etc., Please refer to [SQL++ Reserved Words](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/reservedwords.html) for more details on how to escape reserved words in SQL++.
+- Use letters, numbers, or underscore: `first_name vs first-name`.
 
 ## Objects vs. Object Arrays
 
@@ -179,7 +100,6 @@ There are two different ways to represent objects.
 
 ```json
 {
-  "type": "userProfile",
   "created": "2015-01-28T13:50:56",
   "dateOfBirth": "1986-06-09",
   "email": "andy.bowman@games.com",
@@ -202,7 +122,6 @@ There are two different ways to represent objects.
 
 ```json
 {
-  "type": "userProfile",
   "created": "2015-01-28T13:50:56",
   "dateOfBirth": "1986-06-09",
   "email": "andy.bowman@games.com",
@@ -236,7 +155,6 @@ Array values may be _simple_ or _object_.
   "id": "003c6f65-641a-4c9a-8e5e-41c947086cae",
   "name": "Eclectic Summer Mix",
   "owner": "copilotmarks61569",
-  "type": "playlist",
   "tracks": [
     "9FFAF88C1C3550245A19CE3BD91D3DC0BE616778",
     "3305311F4A0FAAFEABD001D324906748B18FB24A",
@@ -246,8 +164,9 @@ Array values may be _simple_ or _object_.
 }
 ```
 
-- Or, nest a summary to avoid a lookup/join
-  - There are lot of advantages in this approach over the first one. In this choice, all we have to do is _one_ get to retrieve all the information that we need regarding the playlist.
+- Another approach is to nest a summary (copy some of the attributes from other documents) to avoid a lookup/join
+  - There are lot of advantages in this approach over the first one. In this choice, only _one_ get is required to retrieve all the information that we need regarding the playlist.
+  - However, if this copied data is changed often, it might not be worth duplicating data
 
 ```json
 {
@@ -285,7 +204,6 @@ The following are examples of commonly used date formats.
 ```json
 {
   "countryCode": "US",
-  "type": "country",
   "gdp": 53548,
   "name": "United States of America",
   "region": "Americas",
@@ -300,7 +218,6 @@ The following are examples of commonly used date formats.
 ```json
 {
   "countryCode": "US",
-  "type": "country",
   "gdp": 53548,
   "name": "United States of America",
   "region": "Americas",
@@ -315,7 +232,6 @@ The following are examples of commonly used date formats.
 ```json
 {
   "countryCode": "US",
-  "type": "country",
   "gdp": 53548,
   "name": "United States of America",
   "region": "Americas",

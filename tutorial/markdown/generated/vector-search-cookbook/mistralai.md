@@ -71,8 +71,10 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the
 
 
 ```python
-!pip install couchbase mistralai
+!pip install couchbase==4.3.5 mistralai==1.7.0
 ```
+
+    [Output too long, omitted for brevity]
 
 # Imports
 

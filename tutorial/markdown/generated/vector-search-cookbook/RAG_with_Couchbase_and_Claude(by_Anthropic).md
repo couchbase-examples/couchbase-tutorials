@@ -44,15 +44,16 @@ You can either download the notebook file and run it on [Google Colab](https://c
 
 ## Create and Deploy Your Free Tier Operational cluster on Capella
 
-To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with a environment where you can explore and learn about Capella with no time constraint.
+To get started with Couchbase Capella, create an account and use it to deploy a forever free tier operational cluster. This account provides you with an environment where you can explore and learn about Capella with no time constraint.
 
-To know more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
+To learn more, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/create-account.html).
 
 ### Couchbase Capella Configuration
 
 When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the following prerequisites need to be met.
 
-* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
+* Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the required bucket (Read and Write) used in the application.
+
 * [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
 # Setting the Stage: Installing Necessary Libraries
@@ -60,39 +61,45 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-!pip install datasets langchain-couchbase langchain-anthropic langchain-openai
+%pip install --quiet datasets==3.5.0 langchain-couchbase==0.3.0 langchain-anthropic==0.3.11 langchain-openai==0.3.13 python-dotenv==1.1.0
 ```
 
-    [Output too long, omitted for brevity]
+    Note: you may need to restart the kernel to use updated packages.
+
 
 # Importing Necessary Libraries
 The script starts by importing a series of libraries required for various tasks, including handling JSON, logging, time tracking, Couchbase connections, embedding generation, and dataset loading. These libraries provide essential functions for working with data, managing database connections, and processing machine learning models.
 
 
 ```python
+import getpass
 import json
 import logging
+import os
 import time
-import sys
-import getpass
 from datetime import timedelta
-from uuid import uuid4
+from multiprocessing import AuthenticationError
 
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
-from couchbase.exceptions import CouchbaseException, InternalServerFailureException, QueryIndexAlreadyExistsException
+from couchbase.exceptions import (CouchbaseException,
+                                  InternalServerFailureException,
+                                  QueryIndexAlreadyExistsException,
+                                  ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
+from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
-from langchain_core.documents import Document
 from langchain_core.globals import set_llm_cache
-from langchain_core.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
+from langchain_core.prompts.chat import (ChatPromptTemplate,
+                                         HumanMessagePromptTemplate,
+                                         SystemMessagePromptTemplate)
 from langchain_core.runnables import RunnablePassthrough
 from langchain_couchbase.cache import CouchbaseCache
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import OpenAIEmbeddings
-from tqdm import tqdm
 ```
 
 # Setup Logging
@@ -102,6 +109,9 @@ Logging is configured to track the progress of the script and capture any errors
 
 ```python
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
+
+# Disable all logging except critical to prevent OpenAI API request logs
+logging.getLogger("httpx").setLevel(logging.CRITICAL)
 ```
 
 # Loading Sensitive Informnation
@@ -111,35 +121,25 @@ The script also validates that all required inputs are provided, raising an erro
 
 
 ```python
-ANTHROPIC_API_KEY = getpass.getpass('Enter your Anthropic API key: ')
-OPENAI_API_KEY = getpass.getpass('Enter your OpenAI API key: ')
-CB_HOST = input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
-CB_USERNAME = input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
-CB_PASSWORD = getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
-CB_BUCKET_NAME = input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
-INDEX_NAME = input('Enter your index name (default: vector_search_claude): ') or 'vector_search_claude'
-SCOPE_NAME = input('Enter your scope name (default: shared): ') or 'shared'
-COLLECTION_NAME = input('Enter your collection name (default: claude): ') or 'claude'
-CACHE_COLLECTION = input('Enter your cache collection name (default: cache): ') or 'cache'
+load_dotenv()
 
+# Load from environment variables or prompt for input in one-liners
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY') or getpass.getpass('Enter your Anthropic API key: ')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or getpass.getpass('Enter your OpenAI API key: ')
+CB_HOST = os.getenv('CB_HOST', 'couchbase://localhost') or input('Enter your Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
+CB_USERNAME = os.getenv('CB_USERNAME', 'Administrator') or input('Enter your Couchbase username (default: Administrator): ') or 'Administrator'
+CB_PASSWORD = os.getenv('CB_PASSWORD', 'password') or getpass.getpass('Enter your Couchbase password (default: password): ') or 'password'
+CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME', 'vector-search-testing') or input('Enter your Couchbase bucket name (default: vector-search-testing): ') or 'vector-search-testing'
+INDEX_NAME = os.getenv('INDEX_NAME', 'vector_search_claude') or input('Enter your index name (default: vector_search_claude): ') or 'vector_search_claude'
+SCOPE_NAME = os.getenv('SCOPE_NAME', 'shared') or input('Enter your scope name (default: shared): ') or 'shared'
+COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'claude') or input('Enter your collection name (default: claude): ') or 'claude'
+CACHE_COLLECTION = os.getenv('CACHE_COLLECTION', 'cache') or input('Enter your cache collection name (default: cache): ') or 'cache'
 # Check if the variables are correctly loaded
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY is not set in the environment.")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in the environment.")
 ```
-
-    Enter your Anthropic API key: ··········
-    Enter your OpenAI API key: ··········
-    Enter your Couchbase host (default: couchbase://localhost): couchbases://cb.hlcup4o4jmjr55yf.cloud.couchbase.com
-    Enter your Couchbase username (default: Administrator): vector-search-rag-demos
-    Enter your Couchbase password (default: password): ··········
-    Enter your Couchbase bucket name (default: vector-search-testing): 
-    Enter your index name (default: vector_search_claude): 
-    Enter your scope name (default: shared): 
-    Enter your collection name (default: claude): 
-    Enter your cache collection name (default: cache): 
-
 
 # Connecting to the Couchbase Cluster
 Connecting to a Couchbase cluster is the foundation of our project. Couchbase will serve as our primary data store, handling all the storage and retrieval operations required for our semantic search engine. By establishing this connection, we enable our application to interact with the database, allowing us to perform operations such as storing embeddings, querying data, and managing collections. This connection is the gateway through which all data will flow, so ensuring it's set up correctly is paramount.
@@ -158,20 +158,70 @@ except Exception as e:
     raise ConnectionError(f"Failed to connect to Couchbase: {str(e)}")
 ```
 
-    2024-08-29 13:33:54,574 - INFO - Successfully connected to Couchbase
+    2025-02-25 21:48:21,579 - INFO - Successfully connected to Couchbase
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: You will not be able to create a bucket on Capella
+
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
+
 
 
 ```python
 def setup_collection(cluster, bucket_name, scope_name, collection_name):
     try:
-        bucket = cluster.bucket(bucket_name)
+        # Check if bucket exists, create if it doesn't
+        try:
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
+        except Exception as e:
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
+
         bucket_manager = bucket.collections()
+
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
 
         # Check if collection exists, create if it doesn't
         collections = bucket_manager.get_all_scopes()
@@ -185,9 +235,11 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
             bucket_manager.create_collection(scope_name, collection_name)
             logging.info(f"Collection '{collection_name}' created successfully.")
         else:
-            logging.info(f"Collection '{collection_name}' already exists.Skipping creation.")
+            logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
 
+        # Wait for collection to be ready
         collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
 
         # Ensure primary index exists
         try:
@@ -207,23 +259,31 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
         return collection
     except Exception as e:
         raise RuntimeError(f"Error setting up collection: {str(e)}")
-
+    
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, CACHE_COLLECTION)
+
 ```
 
-    2024-08-29 13:33:54,801 - INFO - Collection 'claude' already exists.Skipping creation.
-    2024-08-29 13:33:54,836 - INFO - Primary index present or created successfully.
-    2024-08-29 13:33:55,491 - INFO - All documents cleared from the collection.
-    2024-08-29 13:33:55,529 - INFO - Collection 'cache' already exists.Skipping creation.
-    2024-08-29 13:33:55,567 - INFO - Primary index present or created successfully.
-    2024-08-29 13:33:55,605 - INFO - All documents cleared from the collection.
+    2025-02-25 21:48:28,237 - INFO - Bucket 'vector-search-testing' does not exist. Creating it...
+    2025-02-25 21:48:28,800 - INFO - Bucket 'vector-search-testing' created successfully.
+    2025-02-25 21:48:28,802 - INFO - Scope 'shared' does not exist. Creating it...
+    2025-02-25 21:48:28,851 - INFO - Scope 'shared' created successfully.
+    2025-02-25 21:48:28,855 - INFO - Collection 'claude' does not exist. Creating it...
+    2025-02-25 21:48:28,943 - INFO - Collection 'claude' created successfully.
+    2025-02-25 21:48:32,802 - INFO - Primary index present or created successfully.
+    2025-02-25 21:48:41,954 - INFO - All documents cleared from the collection.
+    2025-02-25 21:48:41,955 - INFO - Bucket 'vector-search-testing' exists.
+    2025-02-25 21:48:41,959 - INFO - Collection 'cache' does not exist. Creating it...
+    2025-02-25 21:48:42,003 - INFO - Collection 'cache' created successfully.
+    2025-02-25 21:48:46,902 - INFO - Primary index present or created successfully.
+    2025-02-25 21:48:46,904 - INFO - All documents cleared from the collection.
 
 
 
 
 
-    <couchbase.collection.Collection at 0x7c1c3a201d20>
+    <couchbase.collection.Collection at 0x742954ceae40>
 
 
 
@@ -233,6 +293,8 @@ Semantic search requires an efficient way to retrieve relevant documents based o
 
 For more information on creating a vector search index, please follow the [instructions](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html).
 
+> Note: Index creation will not fail if used with the concerned bucket(vector-search-testing) instead of travel-sample
+
 
 
 ```python
@@ -241,24 +303,34 @@ For more information on creating a vector search index, please follow the [instr
 
 # index_definition_path = '/path_to_your_index_file/claude_index.json'  # Local setup: specify your file path here
 
-# If you are running in Google Colab, use the following code to upload the index definition file
-from google.colab import files
-print("Upload your index definition file")
-uploaded = files.upload()
-index_definition_path = list(uploaded.keys())[0]
+# # Version for Google Colab
+# def load_index_definition_colab():
+#     from google.colab import files
+#     print("Upload your index definition file")
+#     uploaded = files.upload()
+#     index_definition_path = list(uploaded.keys())[0]
 
-try:
-    with open(index_definition_path, 'r') as file:
-        index_definition = json.load(file)
-except Exception as e:
-    raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+#     try:
+#         with open(index_definition_path, 'r') as file:
+#             index_definition = json.load(file)
+#         return index_definition
+#     except Exception as e:
+#         raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Version for Local Environment
+def load_index_definition_local(index_definition_path):
+    try:
+        with open(index_definition_path, 'r') as file:
+            index_definition = json.load(file)
+        return index_definition
+    except Exception as e:
+        raise ValueError(f"Error loading index definition from {index_definition_path}: {str(e)}")
+
+# Usage
+# Uncomment the appropriate line based on your environment
+# index_definition = load_index_definition_colab()
+index_definition = load_index_definition_local('claude_index.json')
 ```
-
-    Upload your index definition file
-
-
-    Saving claude_index.json to claude_index.json
-
 
 # Creating or Updating Search Indexes
 
@@ -287,88 +359,15 @@ try:
 
 except QueryIndexAlreadyExistsException:
     logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
-
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
 except InternalServerFailureException as e:
-    error_message = str(e)
-    logging.error(f"InternalServerFailureException raised: {error_message}")
-
-    try:
-        # Accessing the response_body attribute from the context
-        error_context = e.context
-        response_body = error_context.response_body
-        if response_body:
-            error_details = json.loads(response_body)
-            error_message = error_details.get('error', '')
-
-            if "collection: 'claude' doesn't belong to scope: 'shared'" in error_message:
-                raise ValueError("Collection 'claude' does not belong to scope 'shared'. Please check the collection and scope names.")
-
-    except ValueError as ve:
-        logging.error(str(ve))
-        raise
-
-    except Exception as json_error:
-        logging.error(f"Failed to parse the error message: {json_error}")
-        raise RuntimeError(f"Internal server error while creating/updating search index: {error_message}")
+    logging.error(f"Internal server error: {str(e)}")
+    raise
 ```
 
-    2024-08-29 13:35:01,109 - INFO - Index 'vector_search_claude' found
-    2024-08-29 13:35:01,317 - INFO - Index 'vector_search_claude' already exists. Skipping creation/update.
-
-
-# Load the TREC Dataset
-To build a search engine, we need data to search through. We use the TREC dataset, a well-known benchmark in the field of information retrieval. This dataset contains a wide variety of text data that we'll use to train our search engine. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the data in the TREC dataset make it an excellent choice for testing and refining our search engine, ensuring that it can handle a wide range of queries effectively.
-
-The TREC dataset's rich content allows us to simulate real-world scenarios where users ask complex questions, enabling us to fine-tune our search engine's ability to understand and respond to various types of queries.
-
-
-```python
-try:
-    trec = load_dataset('trec', split='train[:1000]')
-    logging.info(f"Successfully loaded TREC dataset with {len(trec)} samples")
-except Exception as e:
-    raise ValueError(f"Error loading TREC dataset: {str(e)}")
-```
-
-    /usr/local/lib/python3.10/dist-packages/huggingface_hub/utils/_token.py:89: UserWarning: 
-    The secret `HF_TOKEN` does not exist in your Colab secrets.
-    To authenticate with the Hugging Face Hub, create a token in your settings tab (https://huggingface.co/settings/tokens), set it as secret in your Google Colab and restart your session.
-    You will be able to reuse this secret in all of your notebooks.
-    Please note that authentication is recommended but still optional to access public models or datasets.
-      warnings.warn(
-
-
-
-    Downloading builder script:   0%|          | 0.00/5.09k [00:00<?, ?B/s]
-
-
-
-    Downloading readme:   0%|          | 0.00/10.6k [00:00<?, ?B/s]
-
-
-    The repository for trec contains custom code which must be executed to correctly load the dataset. You can inspect the repository content at https://hf.co/datasets/trec.
-    You can avoid this prompt in future by passing the argument `trust_remote_code=True`.
-    
-    Do you wish to run the custom code? [y/N] y
-
-
-
-    Downloading data:   0%|          | 0.00/336k [00:00<?, ?B/s]
-
-
-
-    Downloading data:   0%|          | 0.00/23.4k [00:00<?, ?B/s]
-
-
-
-    Generating train split:   0%|          | 0/5452 [00:00<?, ? examples/s]
-
-
-
-    Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]
-
-
-    2024-08-29 13:35:10,138 - INFO - Successfully loaded TREC dataset with 1000 samples
+    2025-02-25 21:48:52,980 - INFO - Creating new index 'vector_search_claude'...
+    2025-02-25 21:48:53,069 - INFO - Index 'vector_search_claude' successfully created/updated.
 
 
 # Creating OpenAI Embeddings
@@ -379,13 +378,13 @@ Embeddings are at the heart of semantic search. They are numerical representatio
 
 ```python
 try:
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model='text-embedding-ada-002')
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY, model='text-embedding-3-small')
     logging.info("Successfully created OpenAIEmbeddings")
 except Exception as e:
     raise ValueError(f"Error creating OpenAIEmbeddings: {str(e)}")
 ```
 
-    2024-08-29 13:35:10,317 - INFO - Successfully created OpenAIEmbeddings
+    2025-02-25 21:48:56,274 - INFO - Successfully created OpenAIEmbeddings
 
 
 #  Setting Up the Couchbase Vector Store
@@ -394,7 +393,7 @@ A vector store is where we'll keep our embeddings. Unlike the FTS index, which i
 
 ```python
 try:
-    vector_store = CouchbaseVectorStore(
+    vector_store = CouchbaseSearchVectorStore(
         cluster=cluster,
         bucket_name=CB_BUCKET_NAME,
         scope_name=SCOPE_NAME,
@@ -408,30 +407,91 @@ except Exception as e:
 
 ```
 
-    2024-08-29 13:35:10,989 - INFO - Successfully created vector store
+    2025-02-25 21:48:59,450 - INFO - Successfully created vector store
 
 
-# Saving Data to the Vector Store
-With the vector store set up, the next step is to populate it with data. We save the TREC dataset to the vector store in batches. This method is efficient and ensures that our search engine can handle large datasets without running into performance issues. By saving the data in this way, we prepare our search engine to quickly and accurately respond to user queries. This step is essential for making the dataset searchable, transforming raw data into a format that can be easily queried by our search engine.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
-Batch processing is particularly important when dealing with large datasets, as it prevents memory overload and ensures that the data is stored in a structured and retrievable manner. This approach not only optimizes performance but also ensures the scalability of our system.
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
 try:
-    batch_size = 50
-    logging.disable(sys.maxsize) # Disable logging to prevent tqdm output
-    for i in tqdm(range(0, len(trec['text']), batch_size), desc="Processing Batches"):
-        batch = trec['text'][i:i + batch_size]
-        documents = [Document(page_content=text) for text in batch]
-        uuids = [str(uuid4()) for _ in range(len(documents))]
-        vector_store.add_documents(documents=documents, ids=uuids)
-    logging.disable(logging.NOTSET) # Re-enable logging
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
+    )
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    Processing Batches: 100%|██████████| 20/20 [00:16<00:00,  1.22it/s]
+    2025-02-25 21:49:09,255 - INFO - Successfully loaded the BBC News dataset with 2687 rows.
+
+
+    Loaded the BBC News dataset with 2687 rows
+
+
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
+
+
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 100 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+batch_size = 100
+
+# Automatic Batch Processing
+articles = [article for article in unique_news_articles if article and len(article) <= 50000]
+
+try:
+    vector_store.add_texts(
+        texts=articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully.")
+except Exception as e:
+    raise ValueError(f"Failed to save documents to vector store: {str(e)}")
+
+```
+
+    2025-02-25 21:50:15,064 - INFO - Document ingestion completed successfully.
 
 
 # Setting Up a Couchbase Cache
@@ -455,11 +515,11 @@ except Exception as e:
     raise ValueError(f"Failed to create cache: {str(e)}")
 ```
 
-    2024-08-29 13:35:27,788 - INFO - Successfully created cache
+    2025-02-25 21:50:48,836 - INFO - Successfully created cache
 
 
-# Using the Claude 3.5 Sonnet Language Model (LLM)
-Language models are AI systems that are trained to understand and generate human language. We'll be using the `Claude 3.5 Sonnet` language model to process user queries and generate meaningful responses. This model is a key component of our semantic search engine, allowing it to go beyond simple keyword matching and truly understand the intent behind a query. By creating this language model, we equip our search engine with the ability to interpret complex queries, understand the nuances of language, and provide more accurate and contextually relevant responses.
+# Using the Claude 3.7 Sonnet Language Model (LLM)
+Language models are AI systems that are trained to understand and generate human language. We'll be using the `Claude 3.7 Sonnet` language model to process user queries and generate meaningful responses. This model is a key component of our semantic search engine, allowing it to go beyond simple keyword matching and truly understand the intent behind a query. By creating this language model, we equip our search engine with the ability to interpret complex queries, understand the nuances of language, and provide more accurate and contextually relevant responses.
 
 The language model's ability to understand context and generate coherent responses is what makes our search engine truly intelligent. It can not only find the right information but also present it in a way that is useful and understandable to the user.
 
@@ -468,24 +528,24 @@ The language model's ability to understand context and generate coherent respons
 
 ```python
 try:
-    llm = ChatAnthropic(temperature=0, anthropic_api_key=ANTHROPIC_API_KEY, model_name='claude-3-5-sonnet-20240620')
+    llm = ChatAnthropic(temperature=0.1, anthropic_api_key=ANTHROPIC_API_KEY, model_name='claude-3-7-sonnet-20250219') 
     logging.info("Successfully created ChatAnthropic")
 except Exception as e:
     logging.error(f"Error creating ChatAnthropic: {str(e)}. Please check your API key and network connection.")
     raise
 ```
 
-    2024-08-29 13:35:27,933 - INFO - Successfully created ChatAnthropic
+    2025-02-25 21:50:52,173 - INFO - Successfully created ChatAnthropic
 
 
 # Perform Semantic Search
-Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined. Common metrics include cosine similarity, Euclidean distance, or dot product, but other metrics can be implemented based on specific use cases. Different embedding models like BERT, Word2Vec, or GloVe can also be used depending on the application's needs, with the vectors generated by these models stored and searched within Couchbase itself.
+Semantic search in Couchbase involves converting queries and documents into vector representations using an embeddings model. These vectors capture the semantic meaning of the text and are stored directly in Couchbase. When a query is made, Couchbase performs a similarity search by comparing the query vector against the stored document vectors. The similarity metric used for this comparison is configurable, allowing flexibility in how the relevance of documents is determined. 
 
-In the provided code, the search process begins by recording the start time, followed by executing the similarity_search_with_score method of the CouchbaseVectorStore. This method searches Couchbase for the most relevant documents based on the vector similarity to the query. The search results include the document content and a similarity score that reflects how closely each document aligns with the query in the defined semantic space. The time taken to perform this search is then calculated and logged, and the results are displayed, showing the most relevant documents along with their similarity scores. This approach leverages Couchbase as both a storage and retrieval engine for vector data, enabling efficient and scalable semantic searches. The integration of vector storage and search capabilities within Couchbase allows for sophisticated semantic search operations without relying on external services for vector storage or comparison.
+In the provided code, the search process begins by recording the start time, followed by executing the similarity_search_with_score method of the CouchbaseSearchVectorStore. This method searches Couchbase for the most relevant documents based on the vector similarity to the query. The search results include the document content and a similarity score that reflects how closely each document aligns with the query in the defined semantic space. The time taken to perform this search is then calculated and logged, and the results are displayed, showing the most relevant documents along with their similarity scores. This approach leverages Couchbase as both a storage and retrieval engine for vector data, enabling efficient and scalable semantic searches. The integration of vector storage and search capabilities within Couchbase allows for sophisticated semantic search operations without relying on external services for vector storage or comparison.
 
 
 ```python
-query = "What caused the 1929 Great Depression?"
+query = "What happened with the map shown during the 2026 FIFA World Cup draw regarding Ukraine and Crimea? What was the controversy?"
 
 try:
     # Perform the semantic search
@@ -497,8 +557,10 @@ try:
 
     # Display search results
     print(f"\nSemantic Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print("-" * 80)  # Add separator line
     for doc, score in search_results:
-        print(f"Distance: {score:.4f}, Text: {doc.page_content}")
+        print(f"Score: {score:.4f}, Text: {doc.page_content}")
+        print("-" * 80)  # Add separator between results
 
 except CouchbaseException as e:
     raise RuntimeError(f"Error performing semantic search: {str(e)}")
@@ -506,22 +568,107 @@ except Exception as e:
     raise RuntimeError(f"Unexpected error: {str(e)}")
 ```
 
-    2024-08-29 13:35:28,094 - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    2024-08-29 13:35:28,285 - INFO - Semantic search completed in 0.34 seconds
+    2025-02-25 21:53:55,462 - INFO - Semantic search completed in 0.55 seconds
 
 
     
-    Semantic Search Results (completed in 0.34 seconds):
-    Distance: 0.9178, Text: Why did the world enter a global depression in 1929 ?
-    Distance: 0.8714, Text: When was `` the Great Depression '' ?
-    Distance: 0.8115, Text: What crop failure caused the Irish Famine ?
-    Distance: 0.7985, Text: What historical event happened in Dogtown in 1899 ?
-    Distance: 0.7917, Text: What caused the Lynmouth floods ?
-    Distance: 0.7912, Text: When did the Dow first reach ?
-    Distance: 0.7908, Text: When was the first Wall Street Journal published ?
-    Distance: 0.7885, Text: What were popular songs and types of songs in the 1920s ?
-    Distance: 0.7857, Text: When did World War I start ?
-    Distance: 0.7842, Text: What caused Harry Houdini 's death ?
+    Semantic Search Results (completed in 0.55 seconds):
+    --------------------------------------------------------------------------------
+    Score: 0.7498, Text: A map shown during the draw for the 2026 Fifa World Cup has been criticised by Ukraine as an "unacceptable error" after it appeared to exclude Crimea as part of the country. The graphic - showing countries that cannot be drawn to play each other for geopolitical reasons - highlighted Ukraine but did not include the peninsula that is internationally recognised to be part of it. Crimea has been under Russian occupation since 2014 and just a handful of countries recognise the peninsula as Russian territory. Ukraine Foreign Ministry spokesman Heorhiy Tykhy said that the nation expects "a public apology". Fifa said it was "aware of an issue" and the image had been removed.
+    
+    Writing on X, Tykhy said that Fifa had not only "acted against international law" but had also "supported Russian propaganda, war crimes, and the crime of aggression against Ukraine". He added a "fixed" version of the map to his post, highlighting Crimea as part of Ukraine's territory. Among the countries that cannot play each other are Ukraine and Belarus, Spain and Gibraltar and Kosovo versus either Bosnia and Herzegovina or Serbia.
+    
+    This Twitter post cannot be displayed in your browser. Please enable Javascript or try a different browser. View original content on Twitter The BBC is not responsible for the content of external sites. Skip twitter post by Heorhii Tykhyi This article contains content provided by Twitter. We ask for your permission before anything is loaded, as they may be using cookies and other technologies. You may want to read Twitter’s cookie policy, external and privacy policy, external before accepting. To view this content choose ‘accept and continue’. The BBC is not responsible for the content of external sites.
+    
+    The Ukrainian Football Association has also sent a letter to Fifa secretary-general Mathias Grafström and UEFA secretary-general Theodore Theodoridis over the matter. "We appeal to you to express our deep concern about the infographic map [shown] on December 13, 2024," the letter reads. "Taking into account a number of official decisions and resolutions adopted by the Fifa Council and the UEFA executive committee since 2014... we emphasize that today's version of the cartographic image of Ukraine... is completely unacceptable and looks like an inconsistent position of Fifa and UEFA." The 2026 World Cup will start on 11 June that year in Mexico City and end on 19 July in New Jersey. The expanded 48-team tournament will last a record 39 days. Ukraine were placed in Group D alongside Iceland, Azerbaijan and the yet-to-be-determined winners of France's Nations League quarter-final against Croatia.
+    --------------------------------------------------------------------------------
+    Score: 0.4302, Text: Defending champions Manchester City will face Juventus in the group stage of the Fifa Club World Cup next summer, while Chelsea meet Brazilian side Flamengo. Pep Guardiola's City, who beat Brazilian side Fluminense to win the tournament for the first time in 2023, begin their title defence against Morocco's Wydad and also play Al Ain of the United Arab Emirates in Group G. Chelsea, winners of the 2021 final, were also drawn alongside Mexico's Club Leon and Tunisian side Esperance Sportive de Tunisie in Group D. The revamped Fifa Club World Cup, which has been expanded to 32 teams, will take place in the United States between 15 June and 13 July next year.
+    
+    A complex and lengthy draw ceremony was held across two separate Miami locations and lasted more than 90 minutes, during which a new Club World Cup trophy was revealed. There was also a video message from incoming US president Donald Trump, whose daughter Ivanka drew the first team. Lionel Messi's Inter Miami will take on Egyptian side Al Ahly at the Hard Rock Stadium in the opening match, staged in Miami. Elsewhere, Paris St-Germain were drawn against Atletico Madrid in Group B, while Bayern Munich meet Benfica in another all-European group-stage match-up. Teams will play each other once in the group phase and the top two will progress to the knockout stage.
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. What is the Club World Cup?
+    
+    Teams from each of the six international football confederations will be represented at next summer's tournament, including 12 European clubs - the highest quota of any confederation. The European places were decided by clubs' Champions League performances over the past four seasons, with recent winners Chelsea, Manchester City and Real Madrid guaranteed places. Al Ain, the most successful club in the UAE with 14 league titles, are owned by the country's president Sheikh Mohamed bin Zayed Al Nahyan - the older brother of City owner Sheikh Mansour. Real, who lifted the Fifa Club World Cup trophy for a record-extending fifth time in 2022, will open up against Saudi Pro League champions Al-Hilal, who currently have Neymar in their ranks. One place was reserved for a club from the host nation, which Fifa controversially awarded to Inter Miami, who will contest the tournament curtain-raiser. Messi's side were winners of the regular-season MLS Supporters' Shield but beaten in the MLS play-offs, meaning they are not this season's champions.
+    • None How does the new Club World Cup work & why is it so controversial?
+    
+    Matches will be played across 12 venues in the US which, alongside Canada and Mexico, also host the 2026 World Cup. Fifa is facing legal action from player unions and leagues about the scheduling of the event, which begins two weeks after the Champions League final at the end of the 2024-25 European calendar and ends five weeks before the first Premier League match of the 2025-2026 season. But football's world governing body believes the dates allow sufficient rest time before the start of the domestic campaigns. The Club World Cup will now take place once every four years, when it was previously held annually and involved just seven teams. Streaming platform DAZN has secured exclusive rights to broadcast next summer's tournament, during which 63 matches will take place over 29 days.
+    --------------------------------------------------------------------------------
+    Score: 0.4207, Text: After Fifa awards Saudi Arabia the hosting rights for the men's 2034 World Cup, BBC analysis editor Ros Atkins looks at how we got here and the controversies surrounding the decision.
+    --------------------------------------------------------------------------------
+    Score: 0.4123, Text: FA still to decide on endorsing Saudi World Cup bid
+    
+    The King Abdullah Sports City Stadium in Jeddah would be refurbished before the tournament
+    
+    The Football Association is still to decide whether it will officially endorse Saudi Arabia's 2034 men's World Cup bid at next week's virtual Fifa Congress. Insiders have told the BBC that discussions involving the FA's board remain ongoing. It has been suggested that rather than a traditional vote, ratification might instead be confirmed by acclamation - with federations in favour asked to show their support by applauding. However, Fifa is yet to confirm this, and FA officials have sought clarification on the process. On Friday, the DFB - Germany's national football association - announced it would vote in favour of both the Saudi Arabia bid and a multi-nation bid for the 2030 event. The BBC has learned that FA officials are mindful of concerns over Saudi Arabia's human rights record. However, some are also wary of suggestions of hypocrisy if the body declines to endorse the tournament, but then participates in it. Saudi Arabia is the sole bidder for the 2034 event, while the 2030 World Cup is set to be awarded to unopposed co-hosts Spain, Morocco and Portugal, with early matches also being played in Uruguay, Argentina and Paraguay. The ratification process has been combined so the 2030 and 2034 hosts will be decided jointly. It would appear, therefore, that if federations oppose one bid, they would have to support neither, with no separate acclamation for each of the potential hosts.
+    
+    In recent years, Saudi Arabia has hosted many major sports events, including Formula One, tennis, boxing and golf. Yet the kingdom's human rights record, restrictions on women's rights and the criminalisation of the LGBTQ+ community has prompted controversy over its ambition to host the men's World Cup in 10 years time. Last week, Fifa released its evaluation report for Saudi Arabia's bid, awarding it an average score of 4.2 out of 5 - the highest ever - with a conclusion that the tournament posed a 'medium' human rights risk. The assessment sparked condemnation from human rights groups.
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. Dec 2023: Saudi sports minister tells BBC sports editor Dan Roan that 'all are welcome'
+    
+    The DFB held a committee meeting on Friday to decide its stance, and unanimous approval was given, external to support the 2030 and 2034 bids. Its president, Bernd Neuendor, explained: "We did not make the decision lightly and carefully examined the application for the 2034 World Cup. "There was an exchange with many interest groups and experts, including human rights organisations and fans, on the basis of which a well-founded decision was made. "We take the criticism of the applicant country seriously and will continue to engage in dialogue. Our goal is to work together with Fifa to improve the situation in the coming years." In 2022, England and Germany were among a group of European teams that abandoned plans to promote diversity and inclusion by wearing 'OneLove' armbands at the Qatar World Cup after Fifa threatened sporting sanctions. The FA had spoken out about human rights in the country.
+    
+    It is a sign of the complexity of this decision that the FA's hierarchy are still to come down one way or another, with just five days to go. While Saudi Arabia has become a fairly regular host of top-level sport, this would be another level entirely. The German FA's statement essentially acknowledges it will be criticised, and makes clear it did not take the decision lightly. It seems likely, therefore, that whatever decision the English FA takes, it will divide opinion. Any support of the event comes amid strong criticism from human rights and environmental campaigners, and just six weeks after more than one hundred professional women's footballers wrote to Fifa urging it to drop the Saudi oil giant Aramco as a sponsor. They called such a deal a "punch in the stomach" to the sport, so awarding the biggest football tournament in the world to the kingdom would likely provoke similar if not stronger criticism. However, there is a school of thought that sport can be a force for positive change, and that putting a spotlight on Saudi Arabia, if it was to host the World Cup, could help accelerate and enhance reforms.
+    --------------------------------------------------------------------------------
+    Score: 0.4095, Text: Uefa 'not worried' at Euro 2025 clash with Club World Cup
+    
+    England won Euro 2022 on home soil beating Germany in the final at Wembley
+    
+    Uefa is "not worried" that some Women's Euro 2025 matches will clash with the Fifa men's Club World Cup, says managing director Nadine Kessler. Fifa's new expanded men's tournament takes place in the United States from 15 June to 13 July and involves 32 teams, including Chelsea and Manchester City. Switzerland is hosting Euro 2025 from 2-27 July, meaning five or six matches are likely to be played at the same time as some in the men's competition. "Overall, I'm not really worried. We're talking about two tournaments, in two different countries, with two different timezones," said Kessler.
+    
+    "There are also broadcasting agreements in place that differs from ours. Again, I'm not worried. "As much as we always try to get full exclusivity for our women's football tournaments, in the times we live in, with our men's football tournaments having so many in a year, to get that privilege of full exclusivity is not easy any more. "We must also stick to our plan because I think it's important we get a professional, respected international calendar in place for women's football. We have to co-exist." In May, Fifa rejected claims that Fifpro and the World Leagues Association were not consulted over its plans for the Club World Cup. BBC Sport asked Fifa to justify the scheduling clash with Euro 2025 this month. A Fifa spokesperson told BBC Sport: "The international match calendar for 2025-2030 was approved by the Fifa Council in 2023, which is made up of members from each of the six confederations, including Uefa. "While Fifa accepts that both the men's and women's international match calendars are constrained by obvious limitations, this was deemed to be the most balanced solution."
+    
+    Uefa is aiming to sell out all matches at Euro 2025 and make it the most watched women's European football tournament. It has a target for a total attendance of more than 700,000. A portion of tickets went on sale on 1 October and over 200,000 have been sold. St Jakob Park in Basel will host the final with a capacity of 34,050. Uefa's events chief executive Martin Kallen said the tournament is getting "bigger and bigger" and this may be the last chance for such a small nation to host the Women's Euros. "It's already at the edge for Switzerland to be able to do this Euros. I think they waited for the right moment to ask for it," said Kallen. "They got it because in the future I think the stadiums and infrastructure in Switzerland is too small." The draw takes place on Monday, 16 December, when defending champions England and tournament debutants Wales will find out their group-stage opponents. Among Uefa's key objectives is an aim to meet "men's Euros standards" in terms of team facilities, football technology and analysis. Video assistant referee, goalline technology and semi-automated offsides will all be included. Artificial pitches in Bern and Thun will be overlaid with natural grass in June for the duration of the tournament in order to ensure conditions are the same across all venues. These pitches will be retained until September.
+    --------------------------------------------------------------------------------
+    Score: 0.3998, Text: The King Abdullah Sports City Stadium is one of 15 stadiums in line to host games in 2034
+    
+    The Football Association says it supported Saudi Arabia's bid to host the 2034 World Cup after being assured all fans would be safe and welcome. As expected, the governing body for English football backed the Saudi bid and a multi-nation hosting of the 2030 World Cup at Wednesday afternoon's online Fifa Congress, where the tournament hosts were officially confirmed. The FA released a statement after the meeting, which said: "Our focus is on ensuring that all our fans can attend and enjoy tournaments. "The FA board met the Saudi Arabian Football Federation last month to discuss their bid in more detail. "We asked them to commit to ensuring all fans would be safe and welcome in Saudi Arabia in 2034 - including LGBTQ+ fans. They assured us that they are fully committed to providing a safe and welcome environment for all fans." Some senior FA officials are known to have been wary of accusations of hypocrisy if it were not to support Saudi Arabia but then wants England to participate. The FA will also be mindful of having caved in to Fifa's threats of sporting sanctions at the Qatar World Cup, when it and some other associations abandoned plans for players to wear 'OneLove' armbands intended as an anti-discrimination protest. But with a potential joint bid for the 2031 Women's World Cup, the British football federations may have been keen to avoid a rift with Fifa. And the FA will also have been aware of Saudi Arabia's importance to the UK Government as a key ally in the Middle East, with Prime Minister Sir Keir Starmer visiting the country's Crown Prince this week in a bid to strengthen economic ties between the two countries. Last year, Jake Daniels, the UK's only openly gay active male professional footballer, told the BBC he "wouldn't feel safe" at a Saudi World Cup. When the country's sports minister Prince Abdulaziz bin Turki Al Faisal was asked by BBC Sport last year what he would say to female and gay fans worrying whether they would be safe to attend, he said that "everyone is welcome". Saudi Arabia was the sole bidder for the 2034 event, while the 2030 World Cup was awarded to unopposed co-hosts Spain, Morocco and Portugal, with early matches also being played in Uruguay, Argentina and Paraguay. Rather than a traditional vote, the ratification process was confirmed by acclamation - with federations in favour asked to show their support by applauding for each bid in turn.
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser.
+    
+    Norway's football federation abstained from the vote, arguing the bidding process "undermines Fifa's own reforms for good governance". On Friday, the DFB - Germany's national football association - announced it would vote in favour of both bids. "We did not make the decision lightly and carefully examined the application for the 2034 World Cup," DFB president Bernd Neuendorf said. "We take the criticism of the applicant country seriously and will continue to engage in dialogue. Our goal is to work together with Fifa to improve the situation in the coming years."
+    --------------------------------------------------------------------------------
+    Score: 0.3878, Text: BBC and ITV agree World Cup deal for 2026 and 2030
+    
+    Argentina, led by Lionel Messi, won the 2022 men's World Cup in Qatar
+    
+    BBC Sport has agreed a deal to share live coverage of the men's Fifa World Cup in 2026 and 2030 with ITV and will broadcast the tournament across TV, audio and digital platforms. The 2026 World Cup in the United States, Canada and Mexico will be the biggest yet, with 48 teams playing 104 matches over 39 days - beginning in Mexico City on 11 June and ending in East Rutherford, New Jersey on 19 July. The two broadcasters will share the rights equally, splitting matches between them, including a shared final, ensuring continued free-to-air coverage of the Fifa World Cup. Alongside live TV coverage and highlights across the BBC TV channels and iPlayer, live audio commentary will be broadcast on BBC Radio 5 Live and 5 Sports Extra. Fans will be able to listen to 5 Live coverage on BBC Sounds and follow all the action on the BBC Sport website and app.
+    
+    ITV will deliver free-to-air coverage of live fixtures across ITV1, ITV4 and ITVX, plus highlights and exclusive content on ITV Sport social accounts. The 2030 tournament will be held across three continents and six countries. Spain, Portugal, and Morocco are co-hosting, but to mark 100 years since Uruguay staged the first World Cup there will be three matches played in South America - Argentina, Paraguay and Uruguay hosting one each - to open the tournament. Alex Kay-Jelski, BBC director of sport, said: "Securing these iconic tournaments means BBC Sport is once again bringing people together for the biggest sporting moments. "The World Cup is magical, something the whole planet stops to experience, and we can't wait to show it to audiences across all platforms." BBC Sport's rights portfolio also includes the Olympic Games, the FA Cup, men's Euro 2028 and women's Euro 2025, the Women's Super League, the Wimbledon Championships, the Women's Rugby World Cup 2025 and Match of the Day.
+    --------------------------------------------------------------------------------
+    Score: 0.3555, Text: Five killed in strike on Russia's Kursk after deadly missile attack on Kyiv
+    
+    Ukrainian officials said at least one person was killed and nine others were injured in the attack on Kyiv
+    
+    Russia says five people have been killed in a Ukrainian strike in the western Kursk region. Ukrainian officials reported earlier that Moscow had launched a fresh missile attack on Kyiv, damaging a building hosting several embassies. In Russia, the acting governor of the Kursk region said in addition to those killed, nine had been taken to hospital following the attack on the town of Rylsk. Alexander Khinshtein said a cultural centre, a fitness complex, a school and homes had been damaged in the strike which took place at 15:30 local time (12:30 GMT) on Friday.
+    
+    Russian officials earlier reported six killed, including a child, in Rylsk, about 25km (16 miles) from the Ukrainian border. But in an audio message on Telegram on Saturday morning, Khinshtein gave the latest update, saying there were five fatalities. "There were no children among those [killed]," he said. Ukrainian troops still hold parts of the Kursk region after launching a surprise cross-border offensive in early August. Ukraine's foreign ministry said Russia's strike on Kyiv had affected the diplomatic missions of Albania, Argentina, North Macedonia, Palestine, Portugal and Montenegro. It is unclear whether the building housing them was directly targeted in the Ukrainian capital. At least one person was killed and nine others were injured in the strike which damaged a number of buildings in the city, Ukraine's military said. It is not thought that any of the embassy diplomats were injured. In a verified video filmed in the Pecherskyi District, Kyiv's second oldest Roman Catholic church, St Nicholas Cathedral, is shown with windows shattered following a nearby blast. Ukraine's military said Russia had launched 65 drones and missiles across the country overnight, with most shot down. One man in Kyiv, who said he was the owner of a restaurant that suffered extensive damage following the attack, was filmed cursing the Russians as "beasts" as he surveyed the charred shell of a building in front of him. The video was widely shared on social media.
+    
+    Oksana, another resident, sent the BBC photos of her destroyed apartment, with the windows blown in and glass and brickwork strewn across the floors. "I don't understand how I survived," she said. "My balcony flew away, half my walls are gone. My neighbour is in such shock she can't even speak. I have no words for the people who did this." A local journalist at the scene told the BBC that one of the buildings nearby had been used by the Ukrainian Security Service, the SBU, and was likely to have been the target of the strikes, although much of the damage seen by the BBC had affected residential buildings. In a statement confirming the attack, the Russian defence ministry said missiles had been launched at an SBU "command post" in response to a strike on a chemical plant in Russia's Rostov Region two days ago. But there is also speculation in Kyiv that Friday's attack could be linked to the killing of a Russian general, Lt-Gen Igor Kirillov, in Moscow on Tuesday. Friday's attack come one day after Vladimir Putin's end-of-year press conference and phone-in show, in which he threatened to launch more ballistic missiles at the Ukrainian capital. There is concern in Ukraine that Russia could use a so-called Oreshnik intermediate-range ballistic missile to hit Kyiv. Moscow test-fired the missile on the central city of Dnipro earlier this month. Earlier on Friday morning, the Ukrainian authorities issued an air alert linked to the possible launch of an Oreshnik missile, and urged people in Kyiv to urgently seek shelter. It turned out to be a false alarm.
+    --------------------------------------------------------------------------------
+    Score: 0.3535, Text: Watch five iconic England goals from Euro 2022 including Georgia Stanway's screamer against Spain and Alessia Russo's cheeky backheel versus Sweden.
+    
+    Watch Women’s Euro 2025 draw at 16:55 GMT on Monday, 16 December, on BBC Two and the BBC Sport website & app
+    
+    Available to UK users only.
+    --------------------------------------------------------------------------------
+    Score: 0.3493, Text: I should have invaded Ukraine earlier, Putin tells Russians in TV marathon
+    
+    Russian President Vladimir Putin has said Russia should have launched a full-scale invasion of Ukraine earlier and been better prepared for the war. In his end-of-year press conference on Thursday, Putin said, with hindsight, there should have been "systemic preparation" for the 2022 invasion, which he refers to as a "special military operation". Russia seized Crimea from Ukraine in 2014 and pro-Russian forces began a conflict in eastern Ukraine, but it was eight years later that Putin tried to seize Kyiv. During his four-hour long appearance, Putin also talked about Syria's deposed leader, Russia's more aggressive nuclear doctrine as well as domestic issues, like the price of butter.
+    
+    Billed as "Results of the Year with Vladimir Putin", the event was broadcast live across the main state TV channels on Thursday. Putin appeared in front of a large blue screen emblazoned with a map of the Russian Federation, complete with annexed parts of Ukraine. He took questions from members of the public, foreign journalists and pensioners - but it was a highly choreographed and tightly controlled affair. When asked by the BBC's Russia editor Steve Rosenberg whether he felt the country was in a better state than where his predecessor, Boris Yeltsin, had left it 25 years ago, Putin said Russia had regained its "sovereignty". "With everything that was happening to Russia before that, we were heading towards a complete, total loss of our sovereignty."
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser.
+    
+    Asked about the fall of the Assad regime in Syria, Putin insisted it was not a defeat for the Kremlin - which supported President Bashar al-Assad militarily for years - but he admitted the situation was "complicated". He said he had not yet spoken to ousted Syrian leader, who fled to Moscow as rebel forces closed in on Damascus earlier this month, but planned to do so soon. He added that Russia was in talks with Syria's new rulers to retain two strategically important military bases on the Mediterranean coast and that Moscow would consider using them for humanitarian purposes.
+    
+    Russia holds some airbases in Syria, including this one at Hmeimim military base in Latakia province
+    
+    On US President-elect Donald Trump, Putin said the pair had not spoken in four years, but he was ready to meet him "if he wants it". When put to him he was in a weak position compared to Trump, who is set to take office in January, Putin quoted American writer Mark Twain: "The rumours of my death are much exaggerated," prompting a smattering of laughs in the conference hall. Moving on to China, Putin said Russia's relations with its eastern neighbour had reached an all-time high and the two countries were coordinating actions on the world stage. "In the last decade, the level and quality of our [Russia-China] relations have reached a point that has never existed throughout our entire history, " he said. A lengthy portion of the session was focused on the war in Ukraine, with Putin saying he was "open to compromises" to end the war - although it was unclear what such compromises could entail. Russian forces are making progress on the frontlines "everyday", he said, describing his troops as "heroes". At one point, he produced a signed flag he said was given to him by Russian marines who were "fighting for the motherland" in the Kursk region, and ushered two observers to hold it behind him for the cameras.
+    
+    Putin produced a flag he said was given to him by Russian marines fighting in Kursk
+    
+    He also talked up Russia's construction projects in areas it has seized from Ukraine, claiming the standard of roads in the Ukrainian region of Luhansk had greatly improved since it was seized by Russia-backed forces in 2014. When asked by an audience member if the West had "received the message" on Russia's change to its nuclear doctrine, which Putin pushed through in November, he said "you'll have to ask them." The new nuclear doctrine allows Russia to conduct a nuclear strike on any country, if it is backed by a nuclear power. That means if Ukraine were to launch a large attack on Russia with conventional missiles, drones or aircraft, that could meet the criteria for a nuclear response, as could an attack on Belarus or any critical threat to Russia's sovereignty. Putin also emphasised the capabilities of Russia's new intermediate-range ballistic missile, Oreshnik, which was used in a strike on Ukraine in November. In order to test its power, he suggested Russia should fire the Oreshnik towards Ukraine, and Ukrainian air defence - using US-supplied systems - should try to bring it down. As for the name "Oreshnik"? "Honestly," Putin said with a smirk, "No idea. No clue." A dominant theme throughout the event was "Russian sovereignty", with Putin claiming that less reliance on international partners - partly a result of Western sanctions - was one of the key achievements of his invasion of Ukraine. He said the economy was "stable", pointing to higher growth than countries like Germany, but admitted inflation of 9.1% was "alarming". In fact, the economy is overheating and highly reliant on military production - sometimes termed the "military industrial complex". Throughout the address, Putin also answered questions on domestic issues - from telephone scammers to young people's struggles with getting a mortgage.
+    --------------------------------------------------------------------------------
 
 
 # Retrieval-Augmented Generation (RAG) with Couchbase and LangChain
@@ -553,30 +700,35 @@ rag_chain = (
 logging.info("Successfully created RAG chain")
 ```
 
-    2024-08-29 13:35:28,305 - INFO - Successfully created RAG chain
+    2025-02-25 21:54:00,781 - INFO - Successfully created RAG chain
 
 
 
 ```python
-# Get responses
-logging.disable(sys.maxsize) # Disable logging to prevent tqdm output
-start_time = time.time()
-rag_response = rag_chain.invoke(query)
-rag_elapsed_time = time.time() - start_time
+try:
+    start_time = time.time()
+    rag_response = rag_chain.invoke(query)
+    rag_elapsed_time = time.time() - start_time
 
-print(f"RAG Response: {rag_response.content}")
-print(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+    print(f"RAG Response: {rag_response.content}")
+    print(f"RAG response generated in {rag_elapsed_time:.2f} seconds")
+except AuthenticationError as e:
+    print(f"Authentication error: {str(e)}")
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
+except Exception as e:
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
-    RAG Response: Based on the context provided, the world entered a global depression in 1929. This event is commonly known as "the Great Depression." While the context doesn't provide specific causes for the Great Depression, it's generally understood that it was triggered by a combination of factors, including:
+    RAG Response: During the draw for the 2026 FIFA World Cup, a map was shown that excluded Crimea as part of Ukraine. This graphic, which was displaying countries that cannot be drawn to play each other for geopolitical reasons, highlighted Ukraine but did not include the Crimean peninsula, which is internationally recognized as Ukrainian territory.
     
-    1. The stock market crash of 1929
-    2. Bank failures
-    3. A decline in consumer spending and investment
-    4. International economic issues, such as the gold standard and trade policies
+    This omission sparked significant controversy because Crimea has been under Russian occupation since 2014, but only a handful of countries recognize it as Russian territory. The Ukrainian Foreign Ministry spokesman, Heorhiy Tykhy, called this an "unacceptable error" and stated that Ukraine expected "a public apology" from FIFA. He criticized FIFA for acting "against international law" and supporting "Russian propaganda, war crimes, and the crime of aggression against Ukraine."
     
-    It's important to note that the exact causes of the Great Depression are complex and still debated by historians and economists. The context doesn't provide detailed information about the specific triggers, but it does confirm that 1929 was the year when the global depression began.
-    RAG response generated in 3.16 seconds
+    The Ukrainian Football Association also sent a formal letter of complaint to FIFA and UEFA officials expressing their "deep concern" about the cartographic representation. FIFA acknowledged they were "aware of an issue" and subsequently removed the image.
+    RAG response generated in 6.58 seconds
 
 
 # Using Couchbase as a caching mechanism
@@ -589,9 +741,9 @@ For subsequent requests with the same query, the system checks Couchbase first. 
 ```python
 try:
     queries = [
-        "Why do heavier objects travel downhill faster?",
-        "What caused the 1929 Great Depression?", # Repeated query
-        "Why do heavier objects travel downhill faster?",  # Repeated query
+        "What happened when Apple's AI feature generated a false BBC headline about a murder case in New York?",
+        "What happened with the map shown during the 2026 FIFA World Cup draw regarding Ukraine and Crimea? What was the controversy?", # Repeated query
+        "What happened when Apple's AI feature generated a false BBC headline about a murder case in New York?", # Repeated query
     ]
 
     for i, query in enumerate(queries, 1):
@@ -602,57 +754,42 @@ try:
         elapsed_time = time.time() - start_time
         print(f"Response: {response.content}")
         print(f"Time taken: {elapsed_time:.2f} seconds")
+except AuthenticationError as e:
+    print(f"Authentication error: {str(e)}")
+except InternalServerFailureException as e:
+    if "query request rejected" in str(e):
+        print("Error: Search request was rejected due to rate limiting. Please try again later.")
+    else:
+        print(f"Internal server error occurred: {str(e)}")
 except Exception as e:
-    raise ValueError(f"Error generating RAG response: {str(e)}")
+    print(f"Unexpected error occurred: {str(e)}")
 ```
 
     
-    Query 1: Why do heavier objects travel downhill faster?
-    Response: Based on the provided context, I can answer the question about why heavier objects travel downhill faster.
+    Query 1: What happened when Apple's AI feature generated a false BBC headline about a murder case in New York?
+    Response: According to the context, Apple Intelligence (an AI feature that summarizes notifications) generated a false headline that made it appear as if BBC News had published an article claiming Luigi Mangione, who was arrested for the murder of healthcare insurance CEO Brian Thompson in New York, had shot himself. This was completely false - Mangione had not shot himself.
     
-    Heavier objects generally travel downhill faster due to the relationship between mass, gravity, and friction. Here's a more detailed explanation:
+    The BBC complained to Apple about this misrepresentation, with a BBC spokesperson stating they had "contacted Apple to raise this concern and fix the problem." The BBC emphasized that as "the most trusted news media in the world," it's essential that audiences can trust information published in their name, including notifications.
     
-    1. Gravitational force: The force of gravity acting on an object is proportional to its mass. Heavier objects have more mass, so they experience a stronger gravitational pull.
+    This wasn't an isolated incident - the context mentions that Apple's AI feature also misrepresented a New York Times article, incorrectly summarizing it as "Netanyahu arrested" when the actual article was about the International Criminal Court issuing an arrest warrant for the Israeli prime minister.
+    Time taken: 6.66 seconds
     
-    2. Friction: While friction does act against the motion of objects rolling downhill, it doesn't increase proportionally with mass. This means that the ratio of gravitational force to friction is generally more favorable for heavier objects.
+    Query 2: What happened with the map shown during the 2026 FIFA World Cup draw regarding Ukraine and Crimea? What was the controversy?
+    Response: During the draw for the 2026 FIFA World Cup, a map was shown that excluded Crimea as part of Ukraine. This graphic, which was displaying countries that cannot be drawn to play each other for geopolitical reasons, highlighted Ukraine but did not include the Crimean peninsula, which is internationally recognized as Ukrainian territory.
     
-    3. Inertia: Heavier objects have more inertia, which means they resist changes in motion more than lighter objects. Once they start moving, they tend to keep moving more easily.
+    This omission sparked significant controversy because Crimea has been under Russian occupation since 2014, but only a handful of countries recognize it as Russian territory. The Ukrainian Foreign Ministry spokesman, Heorhiy Tykhy, called this an "unacceptable error" and stated that Ukraine expected "a public apology" from FIFA. He criticized FIFA for acting "against international law" and supporting "Russian propaganda, war crimes, and the crime of aggression against Ukraine."
     
-    4. Air resistance: While air resistance does affect objects moving downhill, its effect is relatively smaller on heavier objects compared to lighter ones, as the ratio of air resistance to mass is lower for heavier objects.
+    The Ukrainian Football Association also sent a formal letter of complaint to FIFA and UEFA officials expressing their "deep concern" about the cartographic representation. FIFA acknowledged they were "aware of an issue" and subsequently removed the image.
+    Time taken: 0.62 seconds
     
-    As a result of these factors, heavier objects typically accelerate faster and reach higher speeds when traveling downhill compared to lighter objects of similar shape and size.
+    Query 3: What happened when Apple's AI feature generated a false BBC headline about a murder case in New York?
+    Response: According to the context, Apple Intelligence (an AI feature that summarizes notifications) generated a false headline that made it appear as if BBC News had published an article claiming Luigi Mangione, who was arrested for the murder of healthcare insurance CEO Brian Thompson in New York, had shot himself. This was completely false - Mangione had not shot himself.
     
-    It's important to note that in a vacuum (where there's no air resistance), all objects would fall at the same rate regardless of their mass. However, in real-world conditions with air resistance and friction, heavier objects generally move faster downhill.
-    Time taken: 5.61 seconds
+    The BBC complained to Apple about this misrepresentation, with a BBC spokesperson stating they had "contacted Apple to raise this concern and fix the problem." The BBC emphasized that as "the most trusted news media in the world," it's essential that audiences can trust information published in their name, including notifications.
     
-    Query 2: What caused the 1929 Great Depression?
-    Response: Based on the context provided, the world entered a global depression in 1929. This event is commonly known as "the Great Depression." While the context doesn't provide specific causes for the Great Depression, it's generally understood that it was triggered by a combination of factors, including:
-    
-    1. The stock market crash of 1929
-    2. Bank failures
-    3. A decline in consumer spending and investment
-    4. International economic issues, such as the gold standard and trade policies
-    
-    It's important to note that the exact causes of the Great Depression are complex and still debated by historians and economists. The context doesn't provide detailed information about the specific triggers, but it does confirm that 1929 was the year when the global depression began.
-    Time taken: 2.22 seconds
-    
-    Query 3: Why do heavier objects travel downhill faster?
-    Response: Based on the provided context, I can answer the question about why heavier objects travel downhill faster.
-    
-    Heavier objects generally travel downhill faster due to the relationship between mass, gravity, and friction. Here's a more detailed explanation:
-    
-    1. Gravitational force: The force of gravity acting on an object is proportional to its mass. Heavier objects have more mass, so they experience a stronger gravitational pull.
-    
-    2. Friction: While friction does act against the motion of objects rolling downhill, it doesn't increase proportionally with mass. This means that the ratio of gravitational force to friction is generally more favorable for heavier objects.
-    
-    3. Inertia: Heavier objects have more inertia, which means they resist changes in motion more than lighter objects. Once they start moving, they tend to keep moving more easily.
-    
-    4. Air resistance: While air resistance does affect objects moving downhill, its effect is relatively smaller on heavier objects compared to lighter ones, as the ratio of air resistance to mass is lower for heavier objects.
-    
-    As a result of these factors, heavier objects typically accelerate faster and reach higher speeds when traveling downhill compared to lighter objects of similar shape and size.
-    
-    It's important to note that in a vacuum (where there's no air resistance), all objects would fall at the same rate regardless of their mass. However, in real-world conditions with air resistance and friction, heavier objects generally move faster downhill.
-    Time taken: 0.35 seconds
+    This wasn't an isolated incident - the context mentions that Apple's AI feature also misrepresented a New York Times article, incorrectly summarizing it as "Netanyahu arrested" when the actual article was about the International Criminal Court issuing an arrest warrant for the Israeli prime minister.
+    Time taken: 0.51 seconds
 
 
+## Conclusion
 By following these steps, you’ll have a fully functional semantic search engine that leverages the strengths of Couchbase and Claude(by Anthropic). This guide is designed not just to show you how to build the system, but also to explain why each step is necessary, giving you a deeper understanding of the principles behind semantic search and how to implement it effectively. Whether you’re a newcomer to software development or an experienced developer looking to expand your skills, this guide will provide you with the knowledge and tools you need to create a powerful, AI-driven search engine.

@@ -47,12 +47,11 @@ Before you start
      a forever free tier operational cluster
    - This account provides you with an environment where you can explore and learn 
      about Capella with no time constraint
-   - To know more, please follow the [Getting Started Guide](https://docs.couchbase.com/cloud/get-started/create-account.html)
+   - To learn more, please follow the [Getting Started Guide](https://docs.couchbase.com/cloud/get-started/create-account.html)
 
 2. Couchbase Capella Configuration
    When running Couchbase using Capella, the following prerequisites need to be met:
-   - Create the database credentials to access the [travel-sample bucket](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) (Read and Write) 
-     used in the application
+   - Create the database credentials to access the required bucket (Read and Write) used in the application
    - Allow access to the Cluster from the IP on which the application is running by following the [Network Security documentation](https://docs.couchbase.com/cloud/security/security.html#public-access)
 
 # Setting the Stage: Installing Necessary Libraries
@@ -63,14 +62,13 @@ We'll install the following key libraries:
 - `langchain-openai`: For accessing OpenAI's embedding and chat models
 - `crewai`: To create and orchestrate our AI agents for RAG operations
 - `python-dotenv`: For securely managing environment variables and API keys
-- `tqdm`: For displaying progress bars during data processing
 
 These libraries provide the foundation for building a semantic search engine with vector embeddings, 
 database integration, and agent-based RAG capabilities.
 
 
 ```python
-%pip install --quiet datasets langchain-couchbase langchain-openai crewai python-dotenv tqdm
+%pip install --quiet datasets==3.5.0 langchain-couchbase==0.3.0 langchain-openai==0.3.13 crewai==0.114.0 python-dotenv==1.1.0
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -81,6 +79,7 @@ The script starts by importing a series of libraries required for various tasks,
 
 
 ```python
+import getpass
 import json
 import logging
 import os
@@ -90,14 +89,16 @@ from datetime import timedelta
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.diagnostics import PingState, ServiceType
-from couchbase.exceptions import (CouchbaseException,
-                                  InternalServerFailureException)
+from couchbase.exceptions import (InternalServerFailureException,
+                                  QueryIndexAlreadyExistsException,
+                                  ServiceUnavailableException)
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.management.search import SearchIndex
 from couchbase.options import ClusterOptions
 from datasets import load_dataset
 from dotenv import load_dotenv
-from langchain.tools import Tool
-from langchain_couchbase.vectorstores import CouchbaseVectorStore
+from crewai.tools import tool
+from langchain_couchbase.vectorstores import CouchbaseSearchVectorStore
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from crewai import Agent, Crew, Process, Task
@@ -113,9 +114,12 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Suppress httpx logging
+logging.getLogger('httpx').setLevel(logging.CRITICAL)
 ```
 
-# Loading Sensitive Informnation
+# Loading Sensitive Information
 In this section, we prompt the user to input essential configuration settings needed. These settings include sensitive information like database credentials, and specific configuration names. Instead of hardcoding these details into the script, we request the user to provide them at runtime, ensuring flexibility and security.
 
 The script uses environment variables to store sensitive information, enhancing the overall security and maintainability of your code by avoiding hardcoded values.
@@ -126,17 +130,17 @@ The script uses environment variables to store sensitive information, enhancing 
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or input("Enter your OpenAI API key: ")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set")
 
-CB_HOST = os.getenv('CB_HOST', 'couchbase://localhost')
-CB_USERNAME = os.getenv('CB_USERNAME', 'Administrator')
-CB_PASSWORD = os.getenv('CB_PASSWORD', 'password')
-CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME', 'vector-search-testing')
-INDEX_NAME = os.getenv('INDEX_NAME', 'vector_search_crew')
-SCOPE_NAME = os.getenv('SCOPE_NAME', 'shared')
-COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'crew')
+CB_HOST = os.getenv('CB_HOST') or input("Enter Couchbase host (default: couchbase://localhost): ") or 'couchbase://localhost'
+CB_USERNAME = os.getenv('CB_USERNAME') or input("Enter Couchbase username (default: Administrator): ") or 'Administrator'
+CB_PASSWORD = os.getenv('CB_PASSWORD') or getpass.getpass("Enter Couchbase password (default: password): ") or 'password'
+CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME') or input("Enter bucket name (default: vector-search-testing): ") or 'vector-search-testing'
+INDEX_NAME = os.getenv('INDEX_NAME') or input("Enter index name (default: vector_search_crew): ") or 'vector_search_crew'
+SCOPE_NAME = os.getenv('SCOPE_NAME') or input("Enter scope name (default: shared): ") or 'shared'
+COLLECTION_NAME = os.getenv('COLLECTION_NAME') or input("Enter collection name (default: crew): ") or 'crew'
 
 print("Configuration loaded successfully")
 ```
@@ -201,68 +205,123 @@ except Exception as e:
     raise
 ```
 
-    Search service is responding at: 18.209.43.8:18094
+    Search service is responding at: 3.235.224.172:18094
     Search service check passed successfully
 
 
-# Setting Up Collections in Couchbase
-In Couchbase, data is organized in buckets, which can be further divided into scopes and collections. Think of a collection as a table in a traditional SQL database. Before we can store any data, we need to ensure that our collections exist. If they don't, we must create them. This step is important because it prepares the database to handle the specific types of data our application will process. By setting up collections, we define the structure of our data storage, which is essential for efficient data retrieval and management.
+## Setting Up Collections in Couchbase
 
-Moreover, setting up collections allows us to isolate different types of data within the same bucket, providing a more organized and scalable data structure. This is particularly useful when dealing with large datasets, as it ensures that related data is stored together, making it easier to manage and query.
+The setup_collection() function handles creating and configuring the hierarchical data organization in Couchbase:
+
+1. Bucket Creation:
+   - Checks if specified bucket exists, creates it if not
+   - Sets bucket properties like RAM quota (1024MB) and replication (disabled)
+   - Note: If you are using Capella, create a bucket manually called vector-search-testing(or any name you prefer) with the same properties.
+
+2. Scope Management:  
+   - Verifies if requested scope exists within bucket
+   - Creates new scope if needed (unless it's the default "_default" scope)
+
+3. Collection Setup:
+   - Checks for collection existence within scope
+   - Creates collection if it doesn't exist
+   - Waits 2 seconds for collection to be ready
+
+Additional Tasks:
+- Creates primary index on collection for query performance
+- Clears any existing documents for clean state
+- Implements comprehensive error handling and logging
+
+The function is called twice to set up:
+1. Main collection for vector embeddings
+2. Cache collection for storing results
+
 
 
 ```python
-
-# Setup collections
-try:
-    bucket = cluster.bucket(CB_BUCKET_NAME)
-    bucket_manager = bucket.collections()
-
-    # Setup main collection
-    collections = bucket_manager.get_all_scopes()
-    collection_exists = any(
-        scope.name == SCOPE_NAME and COLLECTION_NAME in [col.name for col in scope.collections]
-        for scope in collections
-    )
-
-    if not collection_exists:
+def setup_collection(cluster, bucket_name, scope_name, collection_name):
+    try:
+        # Check if bucket exists, create if it doesn't
         try:
-            bucket_manager.create_collection(SCOPE_NAME, COLLECTION_NAME)
-            print(f"Collection '{COLLECTION_NAME}' created")
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' exists.")
         except Exception as e:
-            print(f"Failed to create collection '{COLLECTION_NAME}': {str(e)}")
-            raise
-    else:
-        print(f"Collection '{COLLECTION_NAME}' already exists")
+            logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
+            bucket_settings = CreateBucketSettings(
+                name=bucket_name,
+                bucket_type='couchbase',
+                ram_quota_mb=1024,
+                flush_enabled=True,
+                num_replicas=0
+            )
+            cluster.buckets().create_bucket(bucket_settings)
+            time.sleep(2)  # Wait for bucket creation to complete and become available
+            bucket = cluster.bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
 
-    # Create primary index
-    try:
-        cluster.query(
-            f"CREATE PRIMARY INDEX IF NOT EXISTS ON `{CB_BUCKET_NAME}`.`{SCOPE_NAME}`.`{COLLECTION_NAME}`"
-        ).execute()
-        print(f"Primary index created for '{COLLECTION_NAME}'")
-    except InternalServerFailureException as e:
-        print(f"Failed to create primary index for '{COLLECTION_NAME}': {str(e)}")
-        raise
+        bucket_manager = bucket.collections()
 
-    # Clear collection
-    try:
-        cluster.query(
-            f"DELETE FROM `{CB_BUCKET_NAME}`.`{SCOPE_NAME}`.`{COLLECTION_NAME}`"
-        ).execute()
-        print(f"Collection '{COLLECTION_NAME}' cleared")
+        # Check if scope exists, create if it doesn't
+        scopes = bucket_manager.get_all_scopes()
+        scope_exists = any(scope.name == scope_name for scope in scopes)
+        
+        if not scope_exists and scope_name != "_default":
+            logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
+            bucket_manager.create_scope(scope_name)
+            logging.info(f"Scope '{scope_name}' created successfully.")
+
+        # Check if collection exists, create if it doesn't
+        collections = bucket_manager.get_all_scopes()
+        collection_exists = any(
+            scope.name == scope_name and collection_name in [col.name for col in scope.collections]
+            for scope in collections
+        )
+
+        if not collection_exists:
+            logging.info(f"Collection '{collection_name}' does not exist. Creating it...")
+            bucket_manager.create_collection(scope_name, collection_name)
+            logging.info(f"Collection '{collection_name}' created successfully.")
+        else:
+            logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
+
+        # Wait for collection to be ready
+        collection = bucket.scope(scope_name).collection(collection_name)
+        time.sleep(2)  # Give the collection time to be ready for queries
+
+        # Ensure primary index exists
+        try:
+            cluster.query(f"CREATE PRIMARY INDEX IF NOT EXISTS ON `{bucket_name}`.`{scope_name}`.`{collection_name}`").execute()
+            logging.info("Primary index present or created successfully.")
+        except Exception as e:
+            logging.warning(f"Error creating primary index: {str(e)}")
+
+        # Clear all documents in the collection
+        try:
+            query = f"DELETE FROM `{bucket_name}`.`{scope_name}`.`{collection_name}`"
+            cluster.query(query).execute()
+            logging.info("All documents cleared from the collection.")
+        except Exception as e:
+            logging.warning(f"Error while clearing documents: {str(e)}. The collection might be empty.")
+
+        return collection
     except Exception as e:
-        print(f"Failed to clear collection '{COLLECTION_NAME}': {str(e)}")
-        raise
+        raise RuntimeError(f"Error setting up collection: {str(e)}")
+    
+setup_collection(cluster, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME)
 
-except Exception as e:
-    print(f"An error occurred during setup: {str(e)}")
-    raise
 ```
 
-    Collection 'crew' already exists
-    Primary index created for 'crew'
-    Collection 'crew' cleared
+    2025-05-25 02:56:12 [INFO] Bucket 'vector-search-testing' exists.
+    2025-05-25 02:56:14 [INFO] Collection 'crew' already exists. Skipping creation.
+    2025-05-25 02:56:17 [INFO] Primary index present or created successfully.
+    2025-05-25 02:56:17 [INFO] All documents cleared from the collection.
+
+
+
+
+
+    <couchbase.collection.Collection at 0x3131a9950>
+
 
 
 # Configuring and Initializing Couchbase Vector Search Index for Semantic Document Retrieval
@@ -275,85 +334,93 @@ For more information on creating a vector search index, please follow the instru
 
 
 ```python
+# Load index definition
 try:
-    # Load index definition
-    try:
-        with open('crew_index.json', 'r') as file:
-            index_definition = json.load(file)
-    except FileNotFoundError as e:
-        print(f"Error: crew_index.json file not found: {str(e)}")
-        raise
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in crew_index.json: {str(e)}")
-        raise
-    except Exception as e:
-        print(f"Error loading index definition: {str(e)}")
-        raise
-
-    # Setup vector search index
-    try:
-        scope_index_manager = cluster.bucket(CB_BUCKET_NAME).scope(SCOPE_NAME).search_indexes()
-
-        # Check if index exists
-        try:
-            existing_indexes = scope_index_manager.get_all_indexes()
-            index_exists = any(index.name == INDEX_NAME for index in existing_indexes)
-        except InternalServerFailureException:
-            # If no indexes exist yet, continue with creation
-            index_exists = False
-            print("No existing indexes found, proceeding with index creation")
-
-        if index_exists:
-            print(f"Index '{INDEX_NAME}' already exists")
-        else:
-            search_index = SearchIndex.from_json(index_definition)
-            scope_index_manager.upsert_index(search_index)
-            print(f"Index '{INDEX_NAME}' created")
-    except InternalServerFailureException as e:
-        print(f"Internal server error occurred while creating vector search index '{INDEX_NAME}'. This may indicate insufficient system resources or an issue with the Couchbase server configuration: {str(e)}")
-        raise
-    except CouchbaseException as e:
-        print(f"A Couchbase-specific error occurred while managing vector search index '{INDEX_NAME}'. Please verify your cluster connectivity and index configuration settings: {str(e)}")
-        raise
-    except Exception as e:
-        print(f"An unexpected error occurred while managing vector search index '{INDEX_NAME}'. This requires investigation of system logs for root cause analysis: {str(e)}")
-        raise
-
+    with open('crew_index.json', 'r') as file:
+        index_definition = json.load(file)
+except FileNotFoundError as e:
+    print(f"Error: crew_index.json file not found: {str(e)}")
+    raise
+except json.JSONDecodeError as e:
+    print(f"Error: Invalid JSON in crew_index.json: {str(e)}")
+    raise
 except Exception as e:
-    print(f"Fatal error in vector search index setup: {str(e)}")
+    print(f"Error loading index definition: {str(e)}")
     raise
 ```
 
-    Index 'vector_search_crew' already exists
+# Creating or Updating Search Indexes
+
+With the index definition loaded, the next step is to create or update the **Vector Search Index** in Couchbase. This step is crucial because it optimizes our database for vector similarity search operations, allowing us to perform searches based on the semantic content of documents rather than just keywords. By creating or updating a Vector Search Index, we enable our search engine to handle complex queries that involve finding semantically similar documents using vector embeddings, which is essential for a robust semantic search engine.
 
 
-# Setting Up OpenAI Components
+```python
+try:
+    scope_index_manager = cluster.bucket(CB_BUCKET_NAME).scope(SCOPE_NAME).search_indexes()
+
+    # Check if index already exists
+    existing_indexes = scope_index_manager.get_all_indexes()
+    index_name = index_definition["name"]
+
+    if index_name in [index.name for index in existing_indexes]:
+        logging.info(f"Index '{index_name}' found")
+    else:
+        logging.info(f"Creating new index '{index_name}'...")
+
+    # Create SearchIndex object from JSON definition
+    search_index = SearchIndex.from_json(index_definition)
+
+    # Upsert the index (create if not exists, update if exists)
+    scope_index_manager.upsert_index(search_index)
+    logging.info(f"Index '{index_name}' successfully created/updated.")
+
+except QueryIndexAlreadyExistsException:
+    logging.info(f"Index '{index_name}' already exists. Skipping creation/update.")
+except ServiceUnavailableException:
+    raise RuntimeError("Search service is not available. Please ensure the Search service is enabled in your Couchbase cluster.")
+except InternalServerFailureException as e:
+    logging.error(f"Internal server error: {str(e)}")
+    raise
+```
+
+    2025-05-25 02:56:18 [INFO] Index 'vector_search_crew' found
+    2025-05-25 02:56:19 [INFO] Index 'vector_search_crew' already exists. Skipping creation/update.
+
+
+## Setting Up OpenAI Components
 
 This section initializes two key OpenAI components needed for our RAG system:
 
 1. OpenAI Embeddings:
-   - Uses the 'text-embedding-ada-002' model
+   - Uses the 'text-embedding-3-small' model
    - Converts text into high-dimensional vector representations (embeddings)
    - These embeddings enable semantic search by capturing the meaning of text
    - Required for vector similarity search in Couchbase
 
 2. ChatOpenAI Language Model:
    - Uses the 'gpt-4o' model
-   - Temperature set to 0.0 for focused responses
-   - Higher temperatures increase creativity and variation
-   - Handles the actual text generation and responses
-   - Acts as the brain of our RAG system for processing retrieved context
+   - Temperature set to 0.2 for balanced creativity and focus
+   - Serves as the cognitive engine for CrewAI agents
+   - Powers agent reasoning, decision-making, and task execution
+   - Enables agents to:
+     - Process and understand retrieved context from vector search
+     - Generate thoughtful responses based on that context
+     - Follow instructions defined in agent roles and goals
+     - Collaborate with other agents in the crew
+   - The relatively low temperature (0.2) ensures agents produce reliable,
+     consistent outputs while maintaining some creative problem-solving ability
 
 Both components require a valid OpenAI API key (OPENAI_API_KEY) for authentication.
-The embeddings model is optimized for creating vector representations,
-while the language model is optimized for understanding and generating human-like text.
+In the CrewAI framework, the LLM acts as the "brain" for each agent, allowing them
+to interpret tasks, retrieve relevant information via the RAG system, and generate
+appropriate outputs based on their specialized roles and expertise.
 
 
 ```python
 # Initialize OpenAI components
 embeddings = OpenAIEmbeddings(
     openai_api_key=OPENAI_API_KEY,
-    model="text-embedding-ada-002"
+    model="text-embedding-3-small"
 )
 
 llm = ChatOpenAI(
@@ -374,7 +441,7 @@ A vector store is where we'll keep our embeddings. Unlike the FTS index, which i
 
 ```python
 # Setup vector store
-vector_store = CouchbaseVectorStore(
+vector_store = CouchbaseSearchVectorStore(
     cluster=cluster,
     bucket_name=CB_BUCKET_NAME,
     scope_name=SCOPE_NAME,
@@ -388,54 +455,103 @@ print("Vector store initialized")
     Vector store initialized
 
 
-# Load the TREC Dataset
-To build a search engine, we need data to search through. We use the TREC dataset, a well-known benchmark in the field of information retrieval. This dataset contains a wide variety of text data that we'll use to train our search engine. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the data in the TREC dataset make it an excellent choice for testing and refining our search engine, ensuring that it can handle a wide range of queries effectively.
+# Load the BBC News Dataset
+To build a search engine, we need data to search through. We use the BBC News dataset from RealTimeData, which provides real-world news articles. This dataset contains news articles from BBC covering various topics and time periods. Loading the dataset is a crucial step because it provides the raw material that our search engine will work with. The quality and diversity of the news articles make it an excellent choice for testing and refining our search engine, ensuring it can handle real-world news content effectively.
 
-The TREC dataset's rich content allows us to simulate real-world scenarios where users ask complex questions, enabling us to fine-tune our search engine's ability to understand and respond to various types of queries.
+The BBC News dataset allows us to work with authentic news articles, enabling us to build and test a search engine that can effectively process and retrieve relevant news content. The dataset is loaded using the Hugging Face datasets library, specifically accessing the "RealTimeData/bbc_news_alltime" dataset with the "2024-12" version.
 
 
 ```python
-# Load TREC dataset
-trec = load_dataset('trec', split='train[:1000]')
-print(f"Loaded {len(trec)} samples from TREC dataset")
-
 try:
-    batch_size = 50
-    vector_store.add_texts(
-        texts=trec['text'],
-        batch_size=batch_size,
+    news_dataset = load_dataset(
+        "RealTimeData/bbc_news_alltime", "2024-12", split="train"
     )
-    print(f"Added {len(trec)} documents to vector store")
+    print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
+    logging.info(f"Successfully loaded the BBC News dataset with {len(news_dataset)} rows.")
 except Exception as e:
-    raise RuntimeError(f"Failed to save documents to vector store: {str(e)}")
+    raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-    Loaded 1000 samples from TREC dataset
+    2025-05-25 02:56:29 [INFO] Successfully loaded the BBC News dataset with 2687 rows.
 
 
-    2024-12-17 23:12:01 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+    Loaded the BBC News dataset with 2687 rows
 
 
-    Added 1000 documents to vector store
+## Cleaning up the Data
+We will use the content of the news articles for our RAG system.
+
+The dataset contains a few duplicate records. We are removing them to avoid duplicate results in the retrieval stage of our RAG system.
 
 
-# Creating a Vector Search Tool
+```python
+news_articles = news_dataset["content"]
+unique_articles = set()
+for article in news_articles:
+    if article:
+        unique_articles.add(article)
+unique_news_articles = list(unique_articles)
+print(f"We have {len(unique_news_articles)} unique articles in our database.")
+```
+
+    We have 1749 unique articles in our database.
+
+
+## Saving Data to the Vector Store
+To efficiently handle the large number of articles, we process them in batches of articles at a time. This batch processing approach helps manage memory usage and provides better control over the ingestion process.
+
+We first filter out any articles that exceed 50,000 characters to avoid potential issues with token limits. Then, using the vector store's add_texts method, we add the filtered articles to our vector database. The batch_size parameter controls how many articles are processed in each iteration.
+
+This approach offers several benefits:
+1. Memory Efficiency: Processing in smaller batches prevents memory overload
+2. Error Handling: If an error occurs, only the current batch is affected
+3. Progress Tracking: Easier to monitor and track the ingestion progress
+4. Resource Management: Better control over CPU and network resource utilization
+
+We use a conservative batch size of 50 to ensure reliable operation.
+The optimal batch size depends on many factors including:
+- Document sizes being inserted
+- Available system resources
+- Network conditions
+- Concurrent workload
+
+Consider measuring performance with your specific workload before adjusting.
+
+
+
+```python
+batch_size = 50
+
+# Automatic Batch Processing
+articles = [article for article in unique_news_articles if article and len(article) <= 50000]
+
+try:
+    vector_store.add_texts(
+        texts=articles,
+        batch_size=batch_size
+    )
+    logging.info("Document ingestion completed successfully.")
+except Exception as e:
+    raise ValueError(f"Failed to save documents to vector store: {str(e)}")
+```
+
+    2025-05-25 02:58:12 [INFO] Document ingestion completed successfully.
+
+
+## Creating a Vector Search Tool
 After loading our data into the vector store, we need to create a tool that can efficiently search through these vector embeddings. This involves two key components:
 
-## Vector Retriever
-The vector retriever is configured to perform similarity searches with specific parameters:
-- k=8: Returns the 8 most similar documents
-- fetch_k=20: Initially retrieves 20 candidates before filtering to the top 8
-This two-stage approach helps balance between accuracy and performance.
+### Vector Retriever
+The vector retriever is configured to perform similarity searches. This creates a retriever that performs semantic similarity searches against our vector database. The similarity search finds documents whose vector embeddings are closest to the query's embedding in the vector space.
 
-## Search Tool
+### Search Tool
 The search tool wraps the retriever in a user-friendly interface that:
-- Accepts natural language queries
-- Handles both string and structured query inputs
-- Formats results with clear document separation
-- Includes metadata for traceability
+- Takes a query string as input
+- Passes the query to the retriever to find relevant documents
+- Formats the results with clear document separation using document numbers and dividers
+- Returns the formatted results as a single string with each document clearly delineated
 
-The tool is designed to integrate seamlessly with our AI agents, providing them with reliable access to our knowledge base through vector similarity search.
+The tool is designed to integrate seamlessly with our AI agents, providing them with reliable access to our knowledge base through vector similarity search. The lambda function in the tool handles both direct string queries and structured query objects, ensuring flexibility in how the tool can be invoked.
 
 
 
@@ -443,32 +559,30 @@ The tool is designed to integrate seamlessly with our AI agents, providing them 
 # Create vector retriever
 retriever = vector_store.as_retriever(
     search_type="similarity",
-    search_kwargs={
-        "k": 8,
-        "fetch_k": 20
-    }
 )
 
-# Create search tool using retriever
-search_tool = Tool(
-    name="vector_search",
-    func=lambda query: "\n\n".join([
-        f"Document {i+1}:\n{'-'*40}\n{doc.page_content}"
-        for i, doc in enumerate(retriever.invoke(
-            query if isinstance(query, str) else str(query.get('query', ''))
-        ))
-    ]),
-    description="""Search for relevant documents using vector similarity.
+# Define the search tool using the @tool decorator
+@tool("vector_search")
+def search_tool(query: str) -> str:
+    """Search for relevant documents using vector similarity.
     Input should be a simple text query string.
-    Returns a list of relevant document contents with metadata.
+    Returns a list of relevant document contents.
     Use this tool to find detailed information about topics."""
-)
+    # Handle potential non-string query input if needed (similar to original lambda)
+    # CrewAI usually passes the string directly based on task description
+    # but checking doesn't hurt, though the Agent logic might handle this.
+    # query_str = query if isinstance(query, str) else str(query.get('query', '')) # Simplified for now
 
-print("Vector search tool created")
+    # Invoke the retriever
+    docs = retriever.invoke(query)
+
+    # Format the results
+    formatted_docs = "\n\n".join([
+        f"Document {i+1}:\n{'-'*40}\n{doc.page_content}"
+        for i, doc in enumerate(docs)
+    ])
+    return formatted_docs
 ```
-
-    Vector search tool created
-
 
 # Creating CrewAI Agents
 
@@ -563,6 +677,38 @@ print("Agents created successfully")
     Agents created successfully
 
 
+## How CrewAI Agents Work in this RAG System
+
+### Agent-Based RAG Architecture
+
+This system uses a two-agent approach to implement Retrieval-Augmented Generation (RAG):
+
+1. **Research Expert Agent**:
+   - Receives the user query
+   - Uses the vector search tool to retrieve relevant documents from Couchbase
+   - Analyzes and synthesizes information from retrieved documents
+   - Produces a comprehensive research summary with key findings
+
+2. **Technical Writer Agent**:
+   - Takes the research summary as input
+   - Structures and formats the information
+   - Creates a polished, user-friendly response
+   - Ensures proper attribution and citation
+
+#### How the Process Works:
+
+1. **Query Processing**: User query is passed to the Research Agent
+2. **Vector Search**: Query is converted to embeddings and matched against document vectors
+3. **Document Retrieval**: Most similar documents are retrieved from Couchbase
+4. **Analysis**: Research Agent analyzes documents for relevance and extracts key information
+5. **Synthesis**: Research Agent combines findings into a coherent summary
+6. **Refinement**: Writer Agent restructures and enhances the content
+7. **Response Generation**: Final polished response is returned to the user
+
+This multi-agent approach separates concerns (research vs. writing) and leverages
+specialized expertise for each task, resulting in higher quality responses.
+
+
 # Testing the Search System
 
 Test the system with some example queries.
@@ -570,6 +716,15 @@ Test the system with some example queries.
 
 ```python
 def process_query(query, researcher, writer):
+    """
+    Test the complete RAG system with a user query.
+    
+    This function tests both the vector search capability and the agent-based processing:
+    1. Vector search: Retrieves relevant documents from Couchbase
+    2. Agent processing: Uses CrewAI agents to analyze and format the response
+    
+    The function measures performance and displays detailed outputs from each step.
+    """
     print(f"\nQuery: {query}")
     print("-" * 80)
     
@@ -624,566 +779,647 @@ def process_query(query, researcher, writer):
 
 
 ```python
-query = "What caused the 1929 Great Depression?"
+# Disable logging before running the query
+logging.disable(logging.CRITICAL)
+
+query = "What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures."
 process_query(query, researcher, writer)
 ```
 
-    23:12:07 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o-mini; provider = openai
-    2024-12-17 23:12:07 [INFO] 
-    LiteLLM completion() model= gpt-4o-mini; provider = openai
-
-
     
-    Query: What caused the 1929 Great Depression?
+    Query: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.
     --------------------------------------------------------------------------------
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080">╭──────────────────────────────────────────── Crew Execution Started ─────────────────────────────────────────────╮</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">Crew Execution Started</span>                                                                                         <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008080; text-decoration-color: #008080">crew</span>                                                                                                     <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008080; text-decoration-color: #008080">d8b9aa65-b394-4caf-922d-4a4b5de60c7e</span>                                                                       <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">│</span>                                                                                                                 <span style="color: #008080; text-decoration-color: #008080">│</span>
+<span style="color: #008080; text-decoration-color: #008080">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
      
-    [2024-12-17 23:12:07][INFO]: Planning the crew execution
+    [2025-05-25 02:58:12][INFO]: Planning the crew execution
 
 
-    2024-12-17 23:12:15 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:15 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:15 [INFO] Wrapper: Completed Call, calling success_handler
-    23:12:15 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:15 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+└── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>                                                                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
 
 
     # Agent: Research Expert
-    ## Task: Research and analyze information relevant to: What caused the 1929 Great Depression?1. Initiate the task by clearly defining the research question: 'What caused the 1929 Great Depression?'
-    2. Use the vector_search tool to find relevant documents. Input the query string that accurately represents the research question.
-    3. Analyze the results from the vector_search tool. Review the list of documents returned with a focus on their content and metadata.
-    4. Collect key findings from the most relevant documents, noting any reliable sources, statistics, and historical facts that provide insight into the causes of the Great Depression.
-    5. Synthesize the findings into a cohesive analysis, ensuring it includes different perspectives and theories about the causes of the Great Depression, such as stock market crash, bank failures, reduced consumer spending, and international trade issues.
-    6. Prepare a summary of the analysis highlighting key findings and supporting evidence that answers the query with a well-rounded perspective.
+    ## Task: Research and analyze information relevant to: What are the key details about the FA Cup third round draw? Include information about Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures.1. The Research Expert will begin by defining the scope of research by identifying key aspects related to the FA Cup third round draw, including historical context, significance of the matches, and team statistics. 
+    2. The expert will formulate a specific query string that encapsulates the required information, focusing on Manchester United vs Arsenal, Tamworth vs Tottenham, and other relevant fixtures. 
+    3. Using the 'vector_search' tool, the expert will input the generated query string to initiate a search for relevant documents containing current and historical information regarding the FA Cup third round draw. 
+    4. The expert will analyze the retrieved documents, identifying key details such as match venue, date, historical performances, and recent form of each team involved. 
+    5. Key findings will be noted meticulously, ensuring each match's context is articulated accurately, particularly emphasizing the implications of the fixtures for the teams involved. 
+    6. The research will conclude with a summary of findings for each identified match, ensuring all relevant insights are captured for later stages.
 
 
-    2024-12-17 23:12:17 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:17 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:17 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:18 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:19 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:19 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
 
 
     
     
     # Agent: Research Expert
-    ## Thought: I need to use the vector_search tool to find relevant documents that explain the causes of the 1929 Great Depression.
+    ## Thought: Thought: I need to gather detailed information about the FA Cup third round draw, focusing on the matches Manchester United vs Arsenal, Tamworth vs Tottenham, and other notable fixtures. I will use the vector_search tool to find relevant documents that provide insights into these matches, including historical context, significance, and team statistics.
     ## Using tool: vector_search
     ## Tool Input: 
-    "{\"query\": \"What caused the 1929 Great Depression?\"}"
+    "{\"query\": \"FA Cup third round draw 2023 Manchester United vs Arsenal Tamworth vs Tottenham notable fixtures\"}"
     ## Tool Output: 
     Document 1:
     ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
+    Holders Manchester United have been drawn away to record 14-time winners Arsenal in the FA Cup third round.
+    
+    Premier League leaders Liverpool will host League Two Accrington Stanley, while Manchester City welcome 'Class of 92'-owned Salford City.
+    
+    Tamworth, one of only two non-league clubs remaining in the competition, are at home to Tottenham.
+    
+    The third-round ties will be played over the weekend of Saturday, 11 January.
+    
+    The third round is when the 44 Premier League and Championship clubs enter the competition, joining the 20 lower-league and non-league clubs who made it through last weekend's second-round ties.
+    
+    There were audible groans from the watching supporters inside Old Trafford as Manchester United, who beat rivals Manchester City to lift the trophy for a 13th time in May, were confirmed as Arsenal's opponents.
+    
+    Tamworth, the lowest-ranked team remaining in the cup, will host Ange Postecoglou's Spurs as reward for their penalty shootout win against League One side Burton Albion, while fellow National League outfit Dagenham & Redbridge will go to Championship Millwall.
+    
+    Everton full-back Ashley Young, 39, could face his 18-year-old son Tyler after the Toffees drew Peterborough at home.
+    
+    "Wow...dreams might come true," posted former England international Young on X.
+    
+    Elsewhere, Chelsea host League Two's bottom club Morecambe, whose fellow fourth-tier strugglers Bromley travel to face Newcastle United at St James' Park.
     
     Document 2:
     ----------------------------------------
-    When was `` the Great Depression '' ?
+    Adam Idah won last season's Scottish Cup for Celtic with a last-gasp goal against Rangers at Hampden in May
+    
+    Holders Celtic will host Kilmarnock in the fourth round of the Scottish Cup, while Rangers welcome Highland League side Fraserburgh to Ibrox. There will be a Dundee derby at Dens Park, St Johnstone take on Motherwell in Perth and Aberdeen make the short trip to Elgin City. Hibernian will be at home against Clydebank, currently unbeaten in the West of Scotland Football League, and Hearts visit Highland League leaders Brechin City. Championship pace-setters Falkirk won 3-1 at East Kilbride on Monday evening and will meet league rivals Raith Rovers next. Musselburgh Athletic of the East of Scotland Premier Division go to Hamilton Accies and Lowland League representatives Broxburn Athletic have a home tie with Ayr United. The fourth-round matches will be played on the weekend of 18-19 January.
+    
+    Former Scotland forward Steven Naismith, who won the trophy with Rangers in 2009, conducted the draw at East Kilbride's K-Park
+    
+    Fraserburgh manager says the prospect of facing Rangers is "a bit surreal". "It's something many, many at our level only dream of," Cowie told BBC Radio Scotland's Good Morning Scotland. "We've got quite a few in the club who are Rangers supporters, so for them it truly is a dream come true, but we're just humbled to have been given this opportunity. Like I said, just to be in the draw, but to pull out a tie such as that one it's going to be incredible. "It'll be rewarding in so many ways, obviously financially, it'll be great for a club and give us a boost during these difficult times, but also in terms of memories, this tie will create for players, supporters and the like. It's truly got to be a great occasion for the club." With almost seven weeks to go until the trip to Ibrox, Cowie says Fraserburgh will "have to try and keep a lid on it" with Highland League and Aberdeenshire Shield games to come first. "The Rangers game is a bit away yet, we've got some league games and cup games that we want to do well in beforehand," he added. "We haven't been together since, so there will be a bit of excitement, but we've got a good group, so hopefully we'll manage to focus on tonight's game [against Keith] and put the Rangers game to the side slightly."
     
     Document 3:
     ----------------------------------------
-    What crop failure caused the Irish Famine ?
+    Man Utd are better with Rashford - Amorim
+    
+    This video can not be played To play this video you need to enable JavaScript in your browser. I just want to help Marcus - Amorim on Rashford
+    
+    Manchester United manager Ruben Amorim says the club are "better" with Marcus Rashford after the forward suggested he could leave Old Trafford. The England international, 27, said on Tuesday that he was "ready for a new challenge and the next steps" in his career. It came two days after Rashford was dropped for United's derby win against Manchester City at Etihad Stadium. Rashford's last Premier League start came in a 4-0 win against Everton on 1 December, when he scored twice. Amorim suggested the club want the striker - who came through United's youth ranks - to stay, saying: "I don't talk about the future, we talk about the present. "This kind of club needs big talent and he's a big talent, so he just needs to perform at the highest level and that is my focus. I just want to help Marcus." Asked about Rashford's desire for a "new challenge", Amorim said: "I think it's right. We have here a new challenge, it's a tough one. "For me it's the biggest challenge in football because we are in a difficult situation and I already said this is one of the biggest clubs in the world. "I really hope all my players are ready for this new challenge." Amorim added the club will "try different things" to help Rashford find the "best levels he has shown in the past". "Nothing has changed - we believe in Marcus," said Amorim. "It's hard to explain to you guys what I am going to do. I'm a little bit emotional so in the moment I will decide what to do. "It's a hard situation to comment [on]. If I give a lot of importance it will have big headlines in the papers and if I say it's not a problem then my standards are getting low." Asked if he, when he was a player, would do an interview or speak privately, Amorim said: "If this was me probably I would speak with the manager."
+    
+    Manchester United face Tottenham in the quarter-finals of the Carabao Cup on Thursday (20:00 GMT). Amorim refused to confirm whether Rashford or winger Alejandro Garnacho - who was also left out of the squad to face Manchester City - would feature against Spurs. However, Rashford was not pictured travelling with the team when they left for London, but Garnacho was. Asked how Garnacho has reacted to being left out, Amorim said: "Really good - he trained really well. He seems a little bit upset with me and that's perfect. "I was really, really happy because I would do the same. He's ready for this game." One player that will not be available is midfielder Mason Mount, who went off in the 14th minute of Sunday's win. Amorim said his injury was still being assessed and Mount was "really sad" in the dressing room, adding "we need to help him".
+    • None What happens now with Man Utd and Rashford?
+    
+    Marcus Rashford has started three of Manchester United's seven matches since Ruben Amorim was appointed
+    
+    Rashford has scored 138 goals in 426 appearances for United since his debut in 2016. His most prolific season was 2022-23, when he scored 30 times in 56 games in all competitions and was rewarded with a new five-year deal. Rashford's goals in that campaign account for more than one-fifth (21.7%) of his total tally across nine and a half seasons at Old Trafford. However, he has struggled for form in the past 18 months, with 15 goals in his past 67 appearances. The forward's shot conversion rate was 11.9% in the 2021-22 season, when he scored five goals in 32 matches. That rate increased to 18% the following season when he scored 30 times, but fell to just 9.4% last term - the worst rate of his career across a whole campaign - as he netted eight times in 43 matches. Since 2019-20, United have won 52.7% of their matches in all competitions with Rashford in the starting line-up (107 wins from 203 games), compared to 54.2% without (58 from 107).
+    
+    If Manchester United offered guidance to avoid creating even more turmoil around an already delicate situation, Ruben Amorim has followed it. We already know enough of Amorim to know he will not hold back just for the sake of it, but this is a case where actions will speak louder than words. Amorim says he wants "big talent" Rashford to stay. But also that players have to meet his standards. He says Rashford - and Alejandro Garnacho - will be assessed for selection on their training-ground performances. It is fair to assume therefore that if neither reaches the required standard, they will not travel to London for the EFL Cup tie at Tottenham - even if Rashford has shaken off the illness that prevented him from training on Monday. After Tottenham, United have Premier League games against Bournemouth, Wolves and Newcastle. We will know soon enough where Rashford fits in Amorim's plans. If he fails to reach the standards his new boss demands, the 27-year-old will not feature.
     
     Document 4:
     ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
+    Leny Yoro signed for Manchester United from Lille for £52m in the summer
     
-    Document 5:
-    ----------------------------------------
-    What caused the Lynmouth floods ?
+    Leny Yoro could make his Manchester United debut against Arsenal on Wednesday, with head coach Ruben Amorim saying he is "excited" to see the "special talent" in action for the club. United signed Yoro from Lille for £52m in the summer, but the Frenchman underwent surgery on a foot injury suffered during pre-season in the United States, coincidentally in a friendly against Arsenal. The 19-year-old has not featured since, but returned to training in October and is in line to make his first competitive appearance in the Premier League at Emirates Stadium (kick-off 20:15 GMT). "Maybe Leny Yoro is going be in the squad," Amorim said in his pre-match news conference. "I feel he is in a good moment now, his fitness is better." Yoro had been linked with Real Madrid, Paris St-Germain and Liverpool before signing for United in July, with the club's sporting director Dan Ashworth describing the centre-back as "one of the most exciting young defenders in world football". Amorim said: "He is a special talent, we have to be careful in the first moment. We didn't have too many training [sessions] together. He has been training with a small group of players. "He is really fast, a modern defender. He will be good when we want to press high and you leave a lot of strikers in this league one against one, he can manage that. He is very good with the ball so I am very excited. "We have to be careful, we have to manage the load and minute in the beginning but I am really excited to see Leny Yoro playing."
     
-    Document 6:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 7:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 8:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
+    United are unbeaten in three games since Amorim took charge, thrashing Everton 4-0 on Sunday, but said Arsenal are "by far" the biggest challenge he has faced in the job so far. Red Devils supporters seem to already be building a rapport with their new Portuguese boss, serenading him with chants that echoed around Old Trafford. “I don't like my chant," Amorim told BBC Sport when asked about the connection with the fans. "I don't feel embarrassed - but I am the coach, they have to chant for the players. It is not a good thing for me, "I understand and appreciate the connection with the supporters but I want them to support the team and the players because they are on the pitch, I am outside. "I am really honoured and I feel a connection with the supporters but we know we need results to maintain that."
 
 
-    2024-12-17 23:12:20 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:21 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:21 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:21 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:22 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:22 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+└── <span style="color: #000080; text-decoration-color: #000080; font-weight: bold">🧠 </span><span style="color: #000080; text-decoration-color: #000080">Thinking...</span>
+</pre>
 
 
-    
-    
-    # Agent: Research Expert
-    ## Thought: Thought: The search results do not directly address the causes of the 1929 Great Depression. I need to refine my search query to obtain more relevant documents.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"causes of the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 6:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 7:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 8:
-    ----------------------------------------
-    What causes pneumonia ?
 
 
-    2024-12-17 23:12:24 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:24 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:24 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:24 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:26 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:26 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
 
 
-    
-    
-    # Agent: Research Expert
-    ## Thought: Thought: The search results still do not provide direct information on the causes of the 1929 Great Depression. I need to refine my search query further to focus specifically on economic factors and events leading to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"economic causes of the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What do economists do ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 6:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 7:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 8:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    
-    You ONLY have access to the following tools, and should NEVER make up tools that are not listed here:
-    
-    Tool Name: vector_search
-    Tool Arguments: {'query': {'description': '', 'type': 'Any'}}
-    Tool Description: Search for relevant documents using vector similarity.
-        Input should be a simple text query string.
-        Returns a list of relevant document contents with metadata.
-        Use this tool to find detailed information about topics.
-    
-    Use the following format:
-    
-    Thought: you should always think about what to do
-    Action: the action to take, only one name of [vector_search], just the name, exactly as it's written.
-    Action Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using " to wrap keys and values.
-    Observation: the result of the action
-    
-    Once all necessary information is gathered:
-    
-    Thought: I now know the final answer
-    Final Answer: the final answer to the original input question
-    
 
 
-    2024-12-17 23:12:27 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:27 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:27 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:28 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:29 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:29 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+<span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
 
 
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are not yielding the desired information on the causes of the 1929 Great Depression. I will attempt a broader query to capture any related documents that might provide insights into the economic factors leading to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"factors leading to the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 4:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 5:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 6:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 7:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 8:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
 
 
-    2024-12-17 23:12:31 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:32 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:32 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:32 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:33 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:33 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
 
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are consistently not providing relevant information about the causes of the 1929 Great Depression. I will attempt one more refined search query focusing on specific economic events and policies that might have contributed to the Great Depression.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"economic events and policies causing the 1929 Great Depression\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What do economists do ?
-    
-    Document 4:
-    ----------------------------------------
-    What crop failure caused the Irish Famine ?
-    
-    Document 5:
-    ----------------------------------------
-    What are some of the significant historical events of the 1990s ?
-    
-    Document 6:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 7:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    Document 8:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-
-
-    2024-12-17 23:12:35 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:35 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:35 [INFO] Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:36 [INFO] HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-    23:12:37 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:37 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
-
-
-    
-    
-    # Agent: Research Expert
-    ## Thought: The search results are still not providing the necessary information on the causes of the 1929 Great Depression. It seems there might be an issue with the search tool or the available documents. I will attempt one last search with a different approach, focusing on the stock market crash and economic downturn.
-    ## Using tool: vector_search
-    ## Tool Input: 
-    "{\"query\": \"1929 stock market crash and economic downturn causes\"}"
-    ## Tool Output: 
-    Document 1:
-    ----------------------------------------
-    Why did the world enter a global depression in 1929 ?
-    
-    Document 2:
-    ----------------------------------------
-    When was `` the Great Depression '' ?
-    
-    Document 3:
-    ----------------------------------------
-    What are bear and bull markets ?
-    
-    Document 4:
-    ----------------------------------------
-    When did the Dow first reach ?
-    
-    Document 5:
-    ----------------------------------------
-    What historical event happened in Dogtown in 1899 ?
-    
-    Document 6:
-    ----------------------------------------
-    What animals do you find in the stock market ?
-    
-    Document 7:
-    ----------------------------------------
-    When was the first Wall Street Journal published ?
-    
-    Document 8:
-    ----------------------------------------
-    What were popular songs and types of songs in the 1920s ?
-    
-    
-    You ONLY have access to the following tools, and should NEVER make up tools that are not listed here:
-    
-    Tool Name: vector_search
-    Tool Arguments: {'query': {'description': '', 'type': 'Any'}}
-    Tool Description: Search for relevant documents using vector similarity.
-        Input should be a simple text query string.
-        Returns a list of relevant document contents with metadata.
-        Use this tool to find detailed information about topics.
-    
-    Use the following format:
-    
-    Thought: you should always think about what to do
-    Action: the action to take, only one name of [vector_search], just the name, exactly as it's written.
-    Action Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using " to wrap keys and values.
-    Observation: the result of the action
-    
-    Once all necessary information is gathered:
-    
-    Thought: I now know the final answer
-    Final Answer: the final answer to the original input question
-    
-
-
-    2024-12-17 23:12:44 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:12:44 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:12:44 [INFO] Wrapper: Completed Call, calling success_handler
-    23:12:44 - LiteLLM:INFO: utils.py:2765 - 
-    LiteLLM completion() model= gpt-4o; provider = openai
-    2024-12-17 23:12:44 [INFO] 
-    LiteLLM completion() model= gpt-4o; provider = openai
 
 
     
     
     # Agent: Research Expert
     ## Final Answer: 
-    The 1929 Great Depression was caused by a combination of factors, including:
+    Document 1:
+    ----------------------------------------
+    Holders Manchester United have been drawn away to record 14-time winners Arsenal in the FA Cup third round.
     
-    1. Stock Market Crash of 1929: The stock market crash in October 1929 is often cited as the immediate trigger of the Great Depression. The crash led to a loss of confidence in the financial system and a reduction in consumer spending and investment.
+    Premier League leaders Liverpool will host League Two Accrington Stanley, while Manchester City welcome 'Class of 92'-owned Salford City.
     
-    2. Bank Failures: Many banks failed during the early 1930s, leading to a contraction in the money supply. This was partly due to bank runs, where panicked depositors withdrew their funds, causing even solvent banks to collapse.
+    Tamworth, one of only two non-league clubs remaining in the competition, are at home to Tottenham.
     
-    3. Reduction in Consumer Spending: As people lost their jobs and savings, consumer spending decreased significantly, leading to a decline in production and further job losses.
+    The third-round ties will be played over the weekend of Saturday, 11 January.
     
-    4. International Trade Issues: The imposition of tariffs, such as the Smoot-Hawley Tariff, led to a decline in international trade. Other countries retaliated with their tariffs, exacerbating the global economic downturn.
+    The third round is when the 44 Premier League and Championship clubs enter the competition, joining the 20 lower-league and non-league clubs who made it through last weekend's second-round ties.
     
-    5. Monetary Policy: The Federal Reserve's monetary policy during this period is often criticized for being too tight, which contributed to deflation and worsened the economic situation.
+    There were audible groans from the watching supporters inside Old Trafford as Manchester United, who beat rivals Manchester City to lift the trophy for a 13th time in May, were confirmed as Arsenal's opponents.
     
-    These factors, among others, created a downward economic spiral that resulted in the prolonged economic hardship known as the Great Depression.
+    Tamworth, the lowest-ranked team remaining in the cup, will host Ange Postecoglou's Spurs as reward for their penalty shootout win against League One side Burton Albion, while fellow National League outfit Dagenham & Redbridge will go to Championship Millwall.
+    
+    Everton full-back Ashley Young, 39, could face his 18-year-old son Tyler after the Toffees drew Peterborough at home.
+    
+    "Wow...dreams might come true," posted former England international Young on X.
+    
+    Elsewhere, Chelsea host League Two's bottom club Morecambe, whose fellow fourth-tier strugglers Bromley travel to face Newcastle United at St James' Park.
     
     
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">6c97cf00-62f0-4478-8b01-7b677f6277c5</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>                                                                                         <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">In Progress</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     # Agent: Technical Writer
-    ## Task: Create a comprehensive and well-structured response1. Gather all the findings and insights collected from the research phase on the causes of the 1929 Great Depression.
-    2. Organize the information in a logical structure, which might include an introduction, main body (with sub-sections for each cause), and a conclusion.
-    3. Write the introduction to provide context about the Great Depression, including its historical significance.
-    4. In the main body, elaborate on each of the key causes identified:
-       a. Stock Market Crash: Describe the events leading to the crash and its immediate economic impact.
-       b. Bank Failures: Discuss how bank failures contributed to the economic crisis.
-       c. Decline in Consumer Spending: Analyze the effects of lower consumer confidence on the economy.
-       d. International Trade Issues: Explain the global impact and how trade policies affected the U.S. economy.
-    5. End the response with a conclusion summarizing how these factors interlinked to cause the Great Depression.
-    6. Review and edit the response to ensure clarity, accuracy, and coherence.
-
-
-    2024-12-17 23:13:03 [INFO] HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-    23:13:03 - LiteLLM:INFO: utils.py:894 - Wrapper: Completed Call, calling success_handler
-    2024-12-17 23:13:03 [INFO] Wrapper: Completed Call, calling success_handler
-
-
+    ## Task: Create a comprehensive and well-structured response1. The Technical Writer will begin by reviewing the key findings and detailed analysis provided by the Research Expert. 
+    2. The writer will outline the structure of the response, ensuring that it flows logically and covers all necessary topics. This may include sections for an introduction, match summaries, and conclusion. 
+    3. Each section will be filled with clear, concise information while ensuring technical accuracy and relevance to the query. 
+    4. The writer will ensure that the language used is appropriate for the audience, aiming to make complex information accessible. 
+    5. After drafting the response, the writer will review and refine the content for clarity, coherence, and completeness. 
+    6. Finally, the writer will verify that all key points regarding Manchester United vs Arsenal, Tamworth vs Tottenham, and notable fixtures are articulated clearly, providing comprehensive insights within the context of the FA Cup third round draw.
     
     
     # Agent: Technical Writer
     ## Final Answer: 
-    **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
+    **FA Cup Third Round Draw: Comprehensive Overview**
     
     **Introduction**
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
     
-    **Main Body**
+    **Key Match Summaries**
     
-    **a. Stock Market Crash of 1929**
+    1. **Manchester United vs Arsenal**
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    2. **Tamworth vs Tottenham**
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
     
-    **b. Bank Failures**
-    
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
-    
-    **c. Reduction in Consumer Spending**
-    
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
-    
-    **d. International Trade Issues**
-    
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
-    
-    **e. Monetary Policy**
-    
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    3. **Other Notable Fixtures**
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     
     
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #808000; text-decoration-color: #808000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #bfbf7f; text-decoration-color: #bfbf7f">Executing Task...</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008080; text-decoration-color: #008080; font-weight: bold">🚀 Crew: crew</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: ef4cb87a-fab3-41ca-b2c3-95a4486b9751</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Task Execution Planner</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+├── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 6c97cf00-62f0-4478-8b01-7b677f6277c5</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│   <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+│   └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Research Expert</span>
+│       <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+└── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">📋 Task: 9a2f521d-7197-4900-9dd5-3f28e67cba96</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Assigned to: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
+    <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">   Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+    └── <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">🤖 Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>
+        <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">    Status: </span><span style="color: #008000; text-decoration-color: #008000; font-weight: bold">✅ Completed</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Task Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Task Completed</span>                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">9a2f521d-7197-4900-9dd5-3f28e67cba96</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #008000; text-decoration-color: #008000">Technical Writer</span>                                                                                        <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Crew Completion ────────────────────────────────────────────────╮</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Crew Execution Completed</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">crew</span>                                                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008000; text-decoration-color: #008000">d8b9aa65-b394-4caf-922d-4a4b5de60c7e</span>                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
+<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
+</pre>
+
+
+
+
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
+</pre>
+
+
+
     
-    Query completed in 55.89 seconds
+    Query completed in 20.01 seconds
     ================================================================================
     RESPONSE
     ================================================================================
-    **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
+    **FA Cup Third Round Draw: Comprehensive Overview**
     
     **Introduction**
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
     
-    **Main Body**
+    **Key Match Summaries**
     
-    **a. Stock Market Crash of 1929**
+    1. **Manchester United vs Arsenal**
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    2. **Tamworth vs Tottenham**
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
     
-    **b. Bank Failures**
-    
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
-    
-    **c. Reduction in Consumer Spending**
-    
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
-    
-    **d. International Trade Issues**
-    
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
-    
-    **e. Monetary Policy**
-    
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    3. **Other Notable Fixtures**
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     
     ================================================================================
     DETAILED TASK OUTPUTS
     ================================================================================
     
-    Task: Research and analyze information relevant to: What caused the 1929 Great Depression?1. Initiate the ...
+    Task: Research and analyze information relevant to: What are the key details about the FA Cup third round ...
     ----------------------------------------
-    Output: The 1929 Great Depression was caused by a combination of factors, including:
+    Output: Document 1:
+    ----------------------------------------
+    Holders Manchester United have been drawn away to record 14-time winners Arsenal in the FA Cup third round.
     
-    1. Stock Market Crash of 1929: The stock market crash in October 1929 is often cited as the immediate trigger of the Great Depression. The crash led to a loss of confidence in the financial system and a reduction in consumer spending and investment.
+    Premier League leaders Liverpool will host League Two Accrington Stanley, while Manchester City welcome 'Class of 92'-owned Salford City.
     
-    2. Bank Failures: Many banks failed during the early 1930s, leading to a contraction in the money supply. This was partly due to bank runs, where panicked depositors withdrew their funds, causing even solvent banks to collapse.
+    Tamworth, one of only two non-league clubs remaining in the competition, are at home to Tottenham.
     
-    3. Reduction in Consumer Spending: As people lost their jobs and savings, consumer spending decreased significantly, leading to a decline in production and further job losses.
+    The third-round ties will be played over the weekend of Saturday, 11 January.
     
-    4. International Trade Issues: The imposition of tariffs, such as the Smoot-Hawley Tariff, led to a decline in international trade. Other countries retaliated with their tariffs, exacerbating the global economic downturn.
+    The third round is when the 44 Premier League and Championship clubs enter the competition, joining the 20 lower-league and non-league clubs who made it through last weekend's second-round ties.
     
-    5. Monetary Policy: The Federal Reserve's monetary policy during this period is often criticized for being too tight, which contributed to deflation and worsened the economic situation.
+    There were audible groans from the watching supporters inside Old Trafford as Manchester United, who beat rivals Manchester City to lift the trophy for a 13th time in May, were confirmed as Arsenal's opponents.
     
-    These factors, among others, created a downward economic spiral that resulted in the prolonged economic hardship known as the Great Depression.
+    Tamworth, the lowest-ranked team remaining in the cup, will host Ange Postecoglou's Spurs as reward for their penalty shootout win against League One side Burton Albion, while fellow National League outfit Dagenham & Redbridge will go to Championship Millwall.
+    
+    Everton full-back Ashley Young, 39, could face his 18-year-old son Tyler after the Toffees drew Peterborough at home.
+    
+    "Wow...dreams might come true," posted former England international Young on X.
+    
+    Elsewhere, Chelsea host League Two's bottom club Morecambe, whose fellow fourth-tier strugglers Bromley travel to face Newcastle United at St James' Park.
     ----------------------------------------
     
-    Task: Create a comprehensive and well-structured response1. Gather all the findings and insights collected...
+    Task: Create a comprehensive and well-structured response1. The Technical Writer will begin by reviewing t...
     ----------------------------------------
-    Output: **The Causes of the 1929 Great Depression: A Comprehensive Analysis**
+    Output: **FA Cup Third Round Draw: Comprehensive Overview**
     
     **Introduction**
     
-    The Great Depression, which began in 1929 and lasted until the late 1930s, was the most severe economic downturn in modern history. It had profound effects on both the United States and the global economy, leading to widespread unemployment, poverty, and political upheaval. Understanding the causes of the Great Depression is crucial for comprehending the economic and social dynamics of the early 20th century. This analysis explores the key factors that contributed to the onset of the Great Depression, including the stock market crash, bank failures, reduction in consumer spending, international trade issues, and monetary policy missteps.
+    The FA Cup third round draw has set the stage for an exciting series of matches, with notable fixtures featuring both top-tier and lower-league clubs. This stage marks the entry of the 44 Premier League and Championship clubs into the competition, joining 20 lower-league and non-league clubs that have successfully navigated the second round. The matches are scheduled to take place over the weekend of Saturday, 11 January.
     
-    **Main Body**
+    **Key Match Summaries**
     
-    **a. Stock Market Crash of 1929**
+    1. **Manchester United vs Arsenal**
+       - Holders Manchester United, who recently celebrated their 13th FA Cup victory, have been drawn away to face Arsenal, the record 14-time winners. This fixture promises to be a thrilling encounter, as both teams have a rich history in the competition. The draw was met with audible groans from supporters at Old Trafford, highlighting the challenge that lies ahead for United.
     
-    The stock market crash of October 1929 is often regarded as the immediate trigger of the Great Depression. In the years leading up to the crash, the stock market experienced a speculative bubble, with stock prices soaring to unsustainable levels. On October 24, 1929, known as Black Thursday, panic selling began, and by October 29, Black Tuesday, the market had plummeted. This crash resulted in a massive loss of wealth, eroding consumer confidence and leading to a sharp decline in spending and investment. The crash exposed the vulnerabilities in the financial system and set off a chain reaction that contributed to the economic downturn.
+    2. **Tamworth vs Tottenham**
+       - Tamworth, one of only two non-league clubs remaining in the competition, will host Premier League side Tottenham Hotspur. This match is particularly significant for Tamworth, the lowest-ranked team still in the cup, as they earned their spot by defeating League One side Burton Albion in a dramatic penalty shootout. Hosting a top-tier team like Spurs is a remarkable achievement and a testament to their determination and skill.
     
-    **b. Bank Failures**
-    
-    Following the stock market crash, the banking sector faced severe challenges. Many banks had invested heavily in the stock market and suffered significant losses. As panic spread, depositors rushed to withdraw their funds, leading to bank runs. Even solvent banks were unable to meet the sudden demand for cash, resulting in widespread bank failures. The collapse of banks led to a contraction in the money supply, further exacerbating the economic crisis. The loss of savings and the inability to access credit stifled economic activity and deepened the depression.
-    
-    **c. Reduction in Consumer Spending**
-    
-    The economic turmoil led to a significant reduction in consumer spending. As people lost their jobs and savings, consumer confidence plummeted. The decline in spending resulted in decreased demand for goods and services, prompting businesses to cut production and lay off workers. This created a vicious cycle of unemployment and reduced income, further diminishing consumer spending and prolonging the economic downturn.
-    
-    **d. International Trade Issues**
-    
-    International trade issues also played a critical role in the Great Depression. The Smoot-Hawley Tariff, enacted in 1930, aimed to protect American industries by imposing high tariffs on imported goods. However, this policy backfired as other countries retaliated with their tariffs, leading to a sharp decline in international trade. The reduction in trade not only affected the U.S. economy but also contributed to a global economic downturn, as countries around the world experienced decreased demand for their exports.
-    
-    **e. Monetary Policy**
-    
-    The Federal Reserve's monetary policy during this period is often criticized for being too restrictive. In an attempt to curb speculation, the Federal Reserve raised interest rates, which further tightened credit and reduced the money supply. This policy contributed to deflation, making debts more burdensome and reducing consumer and business spending. The failure to provide adequate liquidity to the banking system and the economy at large worsened the economic situation and prolonged the depression.
+    3. **Other Notable Fixtures**
+       - Premier League leaders Liverpool will host League Two's Accrington Stanley, while Manchester City will welcome Salford City, owned by the 'Class of 92'. These matches highlight the diverse range of clubs participating in the third round.
+       - Everton's draw against Peterborough presents a unique scenario where Everton full-back Ashley Young, 39, could potentially face his 18-year-old son Tyler, adding a personal narrative to the fixture.
+       - Chelsea will play against Morecambe, the bottom club of League Two, and Newcastle United will face Bromley, another fourth-tier team, at St James' Park.
     
     **Conclusion**
     
-    The Great Depression was the result of a complex interplay of factors, each contributing to a downward economic spiral. The stock market crash undermined financial stability and consumer confidence, while bank failures led to a contraction in the money supply. The reduction in consumer spending and international trade issues further exacerbated the economic decline. Additionally, the Federal Reserve's monetary policy missteps intensified deflationary pressures. Together, these factors created a prolonged period of economic hardship that reshaped the economic and social landscape of the 20th century. Understanding these causes provides valuable insights into the vulnerabilities of economic systems and the importance of sound economic policies.
+    The FA Cup third round draw has set up a series of intriguing matches that blend the excitement of top-tier clashes with the charm of underdog stories. With Manchester United facing Arsenal and Tamworth hosting Tottenham, fans can look forward to a weekend filled with high-stakes football and potential upsets. This stage of the competition continues to embody the spirit of the FA Cup, where dreams can become reality, and every team has a chance to shine on the national stage.
     ----------------------------------------
 
+
+## Conclusion
+By following these steps, you've built a powerful RAG system that combines Couchbase's vector storage capabilities with CrewAI's agent-based architecture. This multi-agent approach separates research and writing concerns, resulting in higher quality responses to user queries.
+
+The system demonstrates several key advantages:
+1. Efficient vector search using Couchbase's vector store
+2. Specialized AI agents that focus on different aspects of the RAG pipeline
+3. Collaborative workflow between agents to produce comprehensive, well-structured responses
+4. Scalable architecture that can be extended with additional agents for more complex tasks
+
+Whether you're building a customer support system, a research assistant, or a knowledge management solution, this agent-based RAG approach provides a flexible foundation that can be adapted to various use cases and domains.
