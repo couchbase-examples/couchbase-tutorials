@@ -65,28 +65,11 @@ gem install bundler
 bundle install
 ```
 
-The application uses the following gems and needs to be installed globally even though they are specified in the `Gemfile`.
-
-```shell
-gem install rails
-gem install rspec
-gem install rubocop
-gem install rswag
-gem install couchbase
-```
-
-> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info. -->
+> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info.
 
 ### Setup Database Configuration
 
-To know more about connecting to your Capella cluster, please follow the [instructions](https://docs.couchbase.com/cloud/get-started/connect.html).
-
-Specifically, you need to do the following:
-
-- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
-- [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
-
-All configuration for communication with the database is fetched from the environment variables. We have provided a convenience feature in this quickstart to read the environment variables from a local file, `dev.env` in the source folder.
+All configuration for communication with the database is fetched from the environment variables. As a security best practice, this quickstart reads the environment variables from a local file, `dev.env` in the source folder.
 
 Create a copy of `dev.env.example` file & rename it to `dev.env` & add the values for the Couchbase cluster.
 
@@ -128,7 +111,7 @@ docker build -t ruby-on-rails-quickstart .
 docker run --env-file dev.env -p 3000:3000 ruby-on-rails-quickstart
 ```
 
-> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file`, docker will inject those environment variables to the container.
+> Note: The `.env` file has the connection information to connect to your Capella cluster. With the `--env-file` flag, Docker injects those environment variables to the container, overriding any default values defined in the application code.
 
 Once the app is up and running, open http://localhost:3000/api-docs to test the APIs.
 
@@ -148,7 +131,7 @@ For this tutorial, we use three collections, `airport`, `airline` and `route` th
 
 ![img](travel_sample_data_model.png)
 
-## Let Us Review the Code
+## Code Structure
 
 To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn about how to create, read, update and delete documents in Couchbase Server.
 
@@ -216,13 +199,11 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   ├── models
 ```
 
-We have separated out the API code into separate files by the entity (collection) in the `api` folder. The tests are similarly separated out by entity in the `tests` folder.
+The API endpoints are organized by entity (collection) with separate controller files in the `app/controllers/api/v1/` folder. Each entity has corresponding test files in the `test/integration/` and `spec/requests/api/v1/` folders.
 
 In `routes.rb`, we define the routes for the application including the API routes.
 
-We have the Couchbase SDK operations defined in the `CouchbaseClient` class inside the `config/initializers/couchbase.rb` file.
-
-We recommend creating a single Couchbase connection when your application starts up, and sharing this instance throughout your application. If you know at startup time which buckets, scopes, and collections your application will use, we recommend obtaining them from the Cluster at startup time and sharing those instances throughout your application as well.
+The Couchbase connection and collection references are configured in the `config/initializers/couchbase.rb` file.
 
 In this application, we have created the connection object in `config/initializers/couchbase.rb` and we use this object in all of our APIs. The object is initialized in `config/initializers/couchbase.rb`. We have also stored the reference to our bucket, `travel-sample` and the scope, `inventory` in the connection object.
 
@@ -292,7 +273,7 @@ In the above code, we first get the environment variables for the connection str
 
 ### Airline Entity
 
-For this tutorial, we will focus on the airline entity. The other entities are similar.
+For this tutorial, we will focus on the airline entity to demonstrate CRUD operations and SQL++ queries.
 
 We will be setting up a REST API to manage airline documents.
 
@@ -576,14 +557,12 @@ end
 
 ## Running Tests
 
-We have defined integration tests using [RSpec](https://rspec.info/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
+Integration tests are implemented using [RSpec](https://rspec.info/) for all API endpoints. Tests verify operations by calling the API and confirming results in the database.
 
-To run the tests, use the following commands:
+To run all tests:
 
 ```bash
-rspec test/integration/airlines_spec.rb
-rspec test/integration/airports_spec.rb
-rspec test/integration/routes_spec.rb
+rspec test/integration/
 ```
 
 ## Appendix
