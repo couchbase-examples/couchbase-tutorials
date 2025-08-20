@@ -2,11 +2,11 @@
 # frontmatter
 path: "/tutorial-looker-studio-columnar"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Connect Looker Studio to Couchbase Columnar using Tabular Analytics Views
+title: Connect Looker Studio to Couchbase Columnar using Views and Custom Queries
 short_title: Columnar Looker Studio Connector
 description:
-  - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs)
-  - Create Tabular Analytics Views in Capella and use them as stable, optimized datasets
+  - Connect Google Looker Studio to Couchbase Columnar using Tabular Analytics Views (TAVs) or custom queries
+  - Create Tabular Analytics Views in Capella for stable datasets or use custom SQL++ queries for flexibility
   - Learn authentication, configuration, schema inference, and troubleshooting
 content_type: tutorial
 filter: connectors
@@ -27,9 +27,9 @@ length: 20 Mins
 
 ## Overview
 
-Connect Looker Studio to Couchbase Columnar for data analysis and visualization. This connector exclusively uses Tabular Analytics Views (TAVs) as stable, optimized data sources. 
+Connect Looker Studio to Couchbase Columnar for data analysis and visualization. This connector supports two modes: Tabular Analytics Views (TAVs) for stable, optimized data sources, and custom queries for flexible data exploration.
 
-**Workflow**: First, create TAVs in Couchbase Capella from your Columnar data. Then connect Looker Studio to those views for powerful business intelligence and reporting. TAVs provide a stable, schema-defined interface that's optimized for BI tools like Looker Studio.
+**Workflow**: Either create TAVs in Couchbase Capella for consistent reporting, or use custom SQL++ queries for ad-hoc analysis. TAVs provide a stable, schema-defined interface that's optimized for BI tools, while custom queries offer maximum flexibility for complex data operations.
 
 The connector authenticates with Basic Auth to the Columnar API (`/api/v1/request`) and infers schema automatically using `array_infer_schema` so Looker Studio fields are created with reasonable types.
 
@@ -53,19 +53,24 @@ When you add the Couchbase Columnar connector in Looker Studio, you'll see the a
 
 ![Authentication Screen](step-0.png "Couchbase Columnar connector authentication screen in Looker Studio")
 
-## Create Tabular Analytics Views (TAVs) in Capella (Required)
+## Create Tabular Analytics Views (TAVs) in Capella (Recommended)
 
-Before connecting, create Tabular Analytics Views in Capella:
+For the "By View" mode, create Tabular Analytics Views in Capella:
 
 1. Open your Capella cluster, go to the Analytics tab, and launch the Analytics Workbench.
 2. Prepare a SQL++ query that returns a tabular result. For simple, flat data structures, basic SELECT statements work well. For nested objects, consider flattening them for better BI tool compatibility. For example:
 
 ```sql
-SELECT airportname AS airportname,
-       city AS city,
-       country AS country
-FROM `travel-sample`.`inventory`.`airport`
-WHERE country = 'United States';
+-- Example with flattening for nested data structures
+SELECT a.airportname AS airport_name,
+       a.city AS city,
+       a.country AS country,
+       a.geo.lat AS latitude,
+       a.geo.lon AS longitude,
+       ARRAY_FLATTEN(a.faa, ', ') AS faa_codes
+FROM `travel-sample`.`inventory`.`airport` AS a
+WHERE a.country = 'United States'
+LIMIT 100;
 ```
 
 3. Run the query, then click Save as View → Annotate for Tabular View. Define the schema (column names, data types, and primary keys) and save with a descriptive name.
@@ -76,11 +81,11 @@ WHERE country = 'United States';
 
 Choose your mode in the configuration screen:
 
-- Configuration Mode: `By View` (views-only connector).
+- Configuration Mode: Choose between `By View` or `Use Custom Query`.
 
 ### Mode: By View (TAV)
 
-- Couchbase Database, Scope, View: Selected from dropdowns populated from metadata.
+- Couchbase Database, Scope, View: Selected from dropdowns that automatically discover your available databases, scopes, and views from your Columnar instance.
 - Maximum Rows: Optional limit for returned rows; leave blank for no limit.
 
 What runs:
@@ -92,16 +97,6 @@ What runs:
 
 - Custom Columnar Query: Enter your own SQL++ query directly in a text area.
 - Maximum Rows: Not applicable (control limits within your query using `LIMIT`).
-
-**Use this mode when**:
-- You need more complex queries than simple TAV selection
-- You want to join multiple TAVs or apply advanced filtering
-- You need aggregations or transformations not available in your existing TAVs
-
-**Query requirements**:
-- Must be valid SQL++ syntax for Couchbase Columnar
-- Include `LIMIT` clause for performance (recommended during testing)
-- Use proper escaping for database, scope, and view names with backticks
 
 **Example custom query**:
 ```sql
@@ -133,7 +128,7 @@ After authentication, configure the connector by selecting your database, scope,
   - string/objects/arrays/null → STRING/TEXT (dimension)
 - Nested fields are flattened using dot and array index notation where possible (for example, `address.city`, `schedule[0].day`). Unstructured values may be stringified.
 
-> **⚠️ Schema Inference Notes**: Field types are inferred from sampled data and may miss variations (e.g., fields containing both text and numbers). Some fields present in unsampled documents may not be detected. If schema inference fails, ensure your TAV contains data and try adding a `LIMIT` clause to sample fewer rows.
+> **⚠️ Schema Inference Notes**: For TAVs, schema inference uses `array_infer_schema` on the entire dataset unless you specify Maximum Rows (which adds a LIMIT clause for sampling). Field types are inferred from the analyzed data and may miss variations (e.g., fields containing both text and numbers in different documents). If schema inference fails, ensure your TAV contains data and consider adding a Maximum Rows limit for faster sampling during testing.
 
 Once your schema is configured, you can customize the fields in your Looker Studio dashboard:
 
@@ -156,7 +151,7 @@ Once your schema is configured, you can customize the fields in your Looker Stud
 - **Schema inference errors**: Ensure your TAV exists and contains data. Try adding a `LIMIT` clause for faster sampling (e.g., `LIMIT 100`).
 - **API error from Columnar**: Review the response message in Looker Studio and verify TAV names, permissions, and that the view is properly created in Capella.
 - **Empty or missing TAV**: Verify that your Tabular Analytics View was saved correctly in the Analytics Workbench and contains data.
-- **Mixed data types**: If fields appear as STRING when they should be NUMBER, your data may have mixed types. Consider data cleanup in your TAV query.
+- **Mixed data types**: If fields appear as STRING when they should be NUMBER, your data may have mixed types. Consider modifying your TAV creation query to cast fields to consistent types (e.g., `CAST(price AS NUMBER)`) or filter out inconsistent records.
 
 ## Next Steps
 
