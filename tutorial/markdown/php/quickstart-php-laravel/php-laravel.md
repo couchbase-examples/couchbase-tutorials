@@ -236,27 +236,178 @@ For CRUD operations, we will use the [Key-Value operations](https://docs.couchba
 
 ### POST Airline
 
-Create a new airline document using the POST endpoint.
+Open the `AirlineController.php` file and navigate to the `store` method. The request data is validated and then passed to the model to save the airline document.
+
+```php
+// store method in AirlineController.php
+public function store(Request $request, $id)
+{
+    if ($errorResponse = $this->validateRequest($request)) {
+        return $errorResponse;
+    }
+    try {
+        $data = $request->only($this->allowedAttributes);
+        $airline = new Airline($data);
+        $airline->saveAirline($id);
+        return response()->json(['message' => 'Airline created successfully'], 201);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Internal Server Error'], 500);
+    }
+}
+```
+
+We call the `saveAirline` method in the Airline model, which uses the [`upsert`](https://docs.couchbase.com/php-sdk/current/howtos/kv-operations.html#upsert) method from the Couchbase SDK. The upsert method inserts a new document or updates an existing one.
+
+```php
+// saveAirline method in Airline model
+public function saveAirline($id)
+{
+    $data = $this->attributesToArray();
+    unset($data['id']);
+    $this->bucket->scope('inventory')->collection('airline')->upsert($id, $data);
+}
+```
 
 ### GET Airline
 
-Retrieve a specific airline document by its ID using the GET endpoint.
+Navigate to the `show` method in the `AirlineController.php` file. This method retrieves a specific airline document using its ID.
+
+```php
+// show method in AirlineController.php
+public function show($id)
+{
+    try {
+        $airline = Airline::findAirline($id);
+        if (!$airline) {
+            return response()->json(['message' => 'Airline not found'], 404);
+        }
+        return response()->json($airline);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Internal Server Error'], 500);
+    }
+}
+```
+
+We call the `findAirline` method in the Airline model, which uses the [`get`](https://docs.couchbase.com/php-sdk/current/howtos/kv-operations.html#retrieving-documents) method from the Couchbase SDK for key-value retrieval.
+
+```php
+// findAirline method in Airline model
+public static function findAirline($id)
+{
+    $instance = new static;
+    $document = $instance->bucket->scope('inventory')->collection('airline')->get($id);
+    $data = $document->content();
+    return new static($data);
+}
+```
 
 ### PUT Airline
 
-Update an existing airline document or create a new one if it doesn't exist using the PUT endpoint.
+The PUT operation uses the same `store` method as POST, leveraging the `upsert` functionality to either update an existing document or create a new one if it doesn't exist.
+
+```php
+// Same store method handles both POST and PUT
+$airline->saveAirline($id); // Uses upsert internally
+```
+
+The `upsert` operation in Couchbase automatically handles both insert and update scenarios, making it perfect for PUT requests.
 
 ### DELETE Airline
 
-Delete an airline document by its ID using the DELETE endpoint.
+Navigate to the `destroy` method in the `AirlineController.php` file. This method deletes an airline document by its ID.
+
+```php
+// destroy method in AirlineController.php
+public function destroy($id)
+{
+    try {
+        $airline = Airline::findAirline($id);
+        if (!$airline) {
+            return response()->json(['message' => 'Airline not found'], 404);
+        }
+        Airline::destroyAirline($id);
+        return response()->json(['message' => 'Airline deleted successfully'], 200);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Internal Server Error'], 500);
+    }
+}
+```
+
+We call the `destroyAirline` method in the Airline model, which uses the [`remove`](https://docs.couchbase.com/php-sdk/current/howtos/kv-operations.html#removing-documents) method from the Couchbase SDK.
+
+```php
+// destroyAirline method in Airline model
+public static function destroyAirline($id)
+{
+    $instance = new static;
+    $instance->bucket->scope('inventory')->collection('airline')->remove($id);
+}
+```
 
 ### List Airlines
 
-Retrieve a list of airlines with optional filtering by country and pagination using query parameters.
+Navigate to the `index` method in the `AirlineController.php` file. This method retrieves a list of airlines with optional country filtering and pagination.
+
+```php
+// index method in AirlineController.php
+public function index(Request $request)
+{
+    try {
+        $offset = $request->query('offset', 0);
+        $limit = $request->query('limit', 10);
+        $country = $request->query('country');
+        $airlines = Airline::getAllAirlinesByCountry($country, $offset, $limit);
+        return response()->json($airlines);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Internal Server Error'], 500);
+    }
+}
+```
+
+We call the `getAllAirlinesByCountry` method in the Airline model, which uses SQL++ queries to retrieve filtered results.
+
+```php
+// getAllAirlinesByCountry method in Airline model
+public static function getAllAirlinesByCountry($country, $offset = 0, $limit = 10)
+{
+    $query = "SELECT * FROM `travel-sample`.`inventory`.`airline`";
+    if ($country) {
+        $query .= " WHERE country = '$country'";
+    }
+    $query .= " LIMIT $limit OFFSET $offset";
+    
+    $result = $instance->bucket->scope('inventory')->query($query);
+    return collect($result->rows());
+}
+```
 
 ### Airlines to Destination
 
-Find airlines that fly to a specific destination airport using SQL++ queries to join collections.
+This endpoint demonstrates SQL++ queries with JOINs to find airlines that fly to a specific destination airport.
+
+```php
+// getAirlinesToAirport method in Airline model
+public static function getAirlinesToAirport($destinationAirportCode, $offset = 0, $limit = 10)
+{
+    $query = "
+    SELECT air.callsign, air.country, air.iata, air.icao, META(air).id AS id, air.name
+    FROM (
+        SELECT DISTINCT route.airlineid AS airlineId
+        FROM `travel-sample`.`inventory`.`route` AS route
+        WHERE route.destinationairport = '$destinationAirportCode'
+    ) AS subquery
+    JOIN `travel-sample`.`inventory`.`airline` AS air ON META(air).id = subquery.airlineId
+    LIMIT $limit OFFSET $offset";
+    
+    $result = $instance->bucket->scope('inventory')->query($query);
+    return collect($result->rows());
+}
+```
+
+This query demonstrates advanced SQL++ features:
+- **Subquery**: Finds distinct airline IDs from routes to the destination
+- **JOIN**: Connects route and airline collections
+- **META()**: Accesses document metadata to get the document ID
 
 ## Running The Tests
 
@@ -264,8 +415,6 @@ This command will execute all the test cases in your project.
 
 ```sh
 php artisan test
-```
-
 ```
 
 ## Project Setup Notes
