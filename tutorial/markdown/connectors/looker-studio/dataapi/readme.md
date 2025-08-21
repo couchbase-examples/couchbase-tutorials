@@ -34,6 +34,32 @@ Use this connector to build Looker Studio reports directly on Couchbase via the 
 
 Behind the scenes, the connector authenticates with Basic Auth and talks to the Data API endpoints for caller identity checks and to the Query Service for SQL++ execution. Schema is inferred automatically from sampled data to make fields available in Looker Studio.
 
+## Getting Access
+
+To use this connector, you need access to Couchbase:
+
+### Couchbase Capella (Recommended)
+- **Sign up**: Visit [Couchbase Capella](https://cloud.couchbase.com/) to create your account
+- **Free Trial**: Start with a free trial to test the connector
+- **Query Service**: All Capella clusters include the Query Service needed for this connector
+- **Pricing**: Capella is billed based on compute and storage usage. See [Capella Pricing](https://www.couchbase.com/pricing/capella/) for details
+
+### Self-Managed Couchbase
+- Install Couchbase Server with Query Service enabled
+- Ensure your deployment has a publicly accessible endpoint for Looker Studio
+- Configure appropriate user credentials with query permissions
+
+## Installation
+
+To add the Couchbase Data API connector to your Looker Studio reports:
+
+1. **Open Looker Studio**: Go to [Looker Studio](https://lookerstudio.google.com/)
+2. **Create or Open Report**: Start a new report or open an existing one
+3. **Add Data Source**: Click "Add data" or the "+" button
+4. **Find Connector**: Search for "Couchbase Data API" in the connector gallery
+5. **Authorize**: Grant necessary permissions when prompted
+6. **Configure**: Follow the authentication and configuration steps below
+
 ## Prerequisites
 
 - A Couchbase Capella cluster or a self-managed cluster with the Query Service reachable from Looker Studio.
@@ -154,5 +180,53 @@ What runs:
 
 - Create charts and tables in Looker Studio from the exposed fields.
 - Iterate on custom SQL++ queries to shape the dataset for your dashboards.
+
+## Support
+
+For assistance with the Couchbase Data API Looker Studio connector:
+
+### Technical Support
+- **Documentation**: Complete guides at [Couchbase Developer Portal](https://developer.couchbase.com/)
+- **Community Forum**: Get help from the community at [Couchbase Forums](https://forums.couchbase.com/)
+- **Developer Community**: Connect with [Couchbase Developer Community](https://www.couchbase.com/developers/community/)
+- **Discord**: Join real-time discussions on [Couchbase Discord](https://discord.gg/sQ5qbPZuTh)
+
+### Issue Reporting
+- **Connector Issues**: Report bugs or feature requests through [Couchbase Support](https://support.couchbase.com/hc/en-us)
+- **General Contact**: For other inquiries, use [Couchbase Contact](https://www.couchbase.com/contact/)
+- **Response Time**: We aim to respond to connector issues within 2-3 business days
+- **Known Limitations**: Check the troubleshooting section above for common issues
+
+### Resources
+- **Data API Documentation**: [Official Data API Docs](https://docs.couchbase.com/server/current/rest-api/rest-intro.html)
+- **Query Service Documentation**: [SQL++ Query Documentation](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html)
+- **Looker Studio Help**: [Google Looker Studio Support](https://support.google.com/looker-studio/)
+- **Sample Data**: Use travel-sample bucket for testing and examples
+
+## Privacy Policy
+
+**Connector Data Usage**: This connector accesses your Couchbase database credentials and query results solely for data integration with Looker Studio. No data is stored permanently by the connector, and all processing occurs within Google's Looker Studio environment.
+
+**Official Privacy Policy**: For complete information about how Couchbase handles your data, please review our official [Couchbase Privacy Policy](https://www.couchbase.com/privacy-policy/).
+
+**Google Looker Studio**: This connector operates within Google Looker Studio, which has its own data handling policies. Please review [Google's Privacy Policy](https://policies.google.com/privacy) for their data practices.
+
+## Terms of Service
+
+**Connector Usage**: Use this connector only with Couchbase instances you own or have permission to access. Maintain security of your credentials and comply with your organization's data governance policies.
+
+**Official Terms**: Your use of Couchbase products and services is governed by our official [Couchbase Terms of Use](https://www.couchbase.com/terms-of-use/). For enterprise customers, additional terms may apply under your specific [Couchbase License Agreement](https://www.couchbase.com/legal/agreements/).
+
+**Google Looker Studio**: This connector operates within Google Looker Studio and is subject to [Google's Terms of Service](https://policies.google.com/terms).
+
+## Legal
+
+**Copyright**: © 2024 Couchbase, Inc. All rights reserved.
+
+**Legal Information**: For comprehensive legal information, licensing terms, and trademark policies, visit [Couchbase Legal](https://www.couchbase.com/legal/) and our [Trademark Policy](https://www.couchbase.com/trademark-policy/).
+
+**Trademarks**: Couchbase and the Couchbase logo are trademarks of Couchbase, Inc. Google Looker Studio is a trademark of Google LLC.
+
+**Contact**: For legal inquiries, contact [legal@couchbase.com](mailto:legal@couchbase.com).
 
 
