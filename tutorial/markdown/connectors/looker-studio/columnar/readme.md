@@ -17,7 +17,8 @@ tags:
   - Looker Studio
   - Couchbase Columnar
   - Connector
-  - Views-only
+  - TAVs
+  - Custom Queries
 sdk_language:
   - nodejs
 length: 20 Mins
@@ -57,11 +58,12 @@ When you add the Couchbase Columnar connector in Looker Studio, you'll see the a
 
 For the "By View" mode, create Tabular Analytics Views in Capella:
 
-1. Open your Capella cluster, go to the Analytics tab, and launch the Analytics Workbench.
-2. Prepare a SQL++ query that returns a tabular result. For simple, flat data structures, basic SELECT statements work well. For nested objects, consider flattening them for better BI tool compatibility. For example:
+1. **Open Analytics Workbench**: In your Capella cluster, go to the Analytics tab and launch the Analytics Workbench.
+
+2. **Create your SQL++ query**: Write a query that returns the data structure you want for reporting. For nested objects, consider flattening them for better BI tool compatibility:
 
 ```sql
--- Example with flattening for nested data structures
+-- Example: Flattened airport data for reporting
 SELECT a.airportname AS airport_name,
        a.city AS city,
        a.country AS country,
@@ -73,7 +75,16 @@ WHERE a.country = 'United States'
 LIMIT 100;
 ```
 
-3. Run the query, then click Save as View → Annotate for Tabular View. Define the schema (column names, data types, and primary keys) and save with a descriptive name.
+3. **Test the query**: Run your query to verify it returns the expected results and data types.
+
+4. **Create the TAV**:
+   - Click **Save as View** in the Analytics Workbench
+   - Select **Annotate for Tabular View**
+   - **Define the schema**: Specify column names, data types (STRING, NUMBER, BOOLEAN), and mark primary key fields
+   - **Name your view**: Use a descriptive name like `airports_us_flattened`
+   - **Save**: The TAV will be created with enforced schema
+
+5. **Verify creation**: Your TAV will appear in the database browser under the specified scope and can be queried like a table.
 
 - For details, see [Tabular Analytics Views](https://docs.couchbase.com/columnar/query/views-tavs.html) and [Buckets, Scopes, and Collections](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html).
 
@@ -151,7 +162,7 @@ Once your schema is configured, you can customize the fields in your Looker Stud
 - **Schema inference errors**: Ensure your TAV exists and contains data. Try adding a `LIMIT` clause for faster sampling (e.g., `LIMIT 100`).
 - **API error from Columnar**: Review the response message in Looker Studio and verify TAV names, permissions, and that the view is properly created in Capella.
 - **Empty or missing TAV**: Verify that your Tabular Analytics View was saved correctly in the Analytics Workbench and contains data.
-- **Mixed data types**: If fields appear as STRING when they should be NUMBER, your data may have mixed types. Consider modifying your TAV creation query to cast fields to consistent types (e.g., `CAST(price AS NUMBER)`) or filter out inconsistent records.
+- **Schema mismatch**: If fields appear with unexpected types, verify your TAV schema definition matches your query results. TAVs enforce schema consistency, so ensure your query produces data that matches the defined column types.
 
 ## Next Steps
 
