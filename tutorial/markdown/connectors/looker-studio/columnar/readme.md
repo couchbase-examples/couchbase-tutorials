@@ -34,14 +34,20 @@ Connect Looker Studio to Couchbase Columnar for data analysis and visualization.
 
 The connector authenticates with Basic Auth to the Columnar API (`/api/v1/request`) and infers schema automatically using `array_infer_schema` so Looker Studio fields are created with reasonable types.
 
-## Getting Access
+## Prerequisites
 
-To use this connector, you need access to Couchbase Columnar:
+To use this connector, you need:
 
+### Couchbase Columnar Access
 - **Sign up**: Visit [Couchbase Capella](https://cloud.couchbase.com/) to create your account
 - **Free Trial**: Start with a free trial to test the connector
 - **Columnar Service**: Enable Columnar analytics in your Capella cluster
 - **Pricing**: Columnar is billed based on compute and storage usage. See [Capella Pricing](https://www.couchbase.com/pricing/capella/) for details
+
+### Technical Requirements
+- A Couchbase Columnar deployment reachable from Looker Studio. For setup information, see [Getting Started with Couchbase Columnar](https://www.couchbase.com/products/analytics/).
+- A database user with permissions to read from the target Tabular Analytics Views (TAVs) and execute queries.
+- Network access from Looker Studio to your Columnar host.
 
 ## Installation
 
@@ -53,12 +59,6 @@ To add the Couchbase Columnar connector to your Looker Studio reports:
 4. **Find Connector**: Search for "Couchbase Columnar" in the connector gallery
 5. **Authorize**: Grant necessary permissions when prompted
 6. **Configure**: Follow the authentication and configuration steps below
-
-## Prerequisites
-
-- A Couchbase Columnar deployment reachable from Looker Studio. For setup information, see [Getting Started with Couchbase Columnar](https://www.couchbase.com/products/analytics/).
-- A database user with permissions to read from the target Tabular Analytics Views (TAVs) and execute queries.
-- Network access from Looker Studio to your Columnar host.
 
 ## Authentication
 
