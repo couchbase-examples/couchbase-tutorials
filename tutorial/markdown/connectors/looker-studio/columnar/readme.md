@@ -80,16 +80,15 @@ For the "By View" mode, create Tabular Analytics Views in Capella:
 
 1. **Open Analytics Workbench**: In your Capella cluster, go to the Analytics tab and launch the Analytics Workbench.
 
-2. **Create your SQL++ query**: Write a query that returns the data structure you want for reporting. For nested objects, consider flattening them for better BI tool compatibility:
+2. **Create your SQL++ query**: Write a query that returns the data structure you want for reporting:
 
 ```sql
--- Example: Flattened airport data for reporting
-SELECT a.airportname AS airport_name,
-       a.city AS city,
-       a.country AS country,
-       a.geo.lat AS latitude,
-       a.geo.lon AS longitude,
-       ARRAY_FLATTEN(a.faa, ', ') AS faa_codes
+-- Example airport query for TAV creation
+SELECT a.airportname,
+       a.city,
+       a.country,
+       a.faa,
+       a.icao
 FROM `travel-sample`.`inventory`.`airport` AS a
 WHERE a.country = 'United States'
 LIMIT 100;
