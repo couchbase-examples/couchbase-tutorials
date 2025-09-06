@@ -48,40 +48,61 @@ git clone https://github.com/couchbase-examples/java-springboot-quickstart.git
 ### Install Dependencies
 
 ```shell
-mvn package
+mvn clean compile
 ```
 
-> Note: Maven automatically restores packages when building the project. in IntelliJ IDEA or Eclipse depending on IDE configuration.
+> Note: Maven automatically restores packages when building the project in IntelliJ IDEA or Eclipse depending on IDE configuration.
 
 ### Database Server Configuration
 
-- The `CouchbaseConfig` class is a Spring configuration class responsible for setting up the connection to a Couchbase database in a Spring Boot application. It defines two beans:
+The `CouchbaseConfig` class is a Spring configuration class responsible for setting up the connection to a Couchbase database in a Spring Boot application. It has been modernized with improved error handling and resilience:
 
-  - `getCouchbaseCluster()`: This bean creates and configures a connection to the Couchbase cluster using the provided hostname, username, and password.
+- `getCouchbaseCluster()`: Creates and configures a connection to the Couchbase cluster with:
+  - Proper variable scoping to handle connection timeouts gracefully  
+  - 30-second connection timeout with partial connectivity fallback
+  - Enhanced error logging and exception handling
 
-  - `getCouchbaseBucket(Cluster cluster)`: This bean retrieves a Couchbase bucket from a cluster, ensuring it exists and is ready within a timeout, throwing exceptions if not found or if connection times out.
+- `getCouchbaseBucket(Cluster cluster)`: Retrieves a Couchbase bucket from the cluster with:
+  - Bucket existence validation before connection attempts
+  - 30-second ready timeout for improved reliability
+  - Comprehensive error handling for various failure scenarios
+
+**Key Improvements**: The configuration now handles connection timeouts more gracefully and provides better error diagnostics for troubleshooting connection issues.
 
 ### Application Properties
 
 You need to configure the connection details to your Couchbase Server in the `application.properties` file located in the `src/main/resources` directory.
 
-In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
+The modern Spring Boot 3.5+ configuration uses updated property names:
+
+```properties
+# Modern Couchbase configuration (Spring Boot 3.5+)
+spring.couchbase.connection-string=${DB_CONN_STR}
+spring.couchbase.username=${DB_USERNAME}
+spring.couchbase.password=${DB_PASSWORD}
+spring.couchbase.bucket.name=travel-sample
+
+# Connection optimizations
+spring.couchbase.env.timeouts.query=30000ms
+spring.couchbase.env.timeouts.key-value=5000ms
+spring.couchbase.env.timeouts.connect=10000ms
+```
+
+### Environment Variables Setup
+
+For security, use a `.env` file in your project root with your actual credentials:
+
+```properties
+DB_CONN_STR=couchbases://xyz.cloud.couchbase.com
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
 
 The connection string should be in the following format:
+- **Couchbase Capella**: `couchbases://xyz.cloud.couchbase.com` (secure)
+- **Local Couchbase**: `couchbase://localhost` (non-secure)
 
-```properties
-spring.couchbase.bootstrap-hosts=couchbases://xyz.cloud.couchbase.com
-OR
-spring.couchbase.bootstrap-hosts=localhost
-```
-
-The couchbases protocol is used for secure connections.
-
-```properties
-spring.couchbase.bootstrap-hosts=DB_CONN_STR
-spring.couchbase.bucket.user=DB_USERNAME
-spring.couchbase.bucket.password=DB_PASSWORD
-```
+The application uses the `dotenv-java` dependency to automatically load these environment variables.
 
 For more information on the spring boot connection string, see [Common Application Properties](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html).
 
@@ -92,7 +113,7 @@ For more information on the spring boot connection string, see [Common Applicati
 At this point the application is ready, and you can run it via your IDE or from the terminal:
 
 ```shell
-mvn spring-boot:run -e -X
+mvn spring-boot:run
 ```
 
 > Note: Either the Couchbase Server must be installed and running on localhost or the connection string must be updated in the `application.properties` file.
@@ -108,7 +129,11 @@ docker build -t java-springboot-quickstart .
 Run the Docker image
 
 ```sh
-docker run -d --name springboot-container -p 8080:8080 java-springboot-quickstart -e DB_CONN_STR=<connection_string> -e DB_USERNAME=<username> -e DB_PASSWORD=<password>
+docker run -d --name springboot-container -p 8080:8080 \  
+  -e DB_CONN_STR=<connection_string> \  
+  -e DB_USERNAME=<username> \  
+  -e DB_PASSWORD=<password> \  
+  java-springboot-quickstart
 ```
 
 Note: The `application.properties` file has the connection information to connect to your Capella cluster. You can also pass the connection information as environment variables to the Docker container.
@@ -401,11 +426,43 @@ Once the query is executed, the `AirlineController` constructs an HTTP response 
 
 ## Running The Tests
 
-This command will execute all the test cases in your project.
+### Integration Tests
+
+This project uses Maven with proper integration test configuration. The tests connect to a real Couchbase instance and validate actual functionality:
 
 ```sh
 mvn test
 ```
+
+**Important**: This project was modernized to ensure integration tests actually execute (no false positives). The Maven surefire plugin configuration was updated to include integration tests that were previously excluded.
+
+### Test Validation
+
+To verify tests are actually running:
+1. Tests should show connection logs to Couchbase
+2. Test count should show actual execution (e.g., "Tests run: 18")
+3. Any test failures will show real assertion errors
+
+## Continuous Integration
+
+### GitHub Actions
+
+The project includes a modern GitHub Actions workflow (`.github/workflows/tests.yaml`) with:
+
+- **Multiple Java Versions**: Tests on Java 17 and 21
+- **Manual Triggering**: `workflow_dispatch` allows manual test runs
+- **Reliability Improvements**: 15-minute timeouts, fail-fast disabled for complete results
+- **Test Artifacts**: Automatic upload of test reports for debugging
+- **Simplified Commands**: Uses `./mvnw clean test` for focused testing
+
+### Running in CI/CD
+
+The workflow automatically:
+1. Sets up Java with Temurin distribution  
+2. Caches Maven dependencies for faster builds
+3. Executes integration tests against Couchbase
+4. Uploads test results as artifacts
+5. Sends failure notifications to Slack (if configured)
 
 ### Run Individual Tests:
 
@@ -431,9 +488,20 @@ mvn test -Dtest=org.couchbase.quickstart.springboot.controllers.RouteIntegration
 
 ## Project Setup Notes
 
-This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/).
+This project was based on the standard [Spring Boot project](https://spring.io/guides/gs/rest-service/) with the following specifications:
 
-A full list of packages are referenced in the `pom.xml` file.
+- **Spring Boot Version**: 3.5.5 (modernized from earlier versions)
+- **Java Version**: 17+ (updated from Java 8)  
+- **Build Tool**: Maven with wrapper (`mvnw`)
+- **Key Dependencies**: 
+  - Spring Boot Starter Web
+  - Couchbase Java SDK 3.7.9
+  - Spring Boot Validation
+  - SpringDoc OpenAPI (Swagger)
+  - Dotenv Java for environment variable management
+  - Project Lombok for reduced boilerplate
+
+A full list of packages and versions are referenced in the `pom.xml` file.
 
 ## Contributing
 

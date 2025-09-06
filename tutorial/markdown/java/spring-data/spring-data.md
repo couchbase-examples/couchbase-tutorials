@@ -24,7 +24,7 @@ length: 30 Mins
 
 ### Prerequisites
 
-To run this prebuild project, you will need:
+To run this prebuilt project, you will need:
 
 - [Couchbase Capella](https://www.couchbase.com/products/capella/) cluster with [travel-sample](https://docs.couchbase.com/dotnet-sdk/current/ref/travel-app-data-model.html) bucket loaded.
   - To run this tutorial using a self managed Couchbase cluster, please refer to the [appendix](#running-self-managed-couchbase-cluster).
@@ -35,7 +35,7 @@ To run this prebuild project, you will need:
 
 ### Source Code
 
-The sample source code used in this tutorial is [published on GitHub](https://github.com/couchbase-examples/java-springboot-quickstart).
+The sample source code used in this tutorial is [published on GitHub](https://github.com/couchbase-examples/java-springdata-quickstart).
 To obtain it, clone the git repository with your IDE or execute the following command:
 
 ```shell
@@ -61,8 +61,9 @@ implementation 'org.springdoc:springdoc-openapi-ui:1.6.6'
 
 ### Database Server Configuration
 
-Spring Data couchbase connector can be configured by providing a `@Configuration` [bean](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#beans-definition) that extends [`AbstractCouchbaseConfiguration`](https://docs.spring.io/spring-data/couchbase/docs/current/api/org/springframework/data/couchbase/config/AbstractCouchbaseConfiguration.html).
-The sample application provides a configuration bean that uses default couchbase login and password:
+Spring Data Couchbase connector can be configured by providing a `@Configuration` [bean](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#beans-definition) that extends [`AbstractCouchbaseConfiguration`](https://docs.spring.io/spring-data/couchbase/docs/current/api/org/springframework/data/couchbase/config/AbstractCouchbaseConfiguration.html).
+
+The sample application provides a modernized configuration bean with improved error handling and environment variable support:
 
 ```java
 @Slf4j
@@ -152,23 +153,36 @@ Please refer to [Managing Connections using the Java SDK with Couchbase Server](
 
 You need to configure the connection details to your Couchbase Server in the application.properties file located in the src/main/resources directory.s
 
-```properties
-spring.couchbase.bootstrap-hosts=DB_CONN_STR
-spring.couchbase.bucket.user=DB_USERNAME
-spring.couchbase.bucket.password=DB_PASSWORD
-```
-
-In the connection string, replace `DB_CONN_STR` with the connection string of your Couchbase cluster. Replace `DB_USERNAME` and `DB_PASSWORD` with the username and password of a Couchbase user with access to the bucket.
-
-The connection string should be in the following format:
+**Modern Spring Boot 3.5+ Configuration:**
 
 ```properties
-spring.couchbase.bootstrap-hosts=couchbases://xyz.cloud.couchbase.com
-OR
-spring.couchbase.bootstrap-hosts=localhost
+# Modern Couchbase configuration 
+spring.couchbase.connection-string=${DB_CONN_STR}
+spring.couchbase.username=${DB_USERNAME}
+spring.couchbase.password=${DB_PASSWORD}
+spring.couchbase.bucket.name=travel-sample
+
+# Connection optimizations
+spring.couchbase.env.timeouts.query=30000ms
+spring.couchbase.env.timeouts.key-value=5000ms
+spring.couchbase.env.timeouts.connect=10000ms
 ```
 
-The couchbases protocol is used for secure connections. If you are using Couchbase Server 6.5 or earlier, you should use the couchbase protocol instead.
+### Environment Variables Setup
+
+For security, use a `.env` file in your project root:
+
+```properties
+DB_CONN_STR=couchbases://xyz.cloud.couchbase.com
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+```
+
+The connection string formats:
+- **Couchbase Capella**: `couchbases://xyz.cloud.couchbase.com` (secure)
+- **Local Couchbase**: `couchbase://localhost` (non-secure)
+
+The `couchbases://` protocol is used for secure TLS connections (required for Couchbase Capella). The `couchbase://` protocol is for non-secure local connections.
 
 ## Running the Application
 
@@ -177,13 +191,13 @@ The couchbases protocol is used for secure connections. If you are using Couchba
 At this point, we have installed the dependencies, loaded the travel-sample data and configured the application with the credentials. The application is now ready and you can run it.
 
 ```sh
-gradle bootRun
+./gradlew bootRun
 ```
 
-Note: If you're using Windows, you can run the application using the `gradle.bat` executable.
+Note: If you're using Windows, you can run the application using the Gradle wrapper batch file:
 
 ```sh
-./gradew.bat bootRun
+.\gradlew.bat bootRun
 ```
 
 ### Using Docker
@@ -362,22 +376,64 @@ For more information, see the [Couchbase Java SDK documentation](https://docs.co
 
 ## Running The Tests
 
-To run the tests, execute `./gradlew test` (`./gradlew.bat test` on Windows).
+### Integration Tests
+
+This project uses Gradle with comprehensive integration test setup. The tests connect to a real Couchbase instance:
 
 ```sh
 ./gradlew test
 ```
 
+**Windows users:**
+```sh
+.\gradlew.bat test
+```
+
+### Test Reliability
+
+This project was modernized to ensure reliable test execution:
+- Tests properly connect to Couchbase and validate real data
+- Integration tests are included in the standard test run
+- Test logging provides clear visibility into execution
+
+## Continuous Integration
+
+### GitHub Actions
+
+The project includes a modern GitHub Actions workflow with:
+
+- **Multi-Version Testing**: Java 17 and 21 support
+- **Manual Triggering**: `workflow_dispatch` for on-demand runs  
+- **Enhanced Reliability**: 15-minute timeouts, non-blocking failure handling
+- **Test Artifacts**: Automatic test report uploads
+- **Optimized Commands**: Uses `./gradlew clean test --stacktrace`
+
+### CI/CD Features
+
+The workflow provides:
+1. Temurin JDK setup with Gradle caching
+2. Real integration test execution against Couchbase
+3. Test result artifact collection for debugging
+4. Slack notification integration (configurable)
+
 ## Project Setup Notes
 
-This project was created using the [Spring Initializr](https://start.spring.io/) with the following options:
+This project was created using the [Spring Initializr](https://start.spring.io/) and modernized with:
 
-- Project: Gradle Project
-- Language: Java
-- Spring Boot: 2.7.18
-- Packaging: Jar
-- Java: 8
-- Dependencies: Spring Web, Spring Data Couchbase, Springdoc OpenAPI UI
+- **Project**: Gradle Project with Wrapper
+- **Language**: Java
+- **Spring Boot**: 3.5.5 (upgraded from 2.7.18)
+- **Packaging**: Jar
+- **Java Version**: 17+ (upgraded from Java 8)
+- **Key Dependencies**: 
+  - Spring Boot Starter Web
+  - Spring Boot Starter Data Couchbase  
+  - SpringDoc OpenAPI Starter WebMVC UI
+  - Spring Boot Starter Validation
+  - Project Lombok
+  - JUnit 5 (Jupiter)
+
+**Performance Optimizations**: The project uses `Slice` instead of `Page` for better memory efficiency and eliminates expensive `COUNT` queries in pagination scenarios.
 
 ## Contributing
 
@@ -399,7 +455,7 @@ If you would like to add another entity to the APIs, these are the steps to foll
 
 If you are running this quickstart with a self managed Couchbase cluster, you need to [load](https://docs.couchbase.com/server/current/manage/manage-settings/install-sample-buckets.html) the travel-sample data bucket in your cluster and generate the credentials for the bucket.
 
-You need to update the connection string and the credentials in the [`src/main/resources/application.properties`](https://github.com/couchbase-examples/java-springboot-quickstart/blob/main/src/main/resources/application.properties) file.
+You need to update the connection string and the credentials in the [`src/main/resources/application.properties`](https://github.com/couchbase-examples/java-springdata-quickstart/blob/main/src/main/resources/application.properties) file.
 
 > **NOTE:** Couchbase must be installed and running prior to running the Spring Boot app.
 
