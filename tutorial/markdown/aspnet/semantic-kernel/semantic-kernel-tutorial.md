@@ -17,7 +17,7 @@ technology:
 tags:
   - Semantic Kernel
   - OpenAI
-  - Vector Search
+  - Artificial Intelligence
 sdk_language:
   - csharp
 length: 30 Mins
