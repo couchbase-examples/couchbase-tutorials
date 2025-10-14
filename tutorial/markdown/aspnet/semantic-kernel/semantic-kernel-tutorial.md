@@ -12,7 +12,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - vector-search
+  - fts
   - kv
 tags:
   - Semantic Kernel
