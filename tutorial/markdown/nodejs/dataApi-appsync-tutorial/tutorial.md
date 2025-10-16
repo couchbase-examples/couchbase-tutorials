@@ -296,16 +296,171 @@ Now we'll build a simple web UI to call AppSync and visualize hotels on a map.
 **What is Streamlit?**
 Streamlit is a Python framework for building data apps with minimal code. You write Python functions, and Streamlit renders them as interactive web UIs.
 
-**Steps:**
+**Application structure:**
+We'll build a multi-page Streamlit app with two Python files:
+1. **`home.py`** — Main entry point with navigation, connection settings, and a home page
+2. **`search_hotels.py`** — Hotel search page with city filter and interactive map visualization
 
-1. Create and activate a virtual environment, then install dependencies:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install streamlit requests pandas pydeck
-   ```
+#### Setup
 
-2. Create a file (e.g., `search_hotels.py`) with the following code.
+Create and activate a virtual environment, then install dependencies:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install streamlit requests pandas pydeck
+```
+
+#### Build the navigation and connection settings (`home.py`)
+
+**What does `home.py` do?**
+This is the main entry point for the Streamlit app. It provides:
+- A home page with information about the demo
+- A sidebar navigation menu to switch between pages
+- Connection settings inputs (GraphQL endpoint, API key, Couchbase credentials) stored in Streamlit's `session_state`
+- Dynamic page loading based on user selection
+- Validation to ensure required settings are filled before accessing feature pages
+
+**Code walkthrough:**
+
+```python
+import importlib
+import streamlit as st
+
+
+PAGES = {
+    "Home": "home",
+    "Search Hotels": "search_hotels",
+}
+
+
+def render_home():
+    """
+    Display the home page with information about the demo.
+    Explains what the app does and how AppSync + Data API + Streamlit work together.
+    """
+    st.title("Home")
+    st.subheader("About this demo")
+    st.markdown(
+        "This Streamlit app calls an AWS AppSync GraphQL API that uses Couchbase Data API behind the scenes to search hotels by city and visualize results on a map."
+    )
+    st.markdown(
+        "**Why dataAPI for serverless?** It keeps credentials and query logic secure on the server behind AppSync, avoids heavy SDK initialization overhead, and perfectly fits stateless, scalable Lambda functions."
+    )
+    st.subheader("What this demo showcases and how to proceed")
+    st.markdown(
+        "- Enter your AppSync GraphQL endpoint and API key in the sidebar (plus Couchbase creds).\n"
+        "- Go to 'Search Hotels' to run a city filter; resolvers invoke dataAPI to query Couchbase.\n"
+        "- View results in a list and on a map; try different cities.\n"
+        "- Extend this starter by adding mutations or subscriptions in your AppSync schema."
+    )
+
+
+def render():
+    """
+    Main render function: sets up sidebar navigation and connection settings.
+    Flow:
+    1. Display navigation menu in sidebar (Home, Search Hotels, etc.)
+    2. Collect connection settings (GraphQL endpoint, API key, Couchbase username/password)
+       - These are stored in session_state so they persist across page changes
+    3. If user is on the Home page, render it directly
+    4. For other pages, validate that all required connection settings are filled
+    5. Dynamically import and render the selected page module
+    
+    Why session_state?
+    Streamlit reruns the entire script on every interaction. session_state persists data
+    across reruns, so users don't have to re-enter connection settings when switching pages.
+    
+    Why dynamic imports?
+    Instead of hardcoding imports for all pages, we use importlib to load page modules
+    based on the user's selection. This keeps the code modular and extensible.
+    """
+    # Sidebar navigation menu
+    st.sidebar.header("Navigation")
+    page_name = st.sidebar.selectbox("Go to", list(PAGES.keys()))
+
+    # Connection settings input fields
+    # These persist in session_state across page navigations
+    st.sidebar.header("Connection Settings")
+    st.session_state["gql_endpoint"] = st.sidebar.text_input(
+        "GraphQL Endpoint",
+        value=st.session_state.get("gql_endpoint", ""),
+    )
+    st.session_state["api_key"] = st.sidebar.text_input(
+        "GraphQL API Key",
+        value=st.session_state.get("api_key", ""),
+        type="password",
+    )
+    st.session_state["username"] = st.sidebar.text_input(
+        "Couchbase Username",
+        value=st.session_state.get("username", ""),
+    )
+    st.session_state["password"] = st.sidebar.text_input(
+        "Couchbase Password",
+        value=st.session_state.get("password", ""),
+        type="password",
+    )
+
+    # Map page name to module name
+    module_name = PAGES[page_name]
+    
+    # Home page doesn't require connection settings, render it directly
+    if module_name == "home":
+        render_home()
+        return
+    
+    # For non-Home pages, validate required connection settings
+    required_keys = [
+        "gql_endpoint",
+        "api_key",
+        "username",
+        "password",
+    ]
+    labels = {
+        "gql_endpoint": "GraphQL Endpoint",
+        "api_key": "GraphQL API Key",
+        "username": "Couchbase Username",
+        "password": "Couchbase Password",
+    }
+    missing = [labels[k] for k in required_keys if not st.session_state.get(k)]
+    if missing:
+        st.error(f"Please fill the required connection settings: {', '.join(missing)}")
+        return
+    
+    # Dynamically import and render the selected page
+    try:
+        module = importlib.import_module(module_name)
+        if hasattr(module, "render"):
+            module.render()
+        else:
+            st.error("Selected page is missing a render() function.")
+    except Exception as exc:
+        st.error(f"Failed to load page: {exc}")
+
+
+if __name__ == "__main__":
+    render()
+```
+
+**Key takeaways:**
+- `PAGES` dictionary maps user-friendly page names to Python module names.
+- `session_state` stores connection settings so they persist when the user switches pages.
+- Input fields use `type="password"` for sensitive data (API key, password) to mask them in the UI.
+- The app validates required settings before loading feature pages, providing clear error messages if any are missing.
+- `importlib.import_module()` dynamically loads page modules, making it easy to add new pages without modifying the main file.
+
+---
+
+#### Build the hotel search page (`search_hotels.py`)
+
+Create a file `search_hotels.py` with the following code. This page handles the actual hotel search functionality.
+
+**What does `search_hotels.py` do?**
+This page:
+- Provides a text input for users to enter a city name
+- Calls the AppSync GraphQL API with the city filter
+- Transforms hotel results into map-friendly data with color-coded ratings
+- Displays hotels on an interactive map using pydeck
+- Shows a raw JSON response in an expandable section for debugging
 
 **Code walkthrough:**
 
@@ -597,25 +752,52 @@ if __name__ == "__main__":
 7. Streamlit computes a rating from reviews, maps it to a color, and plots each hotel on a map.
 8. Hovering over a hotel shows name, rating, address, price, phone, url.
 
-**Key points:**
-- `fetch_hotels()` is a standard GraphQL HTTP client: POST to AppSync with `query` + `variables`.
-- `compute_rating_from_reviews()` averages the `Overall` rating from all reviews and scales 0–5 to 0–10.
-- `color_from_rating()` interpolates red→green based on rating for visual feedback.
-- `build_map()` uses pydeck's ScatterplotLayer to plot lat/lon points with color and tooltips.
+**Key functions explained:**
+- `get_connection_settings()` — Retrieves connection details from Streamlit's `session_state` (populated by `home.py`).
+- `build_query()` — Constructs the GraphQL query string for `listHotelsInCity`.
+- `build_variables()` — Maps UI inputs (city, username, password) to GraphQL variables.
+- `fetch_hotels()` — Standard GraphQL HTTP client that POSTs to AppSync with `query` + `variables`.
+- `compute_rating_from_reviews()` — Averages the `Overall` rating from all reviews and scales 0–5 to 0–10.
+- `color_from_rating()` — Interpolates red→green color based on rating for visual feedback (red = poor, green = excellent).
+- `hotels_to_points()` — Transforms GraphQL hotel results into map-friendly data with lat/lon and color.
+- `build_map()` — Creates a pydeck ScatterplotLayer to plot hotels with color-coded ratings and interactive tooltips.
 
-3. Run the app:
-   ```bash
-   streamlit run search_hotels.py
-   ```
+**Data flow:**
+1. User enters city → clicks "Search"
+2. `fetch_hotels()` → AppSync GraphQL API
+3. AppSync → resolver → Data API → Couchbase
+4. Data API returns hotels → AppSync → Streamlit
+5. Streamlit computes ratings, maps to colors, and plots on map
 
-4. In the browser sidebar, set:
-   - **GraphQL Endpoint**: your AppSync API URL (e.g., `https://xxx.appsync-api.us-east-1.amazonaws.com/graphql`)
-   - **GraphQL API Key**: your AppSync API key
-   - **Couchbase Username**: your Couchbase username (e.g., `Administrator`)
-   - **Couchbase Password**: your Couchbase password
-   - (Optional) **Mapbox Token**: for a prettier map
+---
 
-5. Go to "Search Hotels", enter a city (e.g., "London"), and click "Search".
+#### Run and test the application
+
+**Start the Streamlit app:**
+
+```bash
+streamlit run home.py
+```
+
+This starts the Streamlit web server and automatically opens the app in your browser (usually at `http://localhost:8501`).
+
+**Configure connection settings:**
+
+In the browser sidebar, fill in the required connection settings:
+- **GraphQL Endpoint**: Your AppSync API URL (e.g., `https://xxx.appsync-api.us-east-1.amazonaws.com/graphql`)
+- **GraphQL API Key**: Your AppSync API key
+- **Couchbase Username**: Your Couchbase username (e.g., `Administrator`)
+- **Couchbase Password**: Your Couchbase password
+
+**Search for hotels:**
+
+1. Use the navigation dropdown in the sidebar to select **"Search Hotels"**
+2. Enter a city name (e.g., "London", "San Francisco", "Paris")
+3. Click the **"Search"** button
+4. View the results:
+   - Hotels appear as colored dots on the map (green = high rating, red = low rating)
+   - Hover over any hotel marker to see details (name, rating, address, price, phone, URL)
+   - Expand the "Raw response" section to see the full JSON data from AppSync
 
 #### Screenshots
 
