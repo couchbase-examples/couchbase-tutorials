@@ -478,8 +478,8 @@ def get_map_style() -> str:
     if token:
         try:
             pdk.settings.mapbox_api_key = token
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"Failed to apply Mapbox token: {e}")
         return "mapbox://styles/mapbox/light-v10"
     return "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
