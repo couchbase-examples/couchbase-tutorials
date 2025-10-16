@@ -16,7 +16,6 @@ tags:
   - GraphQL
   - Data API
   - Streamlit
-  - Travel Sampl
 sdk_language:
   - nodejs
   - python
