@@ -1,8 +1,33 @@
+---
+# frontmatter
+path: "/tutorial-appsync-data-api-streamlit-travel-sample"
+title: Build a Hotel Search App with AWS AppSync, Couchbase Data API, and Streamlit
+short_title: Hotel Search with AppSync & Data API
+description:
+  - Build a serverless hotel search application using AWS AppSync GraphQL and Couchbase Data API.
+  - Learn how to integrate Couchbase Data API with AppSync resolvers for RESTful access to your cluster.
+  - Create an interactive map-based UI with Streamlit to visualize hotel search results.
+content_type: tutorial
+filter: sdk
+technology:
+  - fts
+  - kv
+tags:
+  - GraphQL
+  - Data API
+  - Streamlit
+  - Travel Sampl
+sdk_language:
+  - nodejs
+  - python
+length: 45 Mins
+---
+
 ## Tutorial: AppSync + Couchbase Data API + Streamlit (Travel Sample)
 
 ![Final result (Streamlit map)](streamlit-map.jpg)
 
-If you want to see the final code you can refer to it here: [Final demo code (placeholder)](ADD_LINK_TO_REPO_OR_GIST_HERE) # TODO: Add link here
+If you want to see the final code you can refer to it here: [Final Demo Code](https://github.com/couchbase-examples/couchbase-data_api-appsync-demo)
 
 This guide walks you through building the hotel search demo using AWS AppSync (GraphQL), Couchbase Data API, and a Streamlit frontend — end to end, with inlined code.
 
