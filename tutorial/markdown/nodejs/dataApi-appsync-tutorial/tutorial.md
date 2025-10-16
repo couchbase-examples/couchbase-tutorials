@@ -200,7 +200,7 @@ export function request(ctx) {
 
     // Construct a SQL++ query to filter hotels by city
     // The query_context below lets us use "hotel" instead of "travel-sample.inventory.hotel"
-    const sql_query = `SELECT c.* FROM ${collection} AS c WHERE city = $city`;
+    const sql_query = `SELECT c.* FROM ${collection} AS c WHERE city = $1`;
 
     // Build the HTTP request object for the Data API Query Service
     const requestObject = {
@@ -215,7 +215,7 @@ export function request(ctx) {
             body: JSON.stringify({
                 query_context: `default:${bucket}.${scope}`,  // Namespace shortcut
                 statement: sql_query,  // The SQL++ query
-                args: { city: city }, // Pass parameters securely
+                args: [ city ], // Pass parameters securely
                 timeout: '30m'  // Query timeout (generous for demo)
             })
         }
