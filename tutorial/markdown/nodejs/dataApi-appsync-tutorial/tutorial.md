@@ -32,9 +32,9 @@ This guide walks you through building the hotel search demo using AWS AppSync (G
 
 ### Prerequisites
 - Couchbase Capella account with the Travel Sample dataset loaded and credentials that can access it (and network access allowed).
-  - Learn/setup here: [Couchbase Connect Prerequisites](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#prerequisites)
-- Placeholder: Couchbase Data API docs (enable Data API, copy endpoint)
-  - [Add Data API docs link here]
+  - Learn/setup here: [Couchbase Data API Prerequisites](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html#prerequisites)
+- Couchbase Data API docs (enable Data API, copy endpoint)
+  - [Data API Docs](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html)
 
 ---
 
