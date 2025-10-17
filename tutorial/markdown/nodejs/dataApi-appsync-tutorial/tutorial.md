@@ -1,16 +1,17 @@
 ---
 # frontmatter
 path: "/tutorial-appsync-data-api-streamlit-travel-sample"
-title: Build a Hotel Search App with AWS AppSync, Couchbase Data API, and Streamlit
-short_title: Hotel Search with AppSync & Data API
+title: Build a Geospatial Hotel Search App with AWS AppSync, Couchbase Data API, and Streamlit
+short_title: Geospatial Hotel Search with AppSync & Data API
 description:
-  - Build a serverless hotel search application using AWS AppSync GraphQL and Couchbase Data API.
+  - Build a serverless geospatial hotel search application using AWS AppSync GraphQL and Couchbase Data API.
   - Learn how to integrate Couchbase Data API with AppSync resolvers for RESTful access to your cluster.
-  - Create an interactive map-based UI with Streamlit to visualize hotel search results.
+  - Implement geospatial distance calculations using SQL++ queries.
+  - Create an interactive map-based UI with Streamlit to visualize hotels near airports.
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - query
   - kv
 tags:
   - GraphQL
@@ -28,7 +29,7 @@ length: 45 Mins
 
 If you want to see the final code you can refer to it here: [Final Demo Code](https://github.com/couchbase-examples/couchbase-data_api-appsync-demo)
 
-This guide walks you through building the hotel search demo using AWS AppSync (GraphQL) with environment variables for credential management, Couchbase Data API, and a Streamlit frontend — end to end, with inlined code.
+This guide walks you through building a geospatial hotel search demo that finds hotels within a specified distance from airports. The application uses AWS AppSync (GraphQL) with environment variables for credential management, Couchbase Data API for executing SQL++ queries, and a Streamlit frontend for interactive map visualization — end to end, with inlined code.
 
 ### Prerequisites
 - Couchbase Capella account with the Travel Sample dataset loaded and credentials that can access it (and network access allowed).
@@ -54,9 +55,10 @@ Couchbase Data API provides a RESTful HTTP interface to your cluster. Instead of
 ![Couchbase Data API endpoint](data-api-endpoint.jpg)
 
 **Notes:**
-- We will query `travel-sample.inventory.hotel` with a simple city filter.
+- We will query `travel-sample.inventory.hotel` and `travel-sample.inventory.airport` collections using a geospatial distance calculation.
 - Credentials are configured as environment variables in AppSync and used by the resolver to call Data API.
 - Data API authenticates each request via Basic auth (username:password Base64-encoded in the `Authorization` header).
+- The query uses SQL++ Common Table Expressions (CTEs) to first find the airport, then calculate distances to nearby hotels.
 
 ---
 
@@ -71,68 +73,81 @@ AppSync provides a managed GraphQL layer with built-in auth, and logging. It let
 #### Define the schema (paste into the schema editor)
 
 This schema defines:
-- `Hotel`, `HotelGeoObject`, `HotelRatingObject`, `HotelReviewObject`: types matching the Travel Sample hotel documents.
-- `Query.listHotelsInCity`: the single query that takes a city and returns a list of hotels.
+- `Hotel`: type matching the Travel Sample hotel documents with all fields including geo location and reviews.
+- `Airport`: type with `name` and nested `location` (GeoObject) representing airport information.
+- `GeoObject`: shared type for latitude, longitude, and accuracy used by both hotels and airports.
+- `Output`: response type that returns both `hotels` array and `airport` object.
+- `Query.listHotelsNearAirport`: the main query that takes an airport name and distance in km, returns hotels within that radius plus the airport information.
 
 ```graphql
-type Hotel {
-    address: String
-    alias: String
-    checkin: String
-    checkout: String
-    city: String
-    country: String
-    description: String
-    directions: String
-    email: String
-    fax: String
-    free_breakfast: Boolean
-    free_internet: Boolean
-    free_parking: Boolean
-    geo: HotelGeoObject
-    id: Float
-    name: String
-    pets_ok: Boolean
-    phone: String
-    price: String
-    public_likes: [String]
-    reviews: [HotelReviewObject]
-    state: String
-    title: String
-    tollfree: String
-    type: String
-    url: String
-    vacancy: Boolean
+type Airport {
+	location: GeoObject
+	name: String
 }
 
-type HotelGeoObject {
-    accuracy: String
-    lat: Float
-    lon: Float
+type GeoObject {
+	accuracy: String
+	lat: Float
+	lon: Float
+}
+
+type Hotel {
+	address: String
+	alias: String
+	checkin: String
+	checkout: String
+	city: String
+	country: String
+	description: String
+	directions: String
+	email: String
+	fax: String
+	free_breakfast: Boolean
+	free_internet: Boolean
+	free_parking: Boolean
+	geo: GeoObject
+	id: Float
+	name: String
+	pets_ok: Boolean
+	phone: String
+	price: String
+	public_likes: [String]
+	reviews: [HotelReviewObject]
+	state: String
+	title: String
+	tollfree: String
+	type: String
+	url: String
+	vacancy: Boolean
 }
 
 type HotelRatingObject {
-    Cleanliness: Float
-    Location: Float
-    Overall: Float
-    Rooms: Float
-    Service: Float
-    Value: Float
+	Cleanliness: Float
+	Location: Float
+	Overall: Float
+	Rooms: Float
+	Service: Float
+	Value: Float
 }
 
 type HotelReviewObject {
-    author: String
-    content: String
-    date: String
-    ratings: HotelRatingObject
+	author: String
+	content: String
+	date: String
+	ratings: HotelRatingObject
+}
+
+type Output {
+	hotels: [Hotel]
+	airport: Airport
 }
 
 type Query {
-    listHotelsInCity(city: String!): [Hotel]
+	listHotelsNearAirport(airportName: String!, withinKm: Int!): Output
 }
 
 schema {
-    query: Query
+	query: Query
 }
 ```
 
@@ -207,22 +222,36 @@ export function request(ctx) {
     const username = ctx.env.cb_username;
     const password = ctx.env.cb_password;
     
-    // Extract city from GraphQL arguments
-    const city = ctx.arguments.city;
-
     // Define the Couchbase keyspace (bucket.scope.collection)
     const bucket = "travel-sample";
     const scope = "inventory";
-    const collection = "hotel";
 
     // Build Basic auth header for Data API
     // Data API expects: Authorization: Basic <base64(username:password)>
     const token = util.base64Encode(`${username}:${password}`);
     const auth = `Basic ${token}`;
 
-    // Construct a parameterized SQL++ query to filter hotels by city
-    // Using $1 as a positional parameter for security (prevents SQL injection)
-    const sql_query = `SELECT c.* FROM ${collection} AS c WHERE city = $1`;
+    // Construct a geospatial SQL++ query using a Common Table Expression (CTE)
+    // The query:
+    // 1. WITH clause: Finds the airport by name and extracts its coordinates
+    // 2. Main SELECT: Joins hotels with airport location and calculates distance
+    // 3. WHERE clause: Filters hotels within the specified radius using Pythagorean theorem
+    // Using $1, $2 as positional parameters for security (prevents SQL injection)
+    const sql_query = `
+      WITH airport_loc AS (
+        SELECT a.geo.lat AS alat, 
+               a.geo.lon AS alon, 
+               IFMISSINGORNULL(a.geo.accuracy, "APPROXIMATE") AS accuracy
+        FROM airport AS a
+        WHERE a.airportname = $1
+        LIMIT 1
+      )
+      SELECT h.*, airport_loc.alat, airport_loc.alon, airport_loc.accuracy
+      FROM hotel AS h, airport_loc
+      WHERE airport_loc.alat IS NOT MISSING
+        AND POWER(h.geo.lat - airport_loc.alat, 2)
+          + POWER(h.geo.lon - airport_loc.alon, 2) <= POWER($2 / 111, 2)
+    `;
 
     // Log to CloudWatch for debugging (best practice)
     console.log("Request Context:", ctx);
@@ -239,9 +268,9 @@ export function request(ctx) {
             },
             body: {
                 query_context: `default:${bucket}.${scope}`,  // Namespace shortcut
-                statement: sql_query,  // The SQL++ query
-                args: [city],  // Pass city as a positional parameter
-                timeout: '30m'  // Query timeout (generous for demo)
+                statement: sql_query,  // The geospatial SQL++ query
+                args: [ctx.arguments.airportName, ctx.arguments.withinKm],  // Positional parameters
+                timeout: '30m'  // Query timeout
             }
         }
     };
@@ -257,28 +286,55 @@ export function response(ctx) {
     console.log("Response Context:", ctx);
     
     // Data API returns JSON like: { results: [ {...hotel1...}, {...hotel2...} ], ... }
-    // Parse it if it arrives as a string, then extract the results array
+    // Each result contains hotel fields plus airport coordinates (alat, alon, accuracy)
     let parsedResult = ctx.result.body;
     if (typeof ctx.result.body === 'string') {
         parsedResult = JSON.parse(ctx.result.body);
         console.log("Parsed Result:", parsedResult);
     }
     
-    // Return the array of hotel documents; AppSync maps them to the Hotel GraphQL type
-    // and filters fields based on the client's selection set (e.g., { id, name, geo { lat lon } })
-    return parsedResult.results;
+    const results = parsedResult.results || [];
+    
+    // Extract airport information from the first result (all results have the same airport location)
+    let airport = null;
+    if (results.length > 0) {
+        const first = results[0];
+        airport = {
+            name: ctx.arguments.airportName,  // Use the input airport name
+            location: {
+                lat: first.alat,
+                lon: first.alon,
+                accuracy: first.accuracy
+            }
+        };
+    }
+    
+    // Clean up hotels by removing airport location fields (alat, alon, accuracy)
+    // These were added by the JOIN but aren't part of the Hotel schema
+    const hotels = results.map(hotel => {
+        const { alat, alon, accuracy, ...cleanHotel } = hotel;
+        return cleanHotel;
+    });
+    
+    // Return in the Output schema format with both hotels and airport
+    return {
+        hotels: hotels,
+        airport: airport
+    };
 }
 ```
 
 **Key takeaways:**
 - `ctx.env` provides access to AppSync environment variables (credentials stored securely).
-- `ctx.arguments` gives you the GraphQL args: `city`.
+- `ctx.arguments` gives you the GraphQL args: `airportName` and `withinKm`.
 - `util.base64Encode` is an AppSync helper to encode credentials.
 - `resourcePath` is the API endpoint path relative to your HTTP data source base URL. In this case, `/_p/query/query/service` is the [Data API Query Service endpoint](https://docs.couchbase.com/cloud/data-api-reference/index.html#tag/Query) for executing SQL++ queries.
-- `query_context` sets the default bucket/scope for SQL++.
-- Using positional parameters (`$1`) in the SQL++ query prevents SQL injection.
-- `parsedResult.results` is the array of documents returned by Data API.
-- CloudWatch logging helps debug request/response flow.
+- `query_context` sets the default bucket/scope for SQL++, allowing short names like `hotel` instead of `travel-sample.inventory.hotel`.
+- Using positional parameters (`$1`, `$2`) in the SQL++ query prevents SQL injection.
+- Distance calculation uses Pythagorean theorem approximation.
+- The response function constructs an `Airport` object from the result data and input arguments.
+- Hotel objects are cleaned to remove the joined airport coordinate fields before returning.
+- CloudWatch logging helps debug the complex geospatial query and response transformation.
 
 Save and deploy your resolver.
 
@@ -309,28 +365,45 @@ Now, every resolver invocation will log to CloudWatch. You can view logs in the 
 Test your resolver directly in the AppSync console before building the frontend.
 
 1. In the AppSync console, open **Queries**.
-2. Paste this query, replacing `city` with your test city:
+2. Paste this query, replacing the airport name and distance as needed:
 
 ```graphql
-query ListHotelsInCity {
-  listHotelsInCity(city: "London") {
-    id
-    name
-    address
-    city
-    country
-    phone
-    price
-    url
-    geo { lat lon }
-    reviews { ratings { Overall } }
+query ListHotelsNearAirport {
+  listHotelsNearAirport(
+    airportName: "Les Loges"
+    withinKm: 50
+  ) {
+    hotels {
+      id
+      name
+      address
+      city
+      country
+      phone
+      price
+      url
+      geo { lat lon }
+      reviews { ratings { Overall } }
+    }
+    airport {
+      name
+      location {
+        lat
+        lon
+        accuracy
+      }
+    }
   }
 }
 ```
 
-3. Click **Run**. You should see a JSON response with hotels in London.
+3. Click **Run**. You should see a JSON response with:
+   - An array of hotels within 50km of Heathrow airport
+   - Airport information including name and location coordinates
 
-If it works, you've successfully bridged AppSync → Data API → Couchbase!
+Try different airport names like "Charles de Gaulle", or "Changi" to see results from different locations.
+
+If it works, you've successfully bridged AppSync → Data API → Couchbase with geospatial querying!
 
 **Note:** The credentials are read from the environment variables you configured earlier, so you don't need to pass them in the query.
 
@@ -346,7 +419,7 @@ Streamlit is a Python framework for building data apps with minimal code. You wr
 **Application structure:**
 We'll build a multi-page Streamlit app with two Python files:
 1. **`home.py`** — Main entry point with navigation, connection settings, and a home page
-2. **`search_hotels.py`** — Hotel search page with city filter and interactive map visualization
+2. **`search_hotels.py`** — Hotel search page with airport name and distance inputs, displaying both hotels and airports on an interactive map
 
 #### Setup
 
@@ -388,16 +461,17 @@ def render_home():
     st.title("Home")
     st.subheader("About this demo")
     st.markdown(
-        "This Streamlit app calls an AWS AppSync GraphQL API that uses Couchbase Data API behind the scenes to search hotels by city and visualize results on a map."
+        "This Streamlit app calls an AWS AppSync GraphQL API that uses Couchbase Data API behind the scenes to search hotels near airports and visualize results on a map."
     )
     st.markdown(
         "**Why dataAPI for serverless?** It keeps credentials and query logic secure on the server behind AppSync, avoids heavy SDK initialization overhead, and perfectly fits stateless, scalable Lambda functions."
     )
     st.subheader("What this demo showcases and how to proceed")
     st.markdown(
-        "- Enter your AppSync GraphQL endpoint and API key in the sidebar (plus Couchbase creds).\n"
-        "- Go to 'Search Hotels' to run a city filter; resolvers invoke dataAPI to query Couchbase.\n"
-        "- View results in a list and on a map; try different cities.\n"
+        "- Enter your AppSync GraphQL endpoint and API key in the sidebar.\n"
+        "- Go to 'Search Hotels' to find hotels near an airport within a specified distance; resolvers invoke dataAPI to query Couchbase.\n"
+        "- The query uses geospatial calculations to find hotels based on lat/lon coordinates.\n"
+        "- View results on a map with color-coded ratings; try different airports and distances.\n"
         "- Extend this starter by adding mutations or subscriptions in your AppSync schema."
     )
 
@@ -488,15 +562,20 @@ if __name__ == "__main__":
 
 #### Build the hotel search page (`search_hotels.py`)
 
-Create a file `search_hotels.py` with the following code. This page handles the actual hotel search functionality.
+Create a file `search_hotels.py` with the following code. This page handles the actual hotel search functionality with geospatial querying.
 
 **What does `search_hotels.py` do?**
 This page:
-- Provides a text input for users to enter a city name
-- Calls the AppSync GraphQL API with the city filter (credentials are handled by AppSync environment variables)
-- Transforms hotel results into map-friendly data with color-coded ratings
-- Displays hotels on an interactive map using pydeck
-- Shows a raw JSON response in an expandable section for debugging
+- Provides inputs for airport name and search radius in kilometers
+- Calls the AppSync GraphQL API with both airport name and distance parameters
+- Receives both hotels and airport information from the GraphQL response
+- Transforms hotel results into map-friendly data with color-coded ratings (red = low, green = high)
+- Displays hotels AND the airport on an interactive map using pydeck with two separate layers
+- Hotels appear as color-coded markers, airport appears as an orange marker with white outline
+- Centers the map on the airport location for optimal viewing
+- Shows detailed tooltips for hotels (rating, address, price, etc.) and simple tooltips for airports
+- Provides a legend explaining the marker colors
+- Shows the raw JSON response in an expandable section for debugging
 
 **Code walkthrough:**
 
@@ -536,55 +615,71 @@ def validate_required(settings: Dict[str, str]) -> List[str]:
 
 def build_query() -> str:
     """
-    GraphQL query string for listHotelsInCity.
-    We request id, name, address, city, country, phone, price, url, geo (lat/lon), and reviews.
+    GraphQL query string for listHotelsNearAirport.
+    We request hotels (id, name, address, city, country, phone, price, url, geo, reviews)
+    AND airport information (name, location with lat/lon/accuracy).
     AppSync will call our resolver, which reads credentials from environment variables,
-    queries Data API, and returns hotels matching the city.
+    executes a geospatial SQL++ query via Data API, and returns both hotels and airport.
     """
     return (
-        "query ListHotelsInCity($city: String!) {\n"
-        "  listHotelsInCity(city: $city) {\n"
-        "    id\n"
-        "    name\n"
-        "    address\n"
-        "    city\n"
-        "    country\n"
-        "    phone\n"
-        "    price\n"
-        "    url\n"
-        "    geo { lat lon }\n"
-        "    reviews { ratings { Overall } }\n"
+        "query ListHotelsNearAirport($airportName: String!, $withinKm: Int!) {\n"
+        "  listHotelsNearAirport(airportName: $airportName, withinKm: $withinKm) {\n"
+        "    hotels {\n"
+        "      id\n"
+        "      name\n"
+        "      address\n"
+        "      city\n"
+        "      country\n"
+        "      phone\n"
+        "      price\n"
+        "      url\n"
+        "      geo { lat lon }\n"
+        "      reviews { ratings { Overall } }\n"
+        "    }\n"
+        "    airport {\n"
+        "      name\n"
+        "      location {\n"
+        "        lat\n"
+        "        lon\n"
+        "        accuracy\n"
+        "      }\n"
+        "    }\n"
         "  }\n"
         "}"
     )
 
 
-def build_variables(settings: Dict[str, str], city: str) -> Dict[str, Any]:
+def build_variables(airport_name: str, within_km: int) -> Dict[str, Any]:
     """
     Map UI inputs to GraphQL variables.
-    Only the city is needed now; Couchbase credentials are stored in AppSync environment variables.
+    We need airport name and distance; Couchbase credentials are stored in AppSync environment variables.
     """
     return {
-        "city": city,
+        "airportName": airport_name,
+        "withinKm": within_km,
     }
 
 
-def fetch_hotels(endpoint: str, api_key: str, query: str, variables: Dict[str, Any]) -> List[Dict[str, Any]]:
+def fetch_hotels(endpoint: str, api_key: str, query: str, variables: Dict[str, Any]) -> Dict[str, Any]:
     """
     Call AppSync GraphQL API using HTTP POST.
     - endpoint: your AppSync GraphQL URL
     - api_key: AppSync API key (passed in x-api-key header)
     - query: the GraphQL query string
-    - variables: the GraphQL variables (auth + city)
+    - variables: the GraphQL variables (airportName and withinKm)
     
-    Returns the list of hotels from the response, or raises on errors.
+    Returns a dict with both 'hotels' list and 'airport' object, or raises on errors.
     """
     headers = {"x-api-key": api_key} if api_key else {}
     resp = requests.post(endpoint, json={"query": query, "variables": variables}, headers=headers)
     payload = resp.json()
     if payload.get("errors"):
         raise RuntimeError(str(payload["errors"]))
-    return payload.get("data", {}).get("listHotelsInCity", [])
+    result = payload.get("data", {}).get("listHotelsNearAirport", {})
+    return {
+        "hotels": result.get("hotels", []),
+        "airport": result.get("airport")
+    }
 
 
 def compute_rating_from_reviews(hotel: Dict[str, Any]) -> float:
@@ -593,17 +688,17 @@ def compute_rating_from_reviews(hotel: Dict[str, Any]) -> float:
     The Travel Sample hotel documents have a 'reviews' array with 'ratings.Overall' (0–5 scale).
     We average all Overall ratings and scale to 0–10 for display.
     Missing reviews -> 0.
+    Uses list comprehension for cleaner code.
     """
     reviews = hotel.get("reviews") or []
-    overall_values: List[float] = []
-    for review in reviews:
-        ratings = (review or {}).get("ratings") or {}
-        overall = ratings.get("Overall")
-        if isinstance(overall, (int, float)):
-            overall_values.append(float(overall))
-    avg_overall = sum(overall_values) / len(overall_values) if overall_values else None
-    # Scale 0–5 -> 0–10
-    return (avg_overall * 2.0) if avg_overall is not None else 0.0
+    overall_values = [
+        float(review.get("ratings", {}).get("Overall"))
+        for review in reviews
+        if review and review.get("ratings", {}).get("Overall") is not None
+    ]
+    if not overall_values:
+        return 0.0
+    return (sum(overall_values) / len(overall_values)) * 2.0
 
 
 def color_from_rating(rating_out_of_10: float) -> List[int]:
@@ -622,100 +717,126 @@ def color_from_rating(rating_out_of_10: float) -> List[int]:
 def hotels_to_points(hotels: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Transform GraphQL hotel results into a list of map-friendly dicts.
-    Each point has: name, rating, lat, lon, color (RGBA), address, city, country, price, phone, url.
+    Each point has: name, details (pre-formatted HTML tooltip), lat, lon, color (RGBA).
     We skip hotels without geo.lat or geo.lon (can't plot them).
+    The details field contains formatted HTML for the tooltip with all hotel information.
     """
-    points: List[Dict[str, Any]] = []
+    points = []
     for hotel in hotels:
         geo = hotel.get("geo") or {}
-        lat = geo.get("lat")
-        lon = geo.get("lon")
-        if lat is None or lon is None:
+        if not geo.get("lat") or not geo.get("lon"):
             continue
+        
         rating = compute_rating_from_reviews(hotel)
-        color = color_from_rating(rating)
-        points.append(
-            {
-                "name": hotel.get("name", ""),
-                "rating": rating,
-                "rating_display": f"{rating:.1f}/10",
-                "address": hotel.get("address", ""),
-                "city": hotel.get("city", ""),
-                "country": hotel.get("country", ""),
-                "price": hotel.get("price", ""),
-                "phone": hotel.get("phone", ""),
-                "url": hotel.get("url", ""),
-                "lat": float(lat),
-                "lon": float(lon),
-                "color": color,
-            }
+        # Pre-format the tooltip HTML with all hotel details
+        details = (
+            f"<br/><div style='margin-top: 5px;'>"
+            f"<b>Rating:</b> {rating:.1f}/10<br/>"
+            f"<b>Address:</b> {hotel.get('address', '')}<br/>"
+            f"<b>City:</b> {hotel.get('city', '')}<br/>"
+            f"<b>Country:</b> {hotel.get('country', '')}<br/>"
+            f"<b>Price:</b> {hotel.get('price', '')}<br/>"
+            f"<b>Phone:</b> {hotel.get('phone', '')}<br/>"
+            f"<b>Website:</b> {hotel.get('url', '')}"
+            f"</div>"
         )
+        
+        points.append({
+            "name": hotel.get("name", ""),
+            "details": details,  # Pre-formatted HTML for tooltip
+            "lat": float(geo["lat"]),
+            "lon": float(geo["lon"]),
+            "color": color_from_rating(rating),
+        })
     return points
 
 
 def get_map_style() -> str:
     """
-    Choose a map basemap style.
-    If the user provides a Mapbox token in the sidebar, use Mapbox light style.
-    Otherwise, fall back to a free Carto basemap (no token required).
+    Use a free Carto basemap (no token required).
+    This provides a clean, light background for our markers.
     """
-    token = st.session_state.get("mapbox_token", "")
-    if token:
-        try:
-            pdk.settings.mapbox_api_key = token
-        except Exception as e:
-            st.warning(f"Failed to apply Mapbox token: {e}")
-        return "mapbox://styles/mapbox/light-v10"
     return "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
 
-def build_map(df: pd.DataFrame) -> pdk.Deck:
+def build_map(df_hotels: pd.DataFrame, airport: Dict[str, Any]) -> pdk.Deck:
     """
-    Create a pydeck Deck with a ScatterplotLayer for hotel locations.
-    - get_position: [lon, lat] columns from the DataFrame
-    - get_fill_color: the 'color' column (RGBA list per hotel)
-    - get_radius: fixed 8m radius per point (scales with zoom)
-    - pickable: enables hover tooltips
-    - tooltip: shows hotel name, rating, address, price, phone, url on hover
+    Create a pydeck Deck with TWO ScatterplotLayers:
+    1. Hotel markers - color-coded by rating (red = low, green = high)
+    2. Airport marker - orange with white outline, larger size
     
-    The map centers on the average lat/lon of all hotels and zooms to level 11 (city scale).
+    The map centers on the airport location for optimal viewing.
+    Tooltips show full details for hotels (name + all info), just the name for airports.
     """
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position="[lon, lat]",
-        get_fill_color="color",
-        get_radius=8,
-        radius_units="meters",
-        radius_min_pixels=4,
-        radius_max_pixels=20,
-        pickable=True,
-        auto_highlight=True,
-    )
-    center_lon = float(df["lon"].mean())
-    center_lat = float(df["lat"].mean())
+    # Layer 1: Hotels with color-coded ratings
+    layers = [
+        pdk.Layer(
+            "ScatterplotLayer",
+            data=df_hotels,
+            get_position="[lon, lat]",
+            get_fill_color="color",
+            get_radius=8,
+            radius_units="meters",
+            radius_min_pixels=4,
+            radius_max_pixels=20,
+            pickable=True,
+            auto_highlight=True,
+        )
+    ]
+    
+    # Layer 2: Airport marker (if available)
+    if airport and airport.get("location"):
+        df_airport = pd.DataFrame([{
+            "name": airport.get("name", "Airport"),
+            "lat": airport["location"]["lat"],
+            "lon": airport["location"]["lon"],
+            "color": [255, 165, 0, 255],  # Orange
+            "details": "",  # No details for airport - just shows name
+        }])
+        
+        layers.append(pdk.Layer(
+            "ScatterplotLayer",
+            data=df_airport,
+            get_position="[lon, lat]",
+            get_fill_color="color",
+            get_radius=15,  # Larger than hotels
+            radius_units="meters",
+            radius_min_pixels=10,
+            radius_max_pixels=40,
+            pickable=True,
+            auto_highlight=True,
+            get_line_color=[255, 255, 255, 255],  # White outline
+            line_width_min_pixels=2,
+            stroked=True,
+        ))
+    
+    # Center map on airport location (or first hotel as fallback)
+    if airport and airport.get("location"):
+        center_lat = airport["location"]["lat"]
+        center_lon = airport["location"]["lon"]
+    else:
+        center_lat = df_hotels["lat"].iloc[0]
+        center_lon = df_hotels["lon"].iloc[0]
+    
     view_state = pdk.ViewState(
         longitude=center_lon,
         latitude=center_lat,
-        zoom=11,
-        pitch=0,
-        bearing=0,
+        zoom=10,  # User can zoom in/out as needed
     )
+    
+    # Unified tooltip: shows name for all, details only for hotels (empty for airport)
     tooltip = {
         "html": (
-            "<div>"
-            "<b>{name}</b><br/>"
-            "Rating: {rating_display}<br/>"
-            "{address}<br/>{city}, {country}<br/>"
-            "Price: {price}<br/>"
-            "Phone: {phone}<br/>"
-            "{url}"
+            "<div style='font-family: Arial, sans-serif;'>"
+            "<b style='font-size: 14px;'>{name}</b>"
+            "{details}"
             "</div>"
         ),
         "style": {"color": "white"},
     }
+    
     return pdk.Deck(
-        layers=[layer],
+        layers=layers,
         initial_view_state=view_state,
         tooltip=tooltip,
         map_style=get_map_style(),
@@ -724,48 +845,82 @@ def build_map(df: pd.DataFrame) -> pdk.Deck:
 
 def render():
     """
-    Main UI: collect inputs (city), call AppSync, render map and raw response.
+    Main UI: collect inputs (airport name, distance), call AppSync, render map and raw response.
     Flow:
-    1. User enters city in a text input.
+    1. User enters airport name and distance in km.
     2. User clicks "Search" button.
-    3. We validate connection settings (AppSync endpoint, API key, Couchbase creds).
+    3. We validate connection settings (AppSync endpoint, API key).
     4. We call fetch_hotels() -> AppSync GraphQL -> resolver -> Data API -> Couchbase.
-    5. We transform hotel results into map points (with color-coded ratings).
-    6. We render a pydeck map with tooltips.
-    7. We show the raw JSON response in an expander for debugging.
+    5. AppSync resolver executes geospatial SQL++ query with CTE to find nearby hotels.
+    6. We transform hotel results into map points (with color-coded ratings).
+    7. We render a pydeck map with TWO layers (hotels + airport) and tooltips.
+    8. We show a legend explaining the marker colors.
+    9. We show the raw JSON response in an expander for debugging.
     """
-    st.title("Search Hotels by City")
+    st.title("Search Hotels Near Airport")
     settings = get_connection_settings()
-    city = st.text_input("City", help="Enter the city to search hotels in")
+    
+    # Two-column layout for inputs
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        airport_name = st.text_input("Airport Name")
+    with col2:
+        within_km = st.number_input("Distance (km)", min_value=1, max_value=500, value=50)
+    
     st.caption("Markers are colored by rating (0–10) derived from reviews.")
 
     if st.button("Search"):
-        missing = validate_required(settings)
-        if missing:
+        # Validate connection settings
+        if missing := validate_required(settings):
             st.error(f"Please fill the required connection settings: {', '.join(missing)}")
             return
+        if not airport_name:
+            st.error("Please enter an airport name")
+            return
+        
+        # Fetch data from AppSync
         try:
-            hotels = fetch_hotels(
+            result = fetch_hotels(
                 endpoint=settings["endpoint"],
                 api_key=settings["api_key"],
                 query=build_query(),
-                variables=build_variables(settings, city),
+                variables=build_variables(airport_name, within_km),
             )
+            hotels = result["hotels"]
+            airport = result["airport"]
         except Exception as exc:
             st.error(f"GraphQL error: {exc}")
             return
-        if not hotels:
-            st.warning("No hotels found for this city.")
+        
+        # Handle empty results
+        if not airport:
+            st.error(f"Airport '{airport_name}' not found.")
             return
+            
+        if not hotels:
+            st.warning(f"No hotels found within {within_km}km of {airport_name}.")
+            return
+            
+        # Transform and display
         points = hotels_to_points(hotels)
         if not points:
             st.warning("No hotel coordinates to plot on the map.")
             return
+            
         df = pd.DataFrame(points)
-        deck = build_map(df)
+        deck = build_map(df, airport)
         st.pydeck_chart(deck)
+        
+        # Add legend
+        st.markdown("""
+        **Legend:**
+        - 🟠 Orange marker: Airport location
+        - 🔴 Red to 🟢 Green markers: Hotels (colored by rating, 0-10)
+        """)
+        
+        # Show raw JSON response for debugging
         with st.expander("Raw response"):
-            st.json({"data": {"listHotelsInCity": hotels}})
+            st.json({"data": {"listHotelsNearAirport": {"hotels": hotels, "airport": airport}}})
 
 
 if __name__ == "__main__":
@@ -775,29 +930,37 @@ if __name__ == "__main__":
 **What happens when you run this?**
 1. Streamlit starts a local web server.
 2. The user fills in the sidebar (GraphQL endpoint, API key).
-3. The user enters a city and clicks "Search".
-4. The app POSTs a GraphQL query to AppSync with the city parameter.
-5. AppSync invokes the resolver, which reads Couchbase credentials from environment variables, calls Data API, which queries Couchbase.
-6. Data API returns matching hotels; the resolver returns them to AppSync; AppSync returns them to Streamlit.
-7. Streamlit computes a rating from reviews, maps it to a color, and plots each hotel on a map.
-8. Hovering over a hotel shows name, rating, address, price, phone, url.
+3. The user enters an airport name and distance radius, then clicks "Search".
+4. The app POSTs a GraphQL query to AppSync with both `airportName` and `withinKm` parameters.
+5. AppSync invokes the resolver, which:
+   - Reads Couchbase credentials from environment variables
+   - Executes a SQL++ query with a CTE to find the airport and calculate distances
+   - Calls Data API to query Couchbase
+6. Data API returns hotels with airport coordinates; the resolver constructs the `Airport` object and cleans the hotel data.
+7. AppSync returns both `hotels` and `airport` to Streamlit.
+8. Streamlit:
+   - Computes ratings from reviews and maps them to colors (red = low, green = high)
+   - Creates TWO map layers: one for hotels, one for the airport (orange with white outline)
+   - Centers the map on the airport location
+9. Hovering over markers shows: full details for hotels (name, rating, address, price, phone, url), just the name for airports.
 
 **Key functions explained:**
 - `get_connection_settings()` — Retrieves AppSync connection details from Streamlit's `session_state` (populated by `home.py`).
-- `build_query()` — Constructs the GraphQL query string for `listHotelsInCity` (no auth parameter needed).
-- `build_variables()` — Maps UI inputs (city only) to GraphQL variables.
-- `fetch_hotels()` — Standard GraphQL HTTP client that POSTs to AppSync with `query` + `variables`.
+- `build_query()` — Constructs the GraphQL query string for `listHotelsNearAirport` requesting both hotels and airport info.
+- `build_variables()` — Maps UI inputs (airport name, distance in km) to GraphQL variables.
+- `fetch_hotels()` — Standard GraphQL HTTP client that POSTs to AppSync and returns both hotels and airport.
 - `compute_rating_from_reviews()` — Averages the `Overall` rating from all reviews and scales 0–5 to 0–10.
 - `color_from_rating()` — Interpolates red→green color based on rating for visual feedback (red = poor, green = excellent).
-- `hotels_to_points()` — Transforms GraphQL hotel results into map-friendly data with lat/lon and color.
-- `build_map()` — Creates a pydeck ScatterplotLayer to plot hotels with color-coded ratings and interactive tooltips.
+- `hotels_to_points()` — Transforms GraphQL hotel results into map-friendly data with pre-formatted HTML tooltips.
+- `build_map()` — Creates a pydeck Deck with TWO ScatterplotLayers (hotels + airport) with different colors, sizes, and tooltips.
 
 **Data flow:**
-1. User enters city → clicks "Search"
-2. `fetch_hotels()` → AppSync GraphQL API (with city parameter)
+1. User enters airport name + distance → clicks "Search"
+2. `fetch_hotels()` → AppSync GraphQL API (with airportName and withinKm parameters)
 3. AppSync → resolver (reads credentials from environment variables) → Data API → Couchbase
-4. Data API returns hotels → AppSync → Streamlit
-5. Streamlit computes ratings, maps to colors, and plots on map
+4. Data API executes geospatial SQL++ query (CTE finds airport, main query calculates distances)
+5. Data API returns hotels + airport coordinates → resolver constructs Airport object → AppSync → Streamlit
+6. Streamlit computes ratings, maps to colors, creates two map layers, and centers on airport
 
 ---
 
@@ -822,12 +985,17 @@ In the browser sidebar, fill in the required connection settings:
 **Search for hotels:**
 
 1. Use the navigation dropdown in the sidebar to select **"Search Hotels"**
-2. Enter a city name (e.g., "London", "San Francisco", "Paris")
-3. Click the **"Search"** button
-4. View the results:
-   - Hotels appear as colored dots on the map (green = high rating, red = low rating)
-   - Hover over any hotel marker to see details (name, rating, address, price, phone, URL)
-   - Expand the "Raw response" section to see the full JSON data from AppSync
+2. Enter an airport name (e.g., "Heathrow", "Charles de Gaulle", "LAX", "Changi")
+3. Enter a distance radius in kilometers (e.g., 50)
+4. Click the **"Search"** button
+5. View the results:
+   - The airport appears as an orange marker with white outline (larger than hotel markers)
+   - Hotels appear as colored dots (green = high rating, red = low rating)
+   - Hover over any hotel marker to see full details (name, rating, address, price, phone, URL)
+   - Hover over the airport marker to see just the airport name
+   - The map automatically centers on the airport location
+   - Use the legend to understand marker colors
+   - Expand the "Raw response" section to see the full JSON data from AppSync (both hotels and airport)
 
 #### Screenshots
 
@@ -838,4 +1006,4 @@ In the browser sidebar, fill in the required connection settings:
 ---
 
 ### Conclusion
-You now have an end-to-end, serverless-friendly hotel search: AppSync handles GraphQL, the resolver securely calls Couchbase Data API, and Streamlit provides a quick UI with a city search and map. From here, consider adding more filters (price, ratings), mutations for reviews, or caching in AppSync.
+You've successfully built a complete demo showcasing **Couchbase Data API** integration with **AWS AppSync GraphQL** and **Streamlit**—creating a serverless geospatial hotel search application that executes SQL++ queries through AppSync resolvers, manages credentials securely via environment variables, and visualizes results on interactive maps with color-coded ratings and dual layers for hotels and airports.
