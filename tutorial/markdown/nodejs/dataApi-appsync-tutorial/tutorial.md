@@ -28,7 +28,7 @@ length: 45 Mins
 
 If you want to see the final code you can refer to it here: [Final Demo Code](https://github.com/couchbase-examples/couchbase-data_api-appsync-demo)
 
-This guide walks you through building the hotel search demo using AWS AppSync (GraphQL), Couchbase Data API, and a Streamlit frontend — end to end, with inlined code.
+This guide walks you through building the hotel search demo using AWS AppSync (GraphQL) with environment variables for credential management, Couchbase Data API, and a Streamlit frontend — end to end, with inlined code.
 
 ### Prerequisites
 - Couchbase Capella account with the Travel Sample dataset loaded and credentials that can access it (and network access allowed).
@@ -55,7 +55,7 @@ Couchbase Data API provides a RESTful HTTP interface to your cluster. Instead of
 
 **Notes:**
 - We will query `travel-sample.inventory.hotel` with a simple city filter.
-- Credentials are passed from the front end to AppSync and used by AppSync's resolver to call Data API.
+- Credentials are configured as environment variables in AppSync and used by the resolver to call Data API.
 - Data API authenticates each request via Basic auth (username:password Base64-encoded in the `Authorization` header).
 
 ---
@@ -71,16 +71,10 @@ AppSync provides a managed GraphQL layer with built-in auth, and logging. It let
 #### Define the schema (paste into the schema editor)
 
 This schema defines:
-- `CouchbaseAuth`: an input type for passing Couchbase username/password from the client.
 - `Hotel`, `HotelGeoObject`, `HotelRatingObject`, `HotelReviewObject`: types matching the Travel Sample hotel documents.
-- `Query.listHotelsInCity`: the single query that takes auth + city and returns a list of hotels.
+- `Query.listHotelsInCity`: the single query that takes a city and returns a list of hotels.
 
 ```graphql
-input CouchbaseAuth {
-    cb_username: String
-    cb_password: String
-}
-
 type Hotel {
     address: String
     alias: String
@@ -134,13 +128,16 @@ type HotelReviewObject {
 }
 
 type Query {
-    listHotelsInCity(auth: CouchbaseAuth!, city: String!): [Hotel]
+    listHotelsInCity(city: String!): [Hotel]
 }
 
 schema {
     query: Query
 }
 ```
+
+#### Screenshot
+![AppSync schema](appsync-schema.jpg)
 
 #### Create HTTP data source
 
@@ -150,7 +147,29 @@ AppSync can call external HTTP APIs. You configure a base URL (your Data API end
 **Steps:**
 - In AppSync, create a new HTTP data source.
 - Set the endpoint to your Couchbase Data API base URL (from step 1).
-- **Do not** configure auth here; we'll add Basic auth dynamically in the resolver using the username/password from the GraphQL request.
+- **Do not** configure auth here; we'll add Basic auth dynamically in the resolver using credentials from environment variables.
+
+#### Screenshot
+![AppSync Data Source](appsync-data-source.jpg)
+
+#### Configure environment variables in AppSync
+
+**Why environment variables?**
+Storing credentials as environment variables in AppSync keeps them centralized. This approach:
+- Avoids exposing credentials to clients
+- Makes credential rotation easier (update once in AppSync, not in every client)
+
+**Steps:**
+1. In the AppSync console, navigate to your API → **Settings** → **Environment variables**.
+2. Add the following environment variables:
+   - **Key**: `cb_username`, **Value**: Your Couchbase username
+   - **Key**: `cb_password`, **Value**: Your Couchbase password
+3. Save the changes.
+
+These environment variables will be accessible in your resolvers via `ctx.env.cb_username` and `ctx.env.cb_password`.
+
+#### Screenshot
+![AppSync Environment Variables](appsync-env-vars.jpg)
 
 #### Add a JavaScript Unit Resolver for `Query.listHotelsInCity`
 
@@ -160,22 +179,23 @@ AppSync resolvers have two functions:
 2. `response()` — transforms the HTTP response from the data source back into GraphQL data.
 
 Our resolver:
-- Extracts `auth.cb_username`, `auth.cb_password`, and `city` from the GraphQL arguments.
-- Constructs a SQL++ query: `SELECT c.* FROM hotel AS c WHERE city = "London"` (for example).
+- Reads `cb_username` and `cb_password` from AppSync environment variables (`ctx.env`).
+- Extracts `city` from the GraphQL arguments.
+- Constructs a parameterized SQL++ query: `SELECT c.* FROM hotel AS c WHERE city = $1`.
 - Builds a Data API Query Service request:
   - **Endpoint**: `/_p/query/query/service` (Data API's SQL++ query endpoint).
   - **Headers**: `Authorization: Basic <base64(username:password)>`, `Content-Type: application/json`.
-  - **Body**: `{ query_context: "default:travel-sample.inventory", statement: "SELECT ...", timeout: "30m" }`.
+  - **Body**: `{ query_context: "default:travel-sample.inventory", statement: "SELECT ...", args: [city], timeout: "30m" }`.
 - Returns the `results` array from Data API's JSON response, which AppSync then maps to the `[Hotel]` type.
 
 **Why `query_context`?**
 Setting `query_context` to `default:travel-sample.inventory` lets you write `FROM hotel` instead of the fully qualified `FROM travel-sample.inventory.hotel` in your SQL++. It's a namespace shortcut.
 
-**Why Basic auth in the resolver?**
-We pass credentials from the client at request time. This means:
-- Each user can use their own Couchbase creds (multi-tenancy).
-- No hardcoded secrets in AppSync configuration.
-- The resolver dynamically builds the `Authorization` header per request.
+**Why environment variables for credentials?**
+Storing credentials as environment variables in AppSync means:
+- Credentials never leave the server or get exposed to clients.
+- Easy credential rotation without updating client code.
+- Centralized credential management across all resolvers.
 
 Paste this code:
 
@@ -183,9 +203,11 @@ Paste this code:
 import { util } from '@aws-appsync/utils';
 
 export function request(ctx) {
-    // Extract GraphQL arguments from the client request
-    const username = ctx.arguments.auth.cb_username;
-    const password = ctx.arguments.auth.cb_password;
+    // Read credentials from AppSync environment variables
+    const username = ctx.env.cb_username;
+    const password = ctx.env.cb_password;
+    
+    // Extract city from GraphQL arguments
     const city = ctx.arguments.city;
 
     // Define the Couchbase keyspace (bucket.scope.collection)
@@ -198,10 +220,13 @@ export function request(ctx) {
     const token = util.base64Encode(`${username}:${password}`);
     const auth = `Basic ${token}`;
 
-    // Construct a SQL++ query to filter hotels by city
-    // The query_context below lets us use "hotel" instead of "travel-sample.inventory.hotel"
+    // Construct a parameterized SQL++ query to filter hotels by city
+    // Using $1 as a positional parameter for security (prevents SQL injection)
     const sql_query = `SELECT c.* FROM ${collection} AS c WHERE city = $1`;
 
+    // Log to CloudWatch for debugging (best practice)
+    console.log("Request Context:", ctx);
+    
     // Build the HTTP request object for the Data API Query Service
     const requestObject = {
         method: 'POST',
@@ -210,26 +235,35 @@ export function request(ctx) {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': auth  // Dynamic Basic auth per request
+                'Authorization': auth  // Basic auth using environment variables
             },
-            body: JSON.stringify({
+            body: {
                 query_context: `default:${bucket}.${scope}`,  // Namespace shortcut
                 statement: sql_query,  // The SQL++ query
-                args: [ city ], // Pass parameters securely
+                args: [city],  // Pass city as a positional parameter
                 timeout: '30m'  // Query timeout (generous for demo)
-            })
+            }
         }
     };
+    
+    // Log the outgoing request
+    console.log("Outgoing Request to Data API:", requestObject);
+    
     return requestObject;
 }
 
 export function response(ctx) {
+    // Log the complete response context
+    console.log("Response Context:", ctx);
+    
     // Data API returns JSON like: { results: [ {...hotel1...}, {...hotel2...} ], ... }
     // Parse it if it arrives as a string, then extract the results array
     let parsedResult = ctx.result.body;
     if (typeof ctx.result.body === 'string') {
         parsedResult = JSON.parse(ctx.result.body);
+        console.log("Parsed Result:", parsedResult);
     }
+    
     // Return the array of hotel documents; AppSync maps them to the Hotel GraphQL type
     // and filters fields based on the client's selection set (e.g., { id, name, geo { lat lon } })
     return parsedResult.results;
@@ -237,38 +271,49 @@ export function response(ctx) {
 ```
 
 **Key takeaways:**
-- `ctx.arguments` gives you the GraphQL args: `auth` and `city`.
+- `ctx.env` provides access to AppSync environment variables (credentials stored securely).
+- `ctx.arguments` gives you the GraphQL args: `city`.
 - `util.base64Encode` is an AppSync helper to encode credentials.
 - `resourcePath` is relative to the HTTP data source base URL.
 - `query_context` sets the default bucket/scope for SQL++.
+- Using positional parameters (`$1`) in the SQL++ query prevents SQL injection.
 - `parsedResult.results` is the array of documents returned by Data API.
+- CloudWatch logging helps debug request/response flow.
 
 Save and deploy your resolver.
 
-#### Screenshots
-
-![AppSync schema](appsync-schema.jpg)
-
-![AppSync Data Source](appsync-data-source.jpg)
-
+#### Screenshot
 ![AppSync Resolver](appsync-resolver.jpg)
+
+#### Enable AppSync request/response logging (recommended)
+
+**Why enable logging?**
+CloudWatch logs let you see exactly what your resolver sends to Data API and what it receives back. This is invaluable for debugging:
+- Incorrect SQL++ syntax? Check the `statement` in the request log.
+- Auth errors? Check the `Authorization` header and Data API response.
+- Unexpected results? Compare the Data API JSON with what AppSync returns to the client.
+
+**Steps:**
+1. In the AppSync console, open your API → **Settings** → **Logging**.
+2. Choose (or create) a CloudWatch Log Group.
+3. Set **Field resolver log level** to at least **ERROR** (use **INFO** or **ALL** during development for full request/response logs).
+4. Save.
+
+Now, every resolver invocation will log to CloudWatch. You can view logs in the CloudWatch console under the log group you selected.
+
+#### Screenshot
+![AppSync Logging Settings](appsync-logging-seeting.jpg)
 
 #### Quick test (optional)
 
 Test your resolver directly in the AppSync console before building the frontend.
 
 1. In the AppSync console, open **Queries**.
-2. Paste this query, replacing `cb_username`, `cb_password`, and `city` with your actual values:
+2. Paste this query, replacing `city` with your test city:
 
 ```graphql
 query ListHotelsInCity {
-  listHotelsInCity(
-    auth: {
-      cb_username: "Administrator",
-      cb_password: "password"
-    },
-    city: "London"
-  ) {
+  listHotelsInCity(city: "London") {
     id
     name
     address
@@ -286,6 +331,8 @@ query ListHotelsInCity {
 3. Click **Run**. You should see a JSON response with hotels in London.
 
 If it works, you've successfully bridged AppSync → Data API → Couchbase!
+
+**Note:** The credentials are read from the environment variables you configured earlier, so you don't need to pass them in the query.
 
 ---
 
@@ -316,7 +363,7 @@ pip install streamlit requests pandas pydeck
 This is the main entry point for the Streamlit app. It provides:
 - A home page with information about the demo
 - A sidebar navigation menu to switch between pages
-- Connection settings inputs (GraphQL endpoint, API key, Couchbase credentials) stored in Streamlit's `session_state`
+- Connection settings inputs (GraphQL endpoint, API key) stored in Streamlit's `session_state`
 - Dynamic page loading based on user selection
 - Validation to ensure required settings are filled before accessing feature pages
 
@@ -360,8 +407,9 @@ def render():
     Main render function: sets up sidebar navigation and connection settings.
     Flow:
     1. Display navigation menu in sidebar (Home, Search Hotels, etc.)
-    2. Collect connection settings (GraphQL endpoint, API key, Couchbase username/password)
+    2. Collect connection settings (GraphQL endpoint, API key)
        - These are stored in session_state so they persist across page changes
+       - Note: Couchbase credentials are now stored as environment variables in AppSync
     3. If user is on the Home page, render it directly
     4. For other pages, validate that all required connection settings are filled
     5. Dynamically import and render the selected page module
@@ -390,15 +438,6 @@ def render():
         value=st.session_state.get("api_key", ""),
         type="password",
     )
-    st.session_state["username"] = st.sidebar.text_input(
-        "Couchbase Username",
-        value=st.session_state.get("username", ""),
-    )
-    st.session_state["password"] = st.sidebar.text_input(
-        "Couchbase Password",
-        value=st.session_state.get("password", ""),
-        type="password",
-    )
 
     # Map page name to module name
     module_name = PAGES[page_name]
@@ -412,14 +451,10 @@ def render():
     required_keys = [
         "gql_endpoint",
         "api_key",
-        "username",
-        "password",
     ]
     labels = {
         "gql_endpoint": "GraphQL Endpoint",
         "api_key": "GraphQL API Key",
-        "username": "Couchbase Username",
-        "password": "Couchbase Password",
     }
     missing = [labels[k] for k in required_keys if not st.session_state.get(k)]
     if missing:
@@ -444,7 +479,8 @@ if __name__ == "__main__":
 **Key takeaways:**
 - `PAGES` dictionary maps user-friendly page names to Python module names.
 - `session_state` stores connection settings so they persist when the user switches pages.
-- Input fields use `type="password"` for sensitive data (API key, password) to mask them in the UI.
+- Input fields use `type="password"` for sensitive data (API key) to mask them in the UI.
+- Only AppSync connection details are needed in the frontend; Couchbase credentials are stored securely in AppSync environment variables.
 - The app validates required settings before loading feature pages, providing clear error messages if any are missing.
 - `importlib.import_module()` dynamically loads page modules, making it easy to add new pages without modifying the main file.
 
@@ -457,7 +493,7 @@ Create a file `search_hotels.py` with the following code. This page handles the 
 **What does `search_hotels.py` do?**
 This page:
 - Provides a text input for users to enter a city name
-- Calls the AppSync GraphQL API with the city filter
+- Calls the AppSync GraphQL API with the city filter (credentials are handled by AppSync environment variables)
 - Transforms hotel results into map-friendly data with color-coded ratings
 - Displays hotels on an interactive map using pydeck
 - Shows a raw JSON response in an expandable section for debugging
@@ -478,12 +514,11 @@ def get_connection_settings() -> Dict[str, str]:
     """
     Read connection details from the Streamlit sidebar state.
     Streamlit uses session_state to persist user inputs across reruns.
+    Note: Couchbase credentials are no longer needed here as they're stored in AppSync environment variables.
     """
     return {
         "endpoint": st.session_state.get("gql_endpoint", ""),
         "api_key": st.session_state.get("api_key", ""),
-        "username": st.session_state.get("username", ""),
-        "password": st.session_state.get("password", ""),
     }
 
 
@@ -495,8 +530,6 @@ def validate_required(settings: Dict[str, str]) -> List[str]:
     labels = {
         "endpoint": "GraphQL Endpoint",
         "api_key": "GraphQL API Key",
-        "username": "Couchbase Username",
-        "password": "Couchbase Password",
     }
     return [labels[k] for k, v in settings.items() if not v]
 
@@ -505,11 +538,12 @@ def build_query() -> str:
     """
     GraphQL query string for listHotelsInCity.
     We request id, name, address, city, country, phone, price, url, geo (lat/lon), and reviews.
-    AppSync will call our resolver, which queries Data API, and returns hotels matching the city.
+    AppSync will call our resolver, which reads credentials from environment variables,
+    queries Data API, and returns hotels matching the city.
     """
     return (
-        "query ListHotelsInCity($auth: CouchbaseAuth!, $city: String!) {\n"
-        "  listHotelsInCity(auth: $auth, city: $city) {\n"
+        "query ListHotelsInCity($city: String!) {\n"
+        "  listHotelsInCity(city: $city) {\n"
         "    id\n"
         "    name\n"
         "    address\n"
@@ -528,13 +562,9 @@ def build_query() -> str:
 def build_variables(settings: Dict[str, str], city: str) -> Dict[str, Any]:
     """
     Map UI inputs to GraphQL variables.
-    The 'auth' object contains Couchbase creds, which the resolver will use to authenticate with Data API.
+    Only the city is needed now; Couchbase credentials are stored in AppSync environment variables.
     """
     return {
-        "auth": {
-            "cb_username": settings["username"],
-            "cb_password": settings["password"],
-        },
         "city": city,
     }
 
@@ -744,18 +774,18 @@ if __name__ == "__main__":
 
 **What happens when you run this?**
 1. Streamlit starts a local web server.
-2. The user fills in the sidebar (GraphQL endpoint, API key, Couchbase username/password).
+2. The user fills in the sidebar (GraphQL endpoint, API key).
 3. The user enters a city and clicks "Search".
-4. The app POSTs a GraphQL query to AppSync with the city and Couchbase creds.
-5. AppSync invokes the resolver, which calls Data API, which queries Couchbase.
+4. The app POSTs a GraphQL query to AppSync with the city parameter.
+5. AppSync invokes the resolver, which reads Couchbase credentials from environment variables, calls Data API, which queries Couchbase.
 6. Data API returns matching hotels; the resolver returns them to AppSync; AppSync returns them to Streamlit.
 7. Streamlit computes a rating from reviews, maps it to a color, and plots each hotel on a map.
 8. Hovering over a hotel shows name, rating, address, price, phone, url.
 
 **Key functions explained:**
-- `get_connection_settings()` — Retrieves connection details from Streamlit's `session_state` (populated by `home.py`).
-- `build_query()` — Constructs the GraphQL query string for `listHotelsInCity`.
-- `build_variables()` — Maps UI inputs (city, username, password) to GraphQL variables.
+- `get_connection_settings()` — Retrieves AppSync connection details from Streamlit's `session_state` (populated by `home.py`).
+- `build_query()` — Constructs the GraphQL query string for `listHotelsInCity` (no auth parameter needed).
+- `build_variables()` — Maps UI inputs (city only) to GraphQL variables.
 - `fetch_hotels()` — Standard GraphQL HTTP client that POSTs to AppSync with `query` + `variables`.
 - `compute_rating_from_reviews()` — Averages the `Overall` rating from all reviews and scales 0–5 to 0–10.
 - `color_from_rating()` — Interpolates red→green color based on rating for visual feedback (red = poor, green = excellent).
@@ -764,8 +794,8 @@ if __name__ == "__main__":
 
 **Data flow:**
 1. User enters city → clicks "Search"
-2. `fetch_hotels()` → AppSync GraphQL API
-3. AppSync → resolver → Data API → Couchbase
+2. `fetch_hotels()` → AppSync GraphQL API (with city parameter)
+3. AppSync → resolver (reads credentials from environment variables) → Data API → Couchbase
 4. Data API returns hotels → AppSync → Streamlit
 5. Streamlit computes ratings, maps to colors, and plots on map
 
@@ -786,8 +816,8 @@ This starts the Streamlit web server and automatically opens the app in your bro
 In the browser sidebar, fill in the required connection settings:
 - **GraphQL Endpoint**: Your AppSync API URL (e.g., `https://xxx.appsync-api.us-east-1.amazonaws.com/graphql`)
 - **GraphQL API Key**: Your AppSync API key
-- **Couchbase Username**: Your Couchbase username (e.g., `Administrator`)
-- **Couchbase Password**: Your Couchbase password
+
+**Note:** Couchbase credentials are no longer entered here. They're securely stored as environment variables in your AppSync configuration.
 
 **Search for hotels:**
 
@@ -804,27 +834,6 @@ In the browser sidebar, fill in the required connection settings:
 ![Streamlit search](streamlit-search.jpg)
 
 ![Streamlit map](streamlit-map.jpg)
-
----
-
-### Enable AppSync request/response logging (optional but recommended)
-
-**Why enable logging?**
-CloudWatch logs let you see exactly what your resolver sends to Data API and what it receives back. This is invaluable for debugging:
-- Incorrect SQL++ syntax? Check the `statement` in the request log.
-- Auth errors? Check the `Authorization` header and Data API response.
-- Unexpected results? Compare the Data API JSON with what AppSync returns to the client.
-
-**Steps:**
-1. In the AppSync console, open your API → **Settings** → **Logging**.
-2. Choose (or create) a CloudWatch Log Group.
-3. Set **Field resolver log level** to at least **ERROR** (use **INFO** or **ALL** during development for full request/response logs).
-4. Save.
-
-Now, every resolver invocation will log to CloudWatch. You can view logs in the CloudWatch console under the log group you selected.
-
-#### Screenshot
-![AppSync Logging Settings](appsync-logging-seeting.jpg)
 
 ---
 
