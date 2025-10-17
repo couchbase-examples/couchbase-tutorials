@@ -230,7 +230,7 @@ export function request(ctx) {
     // Build the HTTP request object for the Data API Query Service
     const requestObject = {
         method: 'POST',
-        resourcePath: '/_p/query/query/service',  // Data API SQL++ endpoint
+        resourcePath: '/_p/query/query/service',  // Data API SQL++ endpoint - see https://docs.couchbase.com/cloud/data-api-reference/index.html#tag/Query
         params: {
             headers: {
                 'Accept': 'application/json',
@@ -274,7 +274,7 @@ export function response(ctx) {
 - `ctx.env` provides access to AppSync environment variables (credentials stored securely).
 - `ctx.arguments` gives you the GraphQL args: `city`.
 - `util.base64Encode` is an AppSync helper to encode credentials.
-- `resourcePath` is relative to the HTTP data source base URL.
+- `resourcePath` is the API endpoint path relative to your HTTP data source base URL. In this case, `/_p/query/query/service` is the [Data API Query Service endpoint](https://docs.couchbase.com/cloud/data-api-reference/index.html#tag/Query) for executing SQL++ queries.
 - `query_context` sets the default bucket/scope for SQL++.
 - Using positional parameters (`$1`) in the SQL++ query prevents SQL injection.
 - `parsedResult.results` is the array of documents returned by Data API.
