@@ -49,7 +49,7 @@ You can either download the notebook file and run it on [Google Colab](https://c
 
 
 ```python
-!pip install --quiet langchain-couchbase==0.5.0rc1 transformers==4.56.1 sentence_transformers==5.1.0 langchain_huggingface==0.3.1 python-dotenv==1.1.1 ipywidgets
+!pip install --quiet langchain-couchbase==0.5.0 transformers==4.56.1 sentence_transformers==5.1.0 langchain_huggingface==0.3.1 python-dotenv==1.1.1 ipywidgets
 ```
 
 ### Import Required Modules
@@ -259,7 +259,9 @@ Before creating our BHIVE index, it's important to understand the configuration 
 - **`IVF1000,SQ6`** - 1000 centroids, 6-bit scalar quantization
 - **`IVF,PQ32x8`** - Auto centroids, 32 subquantizers with 8 bits
 
-For detailed configuration options, see the [Couchbase Vector Index documentation](https://docs.couchbase.com/server/current/vector-index/hyperscale-vector-index.html#algo_settings).
+For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/cloud/vector-index/hyperscale-vector-index.html#algo_settings).
+
+For more information on GSI vector indexes, see [Couchbase GSI Vector Documentation](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
 
 ##### Our Configuration Choice
 

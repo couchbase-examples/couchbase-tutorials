@@ -68,7 +68,7 @@ Install the necessary packages for Couchbase GSI vector search, Jina AI integrat
 
 ```python
 # Jina doesnt support openai other than 0.27
-%pip install --quiet datasets==3.6.0 langchain-couchbase==0.5.0rc1 langchain-community==0.3.24 openai==0.27 python-dotenv==1.1.0 ipywidgets
+%pip install --quiet datasets==3.6.0 langchain-couchbase==0.5.0 langchain-community==0.3.24 openai==0.27 python-dotenv==1.1.0 ipywidgets
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -478,9 +478,9 @@ IVF500,PQ16x4    # 500 centroids with 16 subquantizers of 4 bits each (high comp
 
 **Scalability**: BHIVE indexes can scale to billions of vectors with optimized concurrent operations, making them suitable for large-scale production deployments.
 
-For detailed configuration options, see the [Quantization & Centroid Settings](https://preview.docs-test.couchbase.com/docs-server-DOC-12565_vector_search_concepts/server/current/vector-index/hyperscale-vector-index.html#algo_settings).
+For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/cloud/vector-index/hyperscale-vector-index.html#algo_settings).
 
-For more information on GSI Vector Indexes, see [Couchbase GSI Vector Documentation](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/vector-search.html).
+For more information on GSI vector indexes, see [Couchbase GSI Vector Documentation](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
 
 ### Vector Search Test Function
 

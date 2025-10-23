@@ -102,7 +102,7 @@ Install the necessary packages for CrewAI, Couchbase integration, and OpenAI emb
 
 
 ```python
-%pip install --quiet crewai==0.186.1 langchain-couchbase==0.5.0rc1 langchain-openai==0.3.33 python-dotenv==1.1.1
+%pip install --quiet crewai==0.186.1 langchain-couchbase==0.5.0 langchain-openai==0.3.33 python-dotenv==1.1.1
 ```
 
     Note: you may need to restart the kernel to use updated packages.
@@ -197,9 +197,9 @@ The `index_description` parameter controls how Couchbase optimizes vector storag
 - IVF1000,SQ6 - 1000 centroids, 6-bit scalar quantization  
 - IVF,PQ32x8 - Auto centroids, 32 subquantizers with 8 bits
 
-For detailed configuration options, see the [Quantization & Centroid Settings](https://preview.docs-test.couchbase.com/docs-server-DOC-12565_vector_search_concepts/server/current/vector-index/hyperscale-vector-index.html#algo_settings).
+For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/cloud/vector-index/hyperscale-vector-index.html#algo_settings).
 
-For more information on GSI vector indexes, see [Couchbase GSI Vector Documentation](https://docs.couchbase.com/server/current/vector-index/use-vector-indexes.html).
+For more information on GSI vector indexes, see [Couchbase GSI Vector Documentation](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
 
 
 ## Custom CouchbaseStorage Implementation
@@ -789,10 +789,6 @@ print("✅ Memory will persist across sessions for continued learning and contex
 
 
 
-    Output()
-
-
-
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"></pre>
 
 
@@ -839,61 +835,7 @@ print("✅ Memory will persist across sessions for continued learning and contex
 
 
 
-    Output()
-
-
-
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"></pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭───────────────────────────────────────────── ✅ Agent Final Answer ─────────────────────────────────────────────╮</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #00ff00; text-decoration-color: #00ff00; font-weight: bold">Sports Analyst</span>                                                                                          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Final Answer:</span>                                                                                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Manchester City's recent performance analysis under Pep Guardiola reflects a team in strong form and </span>          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">alignment with the manager's philosophy. Guardiola's comments, "The team is playing well, we are in a good </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">moment. The way we are training, the way we are playing - I am really pleased," suggest a high level of </span>       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">satisfaction with both the tactical execution and the overall team ethos on the pitch.</span>                         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">In recent matches, Manchester City has demonstrated their prowess in both domestic and international </span>          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">competitions. This form can be attributed to their meticulous training regimen and strategic flexibility, </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">hallmarks of Guardiola's management style. Over the past few matches, City has maintained a high possession </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">rate, often exceeding 60%, which allows them to control the tempo and dictate the flow of the game. Their </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">attacking prowess is underscored by their goal-scoring statistics, often leading the league in goals scored </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">per match.</span>                                                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">One standout example of their performance is their recent dominant victory against a top Premier League </span>       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">rival, where they not only showcased their attacking capabilities but also their defensive solidity, keeping </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">a clean sheet. Key players such as Kevin De Bruyne and Erling Haaland have been instrumental, with De </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Bruyne's creativity and passing range creating numerous opportunities, while Haaland's clinical finishing has</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">consistently troubled defenses.</span>                                                                                <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Guardiola's system relies heavily on positional play and fluid movement, which has been evident in the team's</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">ability to break down opposition defenses through quick, incisive passes. The team's pressing game has also </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">been a critical component, often winning back possession high up the pitch and quickly transitioning to </span>       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">attack.</span>                                                                                                        <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Despite Guardiola's positive outlook, potential biases in his comments might overlook some areas needing </span>      <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">improvement. For instance, while their attack is formidable, there have been instances where the team has </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">shown vulnerability to counter-attacks, particularly when full-backs are pushed high up the field. Addressing</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">these defensive transitions could be crucial, especially against teams with quick, counter-attacking </span>          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">capabilities.</span>                                                                                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Looking ahead, Manchester City's current form sets a strong foundation for upcoming challenges, including key</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">fixtures in the Premier League and the knockout stages of the UEFA Champions League. Maintaining this level </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">of performance will be critical as they pursue multiple titles. The team's depth, strategic versatility, and </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Guardiola's leadership are likely to be decisive factors in sustaining their momentum.</span>                         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">In summary, Manchester City is indeed in a "good moment," as Guardiola states, with their recent performances</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">reflecting a well-oiled machine operating at high efficiency. However, keeping a vigilant eye on potential </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">weaknesses and continuing to adapt tactically will be essential to translating their current form into </span>        <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">long-term success.</span>                                                                                             <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
-</pre>
 
 
 
@@ -901,10 +843,6 @@ print("✅ Memory will persist across sessions for continued learning and contex
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
 </pre>
 
-
-
-
-    Output()
 
 
 
@@ -930,10 +868,6 @@ print("✅ Memory will persist across sessions for continued learning and contex
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
 </pre>
 
-
-
-
-    Output()
 
 
 
@@ -982,63 +916,7 @@ print("✅ Memory will persist across sessions for continued learning and contex
 
 
 
-    Output()
-
-
-
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"></pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭───────────────────────────────────────────── ✅ Agent Final Answer ─────────────────────────────────────────────╮</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Agent: </span><span style="color: #00ff00; text-decoration-color: #00ff00; font-weight: bold">Sports Journalist</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Final Answer:</span>                                                                                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">**Manchester City’s Impeccable Form: A Reflection of Guardiola’s Philosophy**</span>                                  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Manchester City has been turning heads with their exceptional form under the astute guidance of Pep </span>           <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Guardiola. The team’s recent performances have not only aligned seamlessly with their manager’s philosophy </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">but have also placed them in a formidable position across various competitions. Guardiola himself expressed </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">his satisfaction, stating, "The team is playing well, we are in a good moment. The way we are training, the </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">way we are playing - I am really pleased."</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">City’s prowess has been evident both domestically and in international arenas. A key factor in their success </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">is their meticulous training regimen, which has fostered strategic flexibility, a hallmark of Guardiola’s </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">management. Over the past few matches, Manchester City has consistently maintained a high possession rate, </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">often exceeding 60%. This high possession allows them to control the tempo and dictate the flow of the game, </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">a crucial component of their strategy.</span>                                                                         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">A recent standout performance was their dominant victory against a top Premier League rival. In this match, </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">City showcased their attacking capabilities and defensive solidity, managing to keep a clean sheet. The </span>       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">contributions of key players like Kevin De Bruyne and Erling Haaland have been instrumental. De Bruyne’s </span>      <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">creativity and passing range have opened multiple avenues for attack, while Haaland’s clinical finishing has </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">consistently troubled defenses.</span>                                                                                <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Guardiola’s system, which relies heavily on positional play and fluid movement, has been a critical factor in</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">their ability to break down opposition defenses with quick, incisive passes. The team’s pressing game has </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">also been a cornerstone of their strategy, allowing them to win back possession high up the pitch and quickly</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">transition to attack.</span>                                                                                          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Despite the glowing form and Guardiola’s positive outlook, it’s important to acknowledge potential areas for </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">improvement. While their attack is formidable, City has shown occasional vulnerability to counter-attacks, </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">particularly when their full-backs are positioned high up the field. Addressing these defensive transitions </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">will be crucial, especially against teams with quick counter-attacking capabilities.</span>                           <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">Looking forward, Manchester City’s current form is a strong foundation for upcoming challenges, including key</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">fixtures in the Premier League and the knockout stages of the UEFA Champions League. Maintaining this </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">performance level will be essential as they pursue multiple titles. The team’s depth, strategic versatility, </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">and Guardiola’s leadership will be decisive factors in sustaining their momentum.</span>                              <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">In conclusion, Manchester City is indeed in a "good moment," as Guardiola aptly puts it. Their recent </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">performances reflect a well-oiled machine operating at high efficiency. However, the team must remain </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">vigilant about potential weaknesses and continue adapting tactically to ensure their current form translates </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">into long-term success. As they aim for glory, the synergy between Guardiola’s strategic mastermind and the </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #00ff00; text-decoration-color: #00ff00">players’ execution will undoubtedly be the key to their triumphs.</span>                                              <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
-</pre>
 
 
 
@@ -1046,10 +924,6 @@ print("✅ Memory will persist across sessions for continued learning and contex
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
 </pre>
 
-
-
-
-    Output()
 
 
 
@@ -1073,60 +947,6 @@ print("✅ Memory will persist across sessions for continued learning and contex
 
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">
-</pre>
-
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="color: #008000; text-decoration-color: #008000">╭──────────────────────────────────────────────── Crew Completion ────────────────────────────────────────────────╮</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #008000; text-decoration-color: #008000; font-weight: bold">Crew Execution Completed</span>                                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Name: </span><span style="color: #008000; text-decoration-color: #008000">crew</span>                                                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">ID: </span><span style="color: #008000; text-decoration-color: #008000">38d8c744-17cf-4aef-b246-3ff3a930ca29</span>                                                                       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Tool Args: </span>                                                                                                    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Final Output: **Manchester City’s Impeccable Form: A Reflection of Guardiola’s Philosophy**</span>                    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Manchester City has been turning heads with their exceptional form under the astute guidance of Pep </span>           <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Guardiola. The team’s recent performances have not only aligned seamlessly with their manager’s philosophy </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">but have also placed them in a formidable position across various competitions. Guardiola himself expressed </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">his satisfaction, stating, "The team is playing well, we are in a good moment. The way we are training, the </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">way we are playing - I am really pleased."</span>                                                                     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">City’s prowess has been evident both domestically and in international arenas. A key factor in their success </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">is their meticulous training regimen, which has fostered strategic flexibility, a hallmark of Guardiola’s </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">management. Over the past few matches, Manchester City has consistently maintained a high possession rate, </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">often exceeding 60%. This high possession allows them to control the tempo and dictate the flow of the game, </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">a crucial component of their strategy.</span>                                                                         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">A recent standout performance was their dominant victory against a top Premier League rival. In this match, </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">City showcased their attacking capabilities and defensive solidity, managing to keep a clean sheet. The </span>       <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">contributions of key players like Kevin De Bruyne and Erling Haaland have been instrumental. De Bruyne’s </span>      <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">creativity and passing range have opened multiple avenues for attack, while Haaland’s clinical finishing has </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">consistently troubled defenses.</span>                                                                                <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Guardiola’s system, which relies heavily on positional play and fluid movement, has been a critical factor in</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">their ability to break down opposition defenses with quick, incisive passes. The team’s pressing game has </span>     <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">also been a cornerstone of their strategy, allowing them to win back possession high up the pitch and quickly</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">transition to attack.</span>                                                                                          <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Despite the glowing form and Guardiola’s positive outlook, it’s important to acknowledge potential areas for </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">improvement. While their attack is formidable, City has shown occasional vulnerability to counter-attacks, </span>    <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">particularly when their full-backs are positioned high up the field. Addressing these defensive transitions </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">will be crucial, especially against teams with quick counter-attacking capabilities.</span>                           <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">Looking forward, Manchester City’s current form is a strong foundation for upcoming challenges, including key</span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">fixtures in the Premier League and the knockout stages of the UEFA Champions League. Maintaining this </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">performance level will be essential as they pursue multiple titles. The team’s depth, strategic versatility, </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">and Guardiola’s leadership will be decisive factors in sustaining their momentum.</span>                              <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">In conclusion, Manchester City is indeed in a "good moment," as Guardiola aptly puts it. Their recent </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">performances reflect a well-oiled machine operating at high efficiency. However, the team must remain </span>         <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">vigilant about potential weaknesses and continue adapting tactically to ensure their current form translates </span>  <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">into long-term success. As they aim for glory, the synergy between Guardiola’s strategic mastermind and the </span>   <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>  <span style="color: #c0c0c0; text-decoration-color: #c0c0c0">players’ execution will undoubtedly be the key to their triumphs.</span>                                              <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">│</span>                                                                                                                 <span style="color: #008000; text-decoration-color: #008000">│</span>
-<span style="color: #008000; text-decoration-color: #008000">╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</span>
 </pre>
 
 
@@ -1254,35 +1074,7 @@ else:
     --------------------------------------------------------------------------------
     Context: **Manchester City’s Impeccable Form: A Reflection of Guardiola’s Philosophy**
     
-    Manchester City has been turning heads with their exceptional form under the astute guidance of Pep Guardiola. The team’s recent performances have not only aligned seamlessly with their manager’s philosophy but have also placed them in a formidable position across various competitions. Guardiola himself expressed his satisfaction, stating, "The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased."
-    
-    City’s prowess has been evident both domestically and in international arenas. A key factor in their success is their meticulous training regimen, which has fostered strategic flexibility, a hallmark of Guardiola’s management. Over the past few matches, Manchester City has consistently maintained a high possession rate, often exceeding 60%. This high possession allows them to control the tempo and dictate the flow of the game, a crucial component of their strategy.
-    
-    A recent standout performance was their dominant victory against a top Premier League rival. In this match, City showcased their attacking capabilities and defensive solidity, managing to keep a clean sheet. The contributions of key players like Kevin De Bruyne and Erling Haaland have been instrumental. De Bruyne’s creativity and passing range have opened multiple avenues for attack, while Haaland’s clinical finishing has consistently troubled defenses.
-    
-    Guardiola’s system, which relies heavily on positional play and fluid movement, has been a critical factor in their ability to break down opposition defenses with quick, incisive passes. The team’s pressing game has also been a cornerstone of their strategy, allowing them to win back possession high up the pitch and quickly transition to attack.
-    
-    Despite the glowing form and Guardiola’s positive outlook, it’s important to acknowledge potential areas for improvement. While their attack is formidable, City has shown occasional vulnerability to counter-attacks, particularly when their full-backs are positioned high up the field. Addressing these defensive transitions will be crucial, especially against teams with quick counter-attacking capabilities.
-    
-    Looking forward, Manchester City’s current form is a strong foundation for upcoming challenges, including key fixtures in the Premier League and the knockout stages of the UEFA Champions League. Maintaining this performance level will be essential as they pursue multiple titles. The team’s depth, strategic versatility, and Guardiola’s leadership will be decisive factors in sustaining their momentum.
-    
-    In conclusion, Manchester City is indeed in a "good moment," as Guardiola aptly puts it. Their recent performances reflect a well-oiled machine operating at high efficiency. However, the team must remain vigilant about potential weaknesses and continue adapting tactically to ensure their current form translates into long-term success. As they aim for glory, the synergy between Guardiola’s strategic mastermind and the players’ execution will undoubtedly be the key to their triumphs.
-    Distance: 0.28344257372366755 (lower = more similar)
-    --------------------------------------------------------------------------------
-    
-    Agent Interaction Memory Results:
-    --------------------------------------------------------------------------------
-    Context: Pep Guardiola praised Manchester City's current form, saying 'The team is playing well, we are in a good moment. The way we are training, the way we are playing - I am really pleased.'...
-    Distance: 0.47818756311692623 (lower = more similar)
-    --------------------------------------------------------------------------------
-    Context: Manchester City's recent performance analysis under Pep Guardiola reflects a team in strong form and alignment with the manager's philosophy. Guardiola's comments, "The team is playing well, we are in...
-    Distance: 0.3116571673383475 (lower = more similar)
-    --------------------------------------------------------------------------------
-    Context: **Manchester City’s Impeccable Form: A Reflection of Guardiola’s Philosophy**
-    
-    Manchester City has been turning heads with their exceptional form under the astute guidance of Pep Guardiola. The team’s...
-    Distance: 0.3930892627912863 (lower = more similar)
-    --------------------------------------------------------------------------------
+    ... (output truncated for brevity)
 
 
 ## Conclusion
