@@ -158,26 +158,10 @@ spring.couchbase.bucket.password=password
 > **_NOTE:_**  Couchbase Capella clusters are using Transport Security Layer (TLS) cryptographic protocol to secure traffic between the cluster and client applications.
 > For simplicity, we will forego certificate validation step in this tutorial.
 > It is highly recommended to always verify your cluster's certificate on production environments.
-
-<<<<<<< HEAD
-> **_NOTE:_** Couchbase Capepella clusters are using Transport Security Layer (TLS) cryptographic protocol to secure traffic between the cluster and client applications.
-Every Capella cluster comes with its own self-signed TLS certificate.
-This certificate can be used by client applications to verify the identity of the server and prevent attackers from intercepting database traffic. 
-It is highly recommended to always verify your cluster's certificate on production environments.
-Please refer to "Full Example / Couchbase Capella Sample" and "Cloud Connections" sections of [Install and Start Using the Java SDK with Couchbase Server](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html#full-example) for information on how to validate cluster certificates.
-
-To connect to Capella, use `couchbases://` connection protocol and add `?tls=no_verify` to the connection string:
-
-```ini
-spring.couchbase.bootstrap-hosts=couchbases://cb.jncm2s9gv4ealbm.cloud.couchbase.com?ssl=no_veriify
-```
-
-Save the file and start the sample application by running the following command in the root folder of the project:
-=======
 > Please refer to "Full Example / Couchbase Capella Sample" and "Cloud Connections" sections of [Install and Start Using the Java SDK with Couchbase Server](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html#full-example) for information on how to validate cluster certificates.
 
 
-To confiure Capella connections, use a `ClusterEnvironment` with enabled TLS security:
+To configure Capella connections, use a `ClusterEnvironment` with enabled TLS security:
 
 ```java
     @Bean
@@ -191,7 +175,7 @@ To confiure Capella connections, use a `ClusterEnvironment` with enabled TLS sec
 
     public ClusterEnvironment getClusterEnvironment() {
       ClusterEnvironment.Builder environmentBuilder = ClusterEnvironment.builder();
-      
+
       SecurityConfig.Builder securityConfig = SecurityConfig.enableTls(true)
         .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
       environmentBuilder.securityConfig(securityConfig);
@@ -200,15 +184,14 @@ To confiure Capella connections, use a `ClusterEnvironment` with enabled TLS sec
     }
 ```
 
-Another alternative is to use`couchbases://` connection protocol and add `?ssl=no_verify` to the connection string:
+Another alternative is to use `couchbases://` connection protocol and add `?ssl=no_verify` to the connection string:
 ```ini
 spring.couchbase.bootstrap-hosts=couchbases://cb.jnym5s9gv4ealbe.cloud.couchbase.com?ssl=no_verify
 ```
 
-> **_NOTE_**: these Capella connection confguration examples should be used for development purposes only and are not recommended for production.
+> **_NOTE_**: these Capella connection configuration examples should be used for development purposes only and are not recommended for production.
 
 Save your customized configuration and start the sample application by running the following command in the root folder of the project:
->>>>>>> 066839e6fbc8c2f00fa28c21cd9a4472abeb62f1
 
 ```shell
 mvn spring-boot:run
