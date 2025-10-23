@@ -38,7 +38,6 @@ To run this prebuilt project, you will need:
 
   - [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 
-
 ### Couchbase Capella Configuration
 
 When running Couchbase using [Capella](https://cloud.couchbase.com/), the following prerequisites need to be met.
@@ -65,21 +64,9 @@ gem install bundler
 bundle install
 ```
 
-The application uses the following gems and needs to be installed globally even though they are specified in the `Gemfile`.
-
-```shell
-gem install rails
-gem install rspec
-gem install rubocop
-gem install rswag
-gem install couchbase
-gem install couchbase-orm
-```
-
-> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info. -->
+> Refer to the [instructions in the SDK](https://github.com/couchbase/couchbase-ruby-client#installation) for more info.
 
 ### Setup Database Configuration
-
 
 To use Couchbase ORM in your Ruby application, you need to configure the connection settings for your Couchbase Server instance. Couchbase ORM provides a simple way to configure the connection.
 
@@ -164,7 +151,7 @@ Once the app is up and running, open http://localhost:3000/api-docs to test the 
 
 Once the application starts, you can see the details of the application on the logs.
 
-![Application Startup](app_startup.png)
+![Application Startup](./app_startup.png)
 
 The application will run on port 3000 of your local machine (http://localhost:3000). You will find the interactive Swagger documentation of the API if you go to the URL in your browser. Swagger documentation is used in this demo to showcase the different API end points and how they can be invoked. More details on the Swagger documentation can be found in the [appendix](#swagger-documentation).
 
@@ -174,7 +161,7 @@ The application will run on port 3000 of your local machine (http://localhost:30
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
 
-![img](travel_sample_data_model.png)
+![Travel Sample Data Model](./travel_sample_data_model.png)
 
 ## Let Us Review the Code
 
@@ -250,9 +237,9 @@ In `routes.rb`, we define the routes for the application including the API route
 
 We have the Couchbase SDK operations defined in the `CouchbaseClient` class inside the `config/initializers/couchbase.rb` file.
 
-We recommend creating a single Couchbase connection when your application starts up, and sharing this instance throughout your application. If you know at startup time which buckets, scopes, and collections your application will use, we recommend obtaining them from the Cluster at startup time and sharing those instances throughout your application as well.
+We recommend creating a single Couchbase connection when your application starts up and reusing this connection throughout your application. This approach improves performance by avoiding the overhead of creating new connections for each request. If you know which buckets, scopes, and collections your application will use, obtain these references at startup and share them throughout your application as well.
 
-In this application, we have created the connection object in `config/initializers/couchbase.rb` and we use this object in all of our APIs. The object is initialized in `config/initializers/couchbase.rb`. We have also stored the reference to our bucket, `travel-sample` and the scope, `inventory` in the connection object.
+In this application, we have created the connection object in `config/initializers/couchbase.rb` and use it in all of our APIs. We have also stored references to the `travel-sample` bucket and the `inventory` scope in global constants for easy access.
 
 ```rb
 require 'couchbase'
@@ -331,11 +318,11 @@ We will be setting up a REST API to manage airline documents.
 - [Airline List](#list-airline) – Get all airlines. Optionally filter the list by country
 - [Direct Connections](#direct-connections) - Get a list of airlines directly connected to the specified airport
 
-For CRUD operations, we will use the [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) that are built into the Couchbase SDK to create, read, update, and delete a document. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents. 
+For CRUD operations, we will use [Key-Value operations](https://docs.couchbase.com/ruby-sdk/current/howtos/kv-operations.html) using the SDK. Every document will need an ID (similar to a primary key in other databases) to save it to the database. This ID is passed in the URL. For other end points, we will use [SQL++](https://docs.couchbase.com/ruby-sdk/current/howtos/n1ql-queries-with-sdk.html) to query for documents.
 
 ### Airline Document Structure
 
-Our airline document will have an airline name, IATA code, ICAO code, callsign, and country. For this demo, we will store all airline information in one document in the `airline` collection in the `travel-sample` bucket.
+Our airline document will have an airline name, IATA code, ICAO code, callsign, and country. For this demo, each airline's information is stored as a separate document in the `airline` collection in the `travel-sample` bucket.
 
 ```json
 {
@@ -347,8 +334,7 @@ Our airline document will have an airline name, IATA code, ICAO code, callsign, 
 }
 ```
 
-### POST Airline 
-
+### POST Airline
 
 ```rb
 # frozen_string_literal: true
@@ -376,7 +362,7 @@ module Api
         render json: { error: 'Internal server error', message: e.message }, status: :internal_server_error
       end
     end
-    ... 
+    ...
 
   end
 end
@@ -387,6 +373,7 @@ In the above code, we first create an instance of the `Airline` class using the 
 ```rb
 # frozen_string_literal: true
 
+# Airline model
 class Airline
   attr_accessor :name, :iata, :icao, :callsign, :country
 
@@ -419,7 +406,7 @@ class Airline
     new(formatted_attributes)
   end
 
-  ... 
+  ...
 end
 
 ```
@@ -427,8 +414,6 @@ end
 In the above code, we first check if all the required fields are present in the request. If any fields are missing, we raise an ArgumentError with the missing fields. If there are any extra fields in the request, we raise an ArgumentError with the extra fields. We then format the attributes and insert the document into the database using the `insert` method. We then create a new instance of the `Airline` class with the formatted attributes and return it.
 
 ### GET Airline
-
-Navigate to the `show` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to retrieve a particular airline document using a key-value operation which is passed in the `find` method. The result is converted into a JSON object using the `to_json` method.
 
 ```rb
   # GET /api/v1/airlines/{id}
@@ -445,7 +430,7 @@ Navigate to the `show` method in the `AirlinesController` class in the `airlines
   end
 ```
 
-The `find` method in the `Airline` class is used to fetch the document from the database using the key. If the document is found, we return the document with a status of 200. If the document is not found, we return a not found status of 404. If there is any other error, we return an internal server error status of 500.
+In the above code, we retrieve the airline document using the `show` method in the controller. The `@airline` instance variable is set by the `set_airline` before_action callback. If the airline is found, we return the airline document with a status of 200. If the airline is not found, we return a not found status of 404. If there is any other error, we return an internal server error status of 500.
 
 ```rb
   def self.find(id)
@@ -460,8 +445,6 @@ In the `find` method, we use the `get` method to fetch the document from the dat
 
 ### PUT Airline
 
-Navigate to the `update` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to update a particular airline document using a key-value operation which is passed in the `update` method. The result is converted into a JSON object using the `to_json` method.
-
 ```rb
     # PUT /api/v1/airlines/{id}
     def update
@@ -474,7 +457,7 @@ Navigate to the `update` method in the `AirlinesController` class in the `airlin
     end
 ```
 
-Inn the above code, we first create an instance of the `Airline` class using the `update` method. We pass the ID and the airline data to the `update` method. If the airline is updated successfully, we return the airline document with a status of 200. If there are any missing fields in the request, we return a bad request status of 400. If there is any other error, we return an internal server error status of 500.
+In the above code, we first create an instance of the `Airline` class using the `update` method. We pass the ID and the airline data to the `update` method. If the airline is updated successfully, we return the airline document with a status of 200. If there are any missing fields in the request, we return a bad request status of 400. If there is any other error, we return an internal server error status of 500.
 
 ```rb
   def update(id, attributes)
@@ -507,8 +490,6 @@ In the `update` method, we first check if all the required fields are present in
 
 ### DELETE Airline
 
-Navigate to the `destroy` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the airline document ID or our key from the user to delete a particular airline document using a key-value operation which is passed in the `destroy` method.
-
 ```rb
     # DELETE /api/v1/airlines/{id}
       def destroy
@@ -539,8 +520,6 @@ end
 
 ### List Airlines
 
-Navigate to the `index` method in the `AirlinesController` class in the `airlines_controller.rb` file. We only need the country, limit, and offset values from the user to retrieve a list of airline documents using a SQL++ query. The result is converted into a JSON object using the `to_json` method.
-
 ```rb
   # GET /api/v1/airlines/list
   def index
@@ -561,7 +540,6 @@ Navigate to the `index` method in the `AirlinesController` class in the `airline
 ```
 
 In the above code, we first get the values for the country, limit, and offset from the request parameters. We then call the `all` method in the `Airline` class to fetch the list of airlines. If the list is empty, we return a status of 200 with a message. If the list is not empty, we return a status of 200 with the list of airlines. If there is any other error, we return an internal server error status of 500.
-
 
 ```rb
   def self.all(country = nil, limit = 10, offset = 0)
@@ -606,27 +584,37 @@ end
 
 We have defined integration tests using [RSpec](https://rspec.info/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database using the CouchbaseClient and compare them. After the tests, the documents are cleaned up.
 
-To run the tests, use the following commands:
+To run all integration tests, use the following command:
 
 ```bash
-rspec test/integration/airlines_spec.rb
-rspec test/integration/airports_spec.rb
-rspec test/integration/routes_spec.rb
+bundle exec rspec test/integration/
 ```
 
 ## Appendix
 
 ### Extending API by Adding New Entity
 
-If you would like to add another entity to the APIs, these are the steps to follow:
+If you would like to add another entity to the APIs, follow these steps:
 
-- Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-ruby-client/Couchbase/Collection.html#create_collection-instance_method) or via the [Couchbase Server interface](https://docs.couchbase.com/server/current/manage/manage-settings/manage-collections.html).
-- Define the routes in a new file in the `api` folder similar to the existing routes like `airline_controller.rb`.
-- Add the new routes to the application in `routes.rb`.
-- Add the tests for the new routes in a new file in the `test/integration/api/v1` folder similar to `airlines_spec.rb`.
-- For Swagger documentation, add the configuration in the `spec/request/api/v1` folder similar to `airlines_spec.rb`.
-- Run the command `rake rswag:specs:swaggerize` to generate the Swagger documentation.
-- The new entity is now ready to be used in the API.
+1. **Create the new collection in Couchbase**: Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-ruby-client/Couchbase/Collection.html#create_collection-instance_method) or via the [Couchbase Server interface](https://docs.couchbase.com/server/current/manage/manage-settings/manage-collections.html).
+
+2. **Create the model**: Create a new model file in the `app/models/` folder (e.g., `app/models/hotel.rb`). Define the model class with attributes and methods for CRUD operations similar to the `Airline` model.
+
+3. **Create the controller**: Create a new controller file in the `app/controllers/api/v1/` folder (e.g., `app/controllers/api/v1/hotels_controller.rb`). Implement the CRUD action methods (index, show, create, update, destroy) similar to `airlines_controller.rb`.
+
+4. **Add routes**: Open `config/routes.rb` and add the new routes for your entity within the `namespace :api` and `namespace :v1` blocks. For example:
+
+   ```ruby
+   resources :hotels
+   ```
+
+5. **Add integration tests**: Create a new test file in the `test/integration/` folder (e.g., `test/integration/hotels_spec.rb`) to test your API endpoints similar to `airlines_spec.rb`.
+
+6. **Add Swagger documentation**: Create a new spec file in the `spec/requests/api/v1/` folder (e.g., `spec/requests/api/v1/hotels_spec.rb`) for Swagger documentation similar to the airlines spec.
+
+7. **Generate Swagger docs**: Run the command `rake rswag:specs:swaggerize` to generate the Swagger documentation.
+
+Your new entity is now ready to be used in the API.
 
 ### Running Self Managed Couchbase Cluster
 
