@@ -32,10 +32,13 @@ If you want to see the final code you can refer to it here: [Final Demo Code](ht
 This guide walks you through building a geospatial hotel search demo that finds hotels within a specified distance from airports. The application uses AWS AppSync (GraphQL) with environment variables for credential management, Couchbase Data API for executing SQL++ queries, and a Streamlit frontend for interactive map visualization — end to end, with inlined code.
 
 ### Prerequisites
-- Couchbase Capella account with the Travel Sample dataset loaded and credentials that can access it (and network access allowed).
-  - Learn/setup here: [Couchbase Data API Prerequisites](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html#prerequisites)
-- Couchbase Data API docs (enable Data API, copy endpoint)
-  - [Data API Docs](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html)
+- **[Couchbase Capella account](https://cloud.couchbase.com/sign-up)** with a [running cluster](https://docs.couchbase.com/cloud/get-started/create-account.html)
+- **[Travel-sample bucket](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html)** imported into your cluster
+- **[Data API enabled](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html)** in Capella (via the cluster's Connect page)
+  - **Important:** Set Allowed IP address to **"Allow access from anywhere"** for demo purposes
+  - This configuration is required for this demo to function with AWS AppSync
+  - Not recommended for production—see [documentation](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html) for secure network configurations
+- **[AWS account](https://aws.amazon.com/)** with permissions to create AppSync APIs
 
 ---
 
@@ -43,8 +46,12 @@ This guide walks you through building a geospatial hotel search demo that finds 
 
 **What is Data API?**
 Couchbase Data API provides a RESTful HTTP interface to your cluster. Instead of embedding the Couchbase SDK in your app, you make standard HTTP requests to query, insert, or update documents. This is perfect for serverless architectures (like AppSync) because:
-- No heavy SDK initialization on cold starts
-- Works from any language with HTTP support
+- **Enables driverless mode:** No need to deploy SDKs in FaaS environments (AWS Lambda, Azure Functions)
+- **Is lightweight:** Avoids heavy SDK initialization overhead in stateless functions
+- **Simplifies integration:** Uses standard HTTP—no SDK version management or dependencies
+- **Is language agnostic:** Works with any platform that can make HTTP requests
+
+Learn more: [Data API vs. SDKs](https://docs.couchbase.com/cloud/data-api-guide/data-api-sdks.html)
 
 **Steps:**
 1. In Capella, enable Data API for your project/cluster (single click in the cluster settings).
@@ -68,7 +75,9 @@ Couchbase Data API provides a RESTful HTTP interface to your cluster. Instead of
 AppSync provides a managed GraphQL layer with built-in auth, and logging. It lets your frontend speak GraphQL while your backend (Data API) speaks SQL++. The resolver bridges the two.
 
 **Steps:**
-1. Create an AppSync GraphQL API with Public API (we'll use API key auth for demo simplicity).
+1. Create an AppSync GraphQL API:
+   - Choose **"Build from scratch"** option when prompted
+   - Select **Public API** with **API key** authentication for demo simplicity
 
 #### Define the schema (paste into the schema editor)
 
@@ -162,7 +171,7 @@ AppSync can call external HTTP APIs. You configure a base URL (your Data API end
 **Steps:**
 - In AppSync, create a new HTTP data source.
 - Set the endpoint to your Couchbase Data API base URL (from step 1).
-- **Do not** configure auth here; we'll add Basic auth dynamically in the resolver using credentials from environment variables.
+- **Important:** Do NOT enable "Authorization configuration", since credentials will be passed dynamically via the resolver using AppSync environment variables.
 
 #### Screenshot
 ![AppSync Data Source](appsync-data-source.jpg)
@@ -186,7 +195,7 @@ These environment variables will be accessible in your resolvers via `ctx.env.cb
 #### Screenshot
 ![AppSync Environment Variables](appsync-env-vars.jpg)
 
-#### Add a JavaScript Unit Resolver for `Query.listHotelsInCity`
+#### Add a JavaScript Unit Resolver for `Query.listHotelsNearAirport`
 
 **What does this resolver do?**
 AppSync resolvers have two functions:
@@ -195,13 +204,13 @@ AppSync resolvers have two functions:
 
 Our resolver:
 - Reads `cb_username` and `cb_password` from AppSync environment variables (`ctx.env`).
-- Extracts `city` from the GraphQL arguments.
-- Constructs a parameterized SQL++ query: `SELECT c.* FROM hotel AS c WHERE city = $1`.
+- Extracts `airportName` and `withinKm` from the GraphQL arguments.
+- Constructs a geospatial SQL++ query to find hotels near the specified airport.
 - Builds a Data API Query Service request:
   - **Endpoint**: `/_p/query/query/service` (Data API's SQL++ query endpoint).
   - **Headers**: `Authorization: Basic <base64(username:password)>`, `Content-Type: application/json`.
-  - **Body**: `{ query_context: "default:travel-sample.inventory", statement: "SELECT ...", args: [city], timeout: "30m" }`.
-- Returns the `results` array from Data API's JSON response, which AppSync then maps to the `[Hotel]` type.
+  - **Body**: `{ query_context: "default:travel-sample.inventory", statement: "...", args: [airportName, withinKm], timeout: "30m" }`.
+- Returns both hotels and airport information in the `Output` schema format.
 
 **Why `query_context`?**
 Setting `query_context` to `default:travel-sample.inventory` lets you write `FROM hotel` instead of the fully qualified `FROM travel-sample.inventory.hotel` in your SQL++. It's a namespace shortcut.
@@ -398,10 +407,12 @@ query ListHotelsNearAirport {
 ```
 
 3. Click **Run**. You should see a JSON response with:
-   - An array of hotels within 50km of Heathrow airport
+   - An array of hotels within 50km of Les Loges airport
    - Airport information including name and location coordinates
 
-Try different airport names like "Charles de Gaulle", or "Changi" to see results from different locations.
+Try different airport names like **"San Francisco Intl"**, **"Charles de Gaulle"**, **"Luton"**, or **"London St Pancras"** to see results from different locations.
+
+**Troubleshooting:** If you encounter a "connection timed out" error, verify that your Data API has IP address access set to **"Allow access from anywhere"** in the Capella Connect page (see Prerequisites section). This is required for AWS AppSync to reach your cluster.
 
 If it works, you've successfully bridged AppSync → Data API → Couchbase with geospatial querying!
 
@@ -415,7 +426,7 @@ Now that you've set up your AWS AppSync backend with the Couchbase Data API inte
 
 Visit the live Streamlit app at **[https://couchbase-data-api-appsync-demo.streamlit.app/](https://couchbase-data-api-appsync-demo.streamlit.app/)**
 
-The app provides an interactive map-based interface where you can search for hotels near airports. Simply enter your AppSync GraphQL endpoint and API key in the sidebar (note that Couchbase credentials are securely stored as environment variables in AppSync, so you don't need to enter them). Navigate to "Search Hotels", enter an airport name like **"Les Loges"** and a distance like **100 km**, then click "Search".
+The app provides an interactive map-based interface where you can search for hotels near airports. Simply enter your **AppSync GraphQL Endpoint** and **AppSync API Key** in the sidebar (note that Couchbase credentials are securely stored as environment variables in AppSync, so you don't need to enter them). Click the **"Search Hotels"** tab, enter an airport name like **"San Francisco Intl"**, **"Les Loges"**, **"Luton"**, or **"London St Pancras"** and a distance like **100 km**, then click "Search". A loading spinner will appear while fetching results.
 
 Results display on an interactive map with the airport shown as an orange marker and hotels as color-coded dots (green for excellent ratings, red for poor). The map automatically centers on the airport location. Hover over any marker to see details like hotel names, addresses, prices, and phone numbers, or expand the "Raw response" section to see the full JSON data from AppSync.
 
@@ -423,9 +434,30 @@ Results display on an interactive map with the airport shown as an orange marker
 
 ![Streamlit map with hotels and airport](streamlit-map.jpg)
 
-**Want to explore the source code or run it locally?** The complete Streamlit frontend code is available at [https://github.com/couchbase-examples/couchbase-data_api-appsync-demo/tree/main/src/frontend](https://github.com/couchbase-examples/couchbase-data_api-appsync-demo/tree/main/src/frontend). The frontend consists of `home.py` (navigation and connection settings) and `search_hotels.py` (hotel search with map visualization using `pydeck`). It uses the `requests` library to call AppSync GraphQL with standard HTTP POST requests. Ratings are computed from review data and mapped to colors for visual feedback.
+**Want to explore the source code or run it locally?** The complete Streamlit frontend code is available at [https://github.com/couchbase-examples/couchbase-data_api-appsync-demo/tree/main/src/frontend](https://github.com/couchbase-examples/couchbase-data_api-appsync-demo/tree/main/src/frontend). The frontend consists of `home.py` (tab-based navigation and connection settings) and `search_hotels.py` (hotel search with map visualization using `pydeck`). It uses the `requests` library to call AppSync GraphQL with standard HTTP POST requests. Ratings are computed from review data and mapped to colors for visual feedback.
 
-To run locally: clone the repo, install dependencies with `pip install -r requirements.txt`, navigate to `src/frontend`, and run `streamlit run home.py`. The app will start at `http://localhost:8501`.
+To run locally:
+```bash
+# Clone the repository
+git clone https://github.com/couchbase-examples/couchbase-data_api-appsync-demo.git
+
+# Navigate to the project directory
+cd couchbase-data_api-appsync-demo
+
+# Create a virtual environment
+python3 -m venv .venv
+
+# Activate the virtual environment
+source ./.venv/bin/activate
+
+# Install required dependencies
+pip install -r requirements.txt
+
+# Run the Streamlit app
+streamlit run src/frontend/home.py
+```
+
+The app will start at `http://localhost:8501`.
 
 ---
 
