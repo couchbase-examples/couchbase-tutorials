@@ -34,7 +34,7 @@ In this guide, we will walk you through building a powerful semantic search engi
 How to run this tutorial
 ----------------------
 This tutorial is available as a Jupyter Notebook (.ipynb file) that you can run 
-interactively. You can access the original notebook here.
+interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/crewai/fts/RAG_with_Couchbase_and_CrewAI.ipynb).
 
 You can either:
 - Download the notebook file and run it on [Google Colab](https://colab.research.google.com)

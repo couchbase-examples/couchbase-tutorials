@@ -32,7 +32,7 @@ In this guide, we will walk you through building a powerful semantic search engi
 
 # How to run this tutorial
 
-This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/azure/RAG_with_Couchbase_and_AzureOpenAI.ipynb).
+This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/azure/fts/RAG_with_Couchbase_and_AzureOpenAI.ipynb).
 
 You can either download the notebook file and run it on [Google Colab](https://colab.research.google.com/) or run it on your system by setting up the Python environment.
 
