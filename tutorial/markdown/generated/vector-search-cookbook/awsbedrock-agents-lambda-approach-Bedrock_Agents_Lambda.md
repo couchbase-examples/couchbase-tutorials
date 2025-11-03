@@ -1879,31 +1879,8 @@ logger.info("--- Lambda Deployment Complete --- ")
     2025-06-09 13:40:23,605 - INFO - Running make command: make -f /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/lambda_functions/Makefile clean package (in /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/lambda_functions)
     2025-06-09 13:40:50,341 - INFO - Make command completed successfully.
     2025-06-09 13:40:50,343 - INFO - Moving and renaming /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/lambda_functions/lambda_package.zip to /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip
-    2025-06-09 13:40:50,351 - INFO - Zip file ready: /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip
-    2025-06-09 13:40:50,362 - INFO - Cleaning up temporary script: /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/lambda_functions/lambda_function.py
-    2025-06-09 13:40:50,362 - INFO - Lambda function packaged at: /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip
-    2025-06-09 13:40:50,363 - INFO - Creating/Updating Lambda function 'bedrock_agent_search_format_exp'...
-    2025-06-09 13:40:50,363 - INFO - Deploying Lambda function bedrock_agent_search_format_exp from /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip...
-    2025-06-09 13:40:50,371 - INFO - Found credentials in environment variables.
-    2025-06-09 13:40:50,516 - INFO - Zip file size: 50.91 MB
-    2025-06-09 13:40:50,516 - INFO - Package size (50.91 MB) requires S3 deployment.
-    2025-06-09 13:40:50,517 - INFO - Preparing to upload /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip to S3 in region us-east-1...
-    2025-06-09 13:40:51,552 - INFO - Generated unique S3 bucket name: lambda-deployment-598307997273-1749456651
-    2025-06-09 13:40:52,277 - INFO - Creating S3 bucket: lambda-deployment-598307997273-1749456651...
-    2025-06-09 13:40:52,666 - INFO - Created S3 bucket: lambda-deployment-598307997273-1749456651. Waiting for availability...
-    2025-06-09 13:40:52,929 - INFO - Bucket lambda-deployment-598307997273-1749456651 is available.
-    2025-06-09 13:40:52,929 - INFO - Uploading /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip to s3://lambda-deployment-598307997273-1749456651/lambda/bedrock_agent_search_and_format.zip-0b1fc73a...
-    2025-06-09 13:41:03,991 - INFO - Successfully uploaded to s3://lambda-deployment-598307997273-1749456651/lambda/bedrock_agent_search_and_format.zip-0b1fc73a
-    2025-06-09 13:41:03,993 - INFO - Creating function 'bedrock_agent_search_format_exp' (attempt 1/3)...
-    2025-06-09 13:41:06,690 - INFO - Successfully created function 'bedrock_agent_search_format_exp' with ARN: arn:aws:lambda:us-east-1:598307997273:function:bedrock_agent_search_format_exp
-    2025-06-09 13:41:11,693 - INFO - Adding basic invoke permission (AllowBedrockInvokeBasic-bedrock_agent_search_format_exp) to bedrock_agent_search_format_exp...
-    2025-06-09 13:41:12,007 - INFO - Successfully added basic invoke permission AllowBedrockInvokeBasic-bedrock_agent_search_format_exp.
-    2025-06-09 13:41:12,007 - INFO - Waiting for function 'bedrock_agent_search_format_exp' to become active...
-    2025-06-09 13:41:12,306 - INFO - Function 'bedrock_agent_search_format_exp' is active.
-    2025-06-09 13:41:12,308 - INFO - Search/Format Lambda Deployed: arn:aws:lambda:us-east-1:598307997273:function:bedrock_agent_search_format_exp
-    2025-06-09 13:41:12,308 - INFO - Cleaning up deployment zip file...
-    2025-06-09 13:41:12,310 - INFO - Removed zip file: /Users/kaustavghosh/Desktop/vector-search-cookbook/awsbedrock-agents/lambda-approach/bedrock_agent_search_and_format.zip
-    2025-06-09 13:41:12,311 - INFO - --- Lambda Deployment Complete --- 
+    
+    ... (output truncated for brevity)
 
 
 ### 4.6 Agent Setup

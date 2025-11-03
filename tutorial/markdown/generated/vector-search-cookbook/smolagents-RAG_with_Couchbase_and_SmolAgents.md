@@ -12,6 +12,7 @@ filter: sdk
 technology:
   - vector search
 tags:
+  - FTS
   - Artificial Intelligence
   - LangChain
   - OpenAI
@@ -397,14 +398,6 @@ except Exception as e:
     raise ValueError(f"Error loading the BBC News dataset: {str(e)}")
 ```
 
-
-    README.md:   0%|          | 0.00/53.5k [00:00<?, ?B/s]
-
-
-
-    Generating train split:   0%|          | 0/2687 [00:00<?, ? examples/s]
-
-
     2025-02-28 10:30:51,981 - INFO - Successfully loaded the BBC News dataset with 2687 rows.
 
 
@@ -586,58 +579,6 @@ agent_output = agent.run(query)
 
 
     2025-02-28 10:32:28,466 - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
-
-
-
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">Observations: # Documents:
-Manchester City boss Pep Guardiola has won <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">18</span> trophies since he arrived at the club in <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">2016</span>
-
-Manchester City boss Pep Guardiola says he is <span style="color: #008000; text-decoration-color: #008000">"fine"</span> despite admitting his sleep and diet are being affected by the
-worst run of results in his entire managerial career. In an interview with former Italy international Luca Toni for
-Amazon Prime Sport before Wednesday's Champions League defeat by Juventus, Guardiola touched on the personal impact
-City's sudden downturn in form has had. Guardiola said his state of mind was <span style="color: #008000; text-decoration-color: #008000">"ugly"</span>, that his sleep was <span style="color: #008000; text-decoration-color: #008000">"worse"</span> and
-he was eating lighter as his digestion had suffered. City go into Sunday's derby against Manchester United at 
-Etihad Stadium having won just one of their past <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">10</span> games. The Juventus loss means there is a chance they may not 
-even secure a play-off spot in the Champions League. Asked to elaborate on his comments to Toni, Guardiola said: 
-<span style="color: #008000; text-decoration-color: #008000">"I'm fine. "</span>In our jobs we always want to do our best or the best as possible. When that doesn't happen you are 
-more uncomfortable than when the situation is going well, always that happened. <span style="color: #008000; text-decoration-color: #008000">"In good moments I am happier but </span>
-<span style="color: #008000; text-decoration-color: #008000">when I get to the next game I am still concerned about what I have to do. There is no human being that makes an </span>
-<span style="color: #008000; text-decoration-color: #008000">activity and it doesn't matter how they do."</span> Guardiola said City have to defend better and <span style="color: #008000; text-decoration-color: #008000">"avoid making mistakes </span>
-<span style="color: #008000; text-decoration-color: #008000">at both ends"</span>. To emphasise his point, Guardiola referred back to the third game of City's current run, against a 
-Sporting side managed by Ruben Amorim, who will be in the United dugout at the weekend. City dominated the first 
-half in Lisbon, led thanks to Phil Foden's early effort and looked to be cruising. Instead, they conceded three 
-times in <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">11</span> minutes either side of half-time as Sporting eventually ran out <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">4</span>-<span style="color: #008080; text-decoration-color: #008080; font-weight: bold">1</span> winners.
-
-...
-
-...
-
-Afterwards Guardiola was calm, so much so it was difficult to hear him in the news conference, a contrast to the 
-frustrated figure he cut on the touchline. He said: <span style="color: #008000; text-decoration-color: #008000">"It depends on us. The solution is bring the players back. We </span>
-<span style="color: #008000; text-decoration-color: #008000">have just one central defender fit, that is difficult. We are going to try next game - another opportunity and we </span>
-<span style="color: #008000; text-decoration-color: #008000">don't think much further than that. "</span>Of course there are more reasons. We concede the goals we don't concede in the
-past, we |don't<span style="font-weight: bold">]</span> score the goals we score in the past. Football is not just one reason. There are a lot of little 
-factors. <span style="color: #008000; text-decoration-color: #008000">"Last season we won the Premier League, but we came here and lost. We have to think positive and I have </span>
-<span style="color: #008000; text-decoration-color: #008000">incredible trust in the guys. Some of them have incredible pride and desire to do it. We have to find a way, step </span>
-<span style="color: #008000; text-decoration-color: #008000">by step, sooner or later to find a way back."</span> Villa boss Unai Emery highlighted City's frailties, saying he felt 
-Villa could seize on the visitors' lack of belief. <span style="color: #008000; text-decoration-color: #008000">"Manchester City are a little bit under the confidence they have</span>
-<span style="color: #008000; text-decoration-color: #008000">normally,"</span> he said. <span style="color: #008000; text-decoration-color: #008000">"The second half was different, we dominated and we scored. Through those circumstances they </span>
-<span style="color: #008000; text-decoration-color: #008000">were feeling worse than even in the first half."</span>
-
-Erling Haaland had one touch in the Villa box
-
-There are chinks in the armour never seen before at City under Guardiola and Erling Haaland conceded belief within 
-the squad is low. He told TNT after the game: <span style="color: #008000; text-decoration-color: #008000">"Of course, |confidence levels are] not the best. We know how </span>
-<span style="color: #008000; text-decoration-color: #008000">important confidence is and you can see that it affects every human being. That is how it is, we have to continue </span>
-<span style="color: #008000; text-decoration-color: #008000">and stay positive even though it is difficult."</span> Haaland, with <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">76</span> goals in <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">83</span> Premier League appearances since 
-joining City from Borussia Dortmund in <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">2022</span>, had one shot and one touch in the Villa box. His <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">18</span> touches in the 
-whole game were the lowest of all starting players and he has been self critical, despite scoring <span style="color: #008080; text-decoration-color: #008080; font-weight: bold">13</span> goals in the 
-top flight this season. Over City's last eight games he has netted just twice though, but Guardiola refused to 
-criticise his star striker. He said: <span style="color: #008000; text-decoration-color: #008000">"Without him we will be even worse but I like the players feeling that way. I </span>
-<span style="color: #008000; text-decoration-color: #008000">don't agree with Erling. He needs to have the balls delivered in the right spots but he will fight for the next </span>
-<span style="color: #008000; text-decoration-color: #008000">one."</span>
-</pre>
-
 
 
 
