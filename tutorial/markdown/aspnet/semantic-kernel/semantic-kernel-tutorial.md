@@ -62,8 +62,8 @@ This makes the connector ideal for RAG (Retrieval-Augmented Generation) applicat
 
 ### 1. Clone and Navigate
 ```bash
-git clone https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel.git
-cd couchbase-semantic-kernel/CouchbaseVectorSearchDemo
+git clone https://github.com/couchbase-examples/couchbase-semantic-kernel-quickstart.git
+cd couchbase-semantic-kernel-quickstart/CouchbaseVectorSearchDemo
 ```
 
 ### 2. Install Dependencies
@@ -91,6 +91,8 @@ Update `appsettings.Development.json` with your credentials:
   }
 }
 ```
+
+> **Note**: The `BucketName`, `ScopeName`, and `CollectionName` values can be changed to match your Couchbase setup, but you'll need to update the corresponding code references in the demo application accordingly.
 
 ## Understanding the Data Model
 
@@ -198,7 +200,7 @@ USING GSI WITH {
 - **Include Fields**: Non-vector fields for faster retrieval
 - **Quantization**: `IVF,SQ8` (Inverted File with 8-bit scalar quantization)
 
-> **Note**: Composite vector indexes can be created similarly by adding scalar fields to the index definition. Use Composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use Hyperscale since we're demonstrating pure semantic search capabilities.
+> **Note**: [Composite vector indexes](https://docs.couchbase.com/server/current/vector-index/composite-vector-index.html) can be created similarly by adding scalar fields to the index definition. Use Composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use Hyperscale since we're demonstrating pure semantic search capabilities.
 
 ### Step 4: Vector Search Operations
 
@@ -293,7 +295,7 @@ All three index types work with the same Semantic Kernel abstractions (`SearchAs
 - Use **Composite** when scalar filters eliminate large portions of data before vector comparison
 - Use **FTS** when you need hybrid search combining full-text and semantic search
 
-For more details, see the [Couchbase Vector Index Documentation](https://preview.docs-test.couchbase.com/docs-server-DOC-12565_vector_search_concepts/server/current/vector-index/use-vector-indexes.html).
+For more details, see the [Couchbase Vector Index Documentation](https://docs.couchbase.com/server/current/vector-index/use-vector-indexes.html).
 
 
 ### Index Configuration (Couchbase 8.0+)
@@ -317,13 +319,12 @@ The `description` parameter in the index definition controls vector storage opti
 - `IVF1000,SQ6` - 1000 centroids, 6-bit quantization (faster, less accurate)
 - `IVF,PQ32x8` - Auto centroids, product quantization (better accuracy)
 
-For detailed configuration options, see the [Quantization & Centroid Settings](https://preview.docs-test.couchbase.com/docs-server-DOC-12565_vector_search_concepts/server/current/vector-index/hyperscale-vector-index.html#algo_settings) documentation.
+For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/server/current/vector-index/hyperscale-vector-index.html#algo_settings) documentation.
 
 ## Running the Demo
 
 ### Build and Execute
 ```bash
-cd CouchbaseVectorSearchDemo
 dotnet build
 dotnet run
 ```
