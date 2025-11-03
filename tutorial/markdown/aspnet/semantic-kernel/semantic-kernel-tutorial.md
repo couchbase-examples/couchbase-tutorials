@@ -5,7 +5,7 @@ path: "/tutorial-csharp-semantic-kernel-vector-search"
 title: Build Vector Search with Couchbase .NET Semantic Kernel Connector and OpenAI
 short_title: Vector Search with Semantic Kernel
 description:
-  - Build a semantic search application using Couchbase BHIVE vector index with Semantic Kernel.
+  - Build a semantic search application using Couchbase Hyperscale vector index with Semantic Kernel.
   - Learn to use the Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel.
   - Discover how to generate embeddings with OpenAI and store them in Couchbase.
   - Perform vector similarity searches with filtering using SQL++ and ANN_DISTANCE.
@@ -26,14 +26,14 @@ length: 30 Mins
 ## Repository Links
 
 - **Connector Repository**: [couchbase-semantic-kernel](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel) - The official Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel
-- **This Example**: [CouchbaseVectorSearchDemo](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel/tree/Support-Bhive-and-Composite-Index/CouchbaseVectorSearchDemo) - Complete working example demonstrating vector search with Couchbase
+- **This Example**: [CouchbaseVectorSearchDemo](https://github.com/couchbase-examples/couchbase-semantic-kernel-quickstart/tree/main/CouchbaseVectorSearchDemo) - Complete working example demonstrating vector search with Couchbase
 
 ## Introduction
 
 This demo showcases the **Semantic Kernel Couchbase connector** - a .NET library that bridges Microsoft's Semantic Kernel framework with Couchbase's vector search capabilities. The connector provides a seamless integration that allows developers to build AI-powered applications using familiar Semantic Kernel abstractions while leveraging Couchbase's vector indexing for high-performance semantic search.
 
 The connector supports three index types:
-- **BHIVE** (Hyperscale Vector Index) - for pure vector search at scale ← *Used in this demo*
+- **Hyperscale Vector Index** - for pure vector search at scale ← *Used in this demo*
 - **Composite Vector Index** - for vector search with heavy scalar filtering
 - **FTS** (Full-Text Search) - for hybrid text + semantic search
 
@@ -49,7 +49,7 @@ This makes the connector ideal for RAG (Retrieval-Augmented Generation) applicat
 
 ### 2. OpenAI API Access
 - **OpenAI API Key** - Get one from: https://platform.openai.com/api-keys
-- Used for generating text embeddings with `text-embedding-ada-002` model
+- Used for generating text embeddings with `text-embedding-3-small` model
 - Ensure you have sufficient API quota for embedding generation
 
 ### 3. Development Environment
@@ -79,7 +79,7 @@ Update `appsettings.Development.json` with your credentials:
 {
   "OpenAI": {
     "ApiKey": "your-openai-api-key-here",
-    "EmbeddingModel": "text-embedding-ada-002"
+    "EmbeddingModel": "text-embedding-3-small"
   },
   "Couchbase": {
     "ConnectionString": "couchbase://localhost",
@@ -133,22 +133,22 @@ Ensure you have the bucket, scope, and collection ready in Couchbase:
 
 This step demonstrates how the connector works with Semantic Kernel's vector store abstractions:
 
-**Getting the Collection** - The demo uses `CouchbaseVectorStore.GetCollection<TKey, TRecord>()` to obtain a collection reference configured for BHIVE index:
+**Getting the Collection** - The demo uses `CouchbaseVectorStore.GetCollection<TKey, TRecord>()` to obtain a collection reference configured for Hyperscale index:
 ```csharp
 var vectorStore = new CouchbaseVectorStore(scope);
 var collection = vectorStore.GetCollection<string, Glossary>(
     "glossary", 
     new CouchbaseQueryCollectionOptions 
     {
-        IndexName = "bhive_glossary_index",  // BHIVE index name
+        IndexName = "hyperscale_glossary_index",  // Hyperscale index name
         SimilarityMetric = "cosine"
     }
 );
 ```
 
-The `CouchbaseQueryCollectionOptions` works with both BHIVE and composite indexes - simply specify the appropriate index name. For FTS indexes, use `CouchbaseSearchCollection` with `CouchbaseSearchCollectionOptions` instead.
+The `CouchbaseQueryCollectionOptions` works with both Hyperscale and Composite indexes - simply specify the appropriate index name. For FTS indexes, use `CouchbaseSearchCollection` with `CouchbaseSearchCollectionOptions` instead.
 
-**Automatic Embedding Generation** - The connector integrates with Semantic Kernel's `IEmbeddingGenerator` interface to automatically generate embeddings from text. When you provide an embedding generator (in this case, OpenAI's `text-embedding-ada-002`), the text is automatically converted to vectors:
+**Automatic Embedding Generation** - The connector integrates with Semantic Kernel's `IEmbeddingGenerator` interface to automatically generate embeddings from text. When you provide an embedding generator (in this case, OpenAI's `text-embedding-3-small`), the text is automatically converted to vectors:
 
 ```csharp
 // Generate embedding from text
@@ -176,12 +176,12 @@ This creates 6 sample glossary entries with technical terms, generates embedding
 }
 ```
 
-### Step 3: BHIVE Index Creation
+### Step 3: Hyperscale Index Creation
 
-This demo uses a **BHIVE (Hyperscale Vector Index)** - optimized for pure vector searches without heavy scalar filtering. After documents are inserted, the demo creates the BHIVE index:
+This demo uses a **Hyperscale Vector Index** - optimized for pure vector searches without heavy scalar filtering. After documents are inserted, the demo creates the Hyperscale index:
 
 ```sql
-CREATE VECTOR INDEX `bhive_glossary_index` 
+CREATE VECTOR INDEX `hyperscale_glossary_index` 
 ON `demo`.`semantic-kernel`.`glossary` (DefinitionEmbedding VECTOR) 
 INCLUDE (Category, Term, Definition)
 USING GSI WITH {
@@ -191,18 +191,18 @@ USING GSI WITH {
 }
 ```
 
-**BHIVE Index Configuration:**
-- **Index Type**: BHIVE (Hyperscale Vector Index) - best for pure vector similarity searches
+**Hyperscale Index Configuration:**
+- **Index Type**: Hyperscale Vector Index - best for pure vector similarity searches
 - **Vector Field**: `DefinitionEmbedding` (1536 dimensions)
 - **Similarity**: `cosine` (optimal for OpenAI embeddings)
 - **Include Fields**: Non-vector fields for faster retrieval
 - **Quantization**: `IVF,SQ8` (Inverted File with 8-bit scalar quantization)
 
-> **Note**: Composite vector indexes can be created similarly by adding scalar fields to the index definition. Use composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use BHIVE since we're demonstrating pure semantic search capabilities.
+> **Note**: Composite vector indexes can be created similarly by adding scalar fields to the index definition. Use Composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use Hyperscale since we're demonstrating pure semantic search capabilities.
 
 ### Step 4: Vector Search Operations
 
-The demo performs two types of searches using the connector's `SearchAsync()` method with the BHIVE index:
+The demo performs two types of searches using the connector's `SearchAsync()` method with the Hyperscale index:
 
 #### Pure Vector Search
 
@@ -230,7 +230,7 @@ LIMIT 1
 
 #### Filtered Vector Search
 
-Even with a BHIVE index (designed for pure vector search), the connector supports filtering using LINQ expressions with `VectorSearchOptions`:
+Even with a Hyperscale index (designed for pure vector search), the connector supports filtering using LINQ expressions with `VectorSearchOptions`:
 ```csharp
 // Search with scalar filter
 var results = await collection.SearchAsync(
@@ -255,7 +255,7 @@ LIMIT 1
 **Query**: *"How do I provide additional context to an LLM?"*  
 **Expected Result**: Finds "RAG" entry within AI category
 
-> **Note**: While BHIVE indexes support filtering as shown above, for scenarios where you frequently filter on scalar values with highly selective filters, consider using a **composite vector index** instead. The index creation syntax is similar - just add the scalar fields to the index definition. The connector's `SearchAsync()` method works identically with both index types.
+> **Note**: While Hyperscale indexes support filtering as shown above, for scenarios where you frequently filter on scalar values with highly selective filters, consider using a **Composite vector index** instead. The index creation syntax is similar - just add the scalar fields to the index definition. The connector's `SearchAsync()` method works identically with both index types.
 
 ## Understanding Vector Index Configuration
 
@@ -263,7 +263,7 @@ Couchbase offers three types of vector indexes optimized for different use cases
 
 ### Index Types
 
-**1. Hyperscale Vector Indexes (BHIVE)** ← *This demo uses BHIVE*
+**1. Hyperscale Vector Indexes** ← *This demo uses Hyperscale*
 - Uses SQL++ queries via `CouchbaseQueryCollection`
 - Best for pure vector searches without complex scalar filtering
 - Designed to scale to billions of vectors with low memory footprint
@@ -276,7 +276,7 @@ Couchbase offers three types of vector indexes optimized for different use cases
 - Best for filtered vector searches combining vector similarity with scalar filters
 - Efficient when scalar filters significantly reduce the search space
 - Ideal for: Compliance filtering, user-specific searches, time-bounded queries
-- **Creation**: Similar to BHIVE but includes scalar fields in the index definition
+- **Creation**: Similar to Hyperscale but includes scalar fields in the index definition
 
 **3. FTS (Full-Text Search) Indexes**
 - Uses Couchbase Search API via `CouchbaseSearchCollection`
@@ -289,7 +289,7 @@ Couchbase offers three types of vector indexes optimized for different use cases
 All three index types work with the same Semantic Kernel abstractions (`SearchAsync()`, `UpsertAsync()`, etc.). The main difference is which collection class you instantiate and the underlying query engine.
 
 **Choosing the Right Type**:
-- Start with **BHIVE** for pure vector searches and large datasets
+- Start with **Hyperscale** for pure vector searches and large datasets
 - Use **Composite** when scalar filters eliminate large portions of data before vector comparison
 - Use **FTS** when you need hybrid search combining full-text and semantic search
 
@@ -330,15 +330,15 @@ dotnet run
 
 ### Expected Output
 ```
-Couchbase BHIVE Vector Search Demo
+Couchbase Hyperscale Vector Search Demo
 ====================================
-Using OpenAI model: text-embedding-ada-002
+Using OpenAI model: text-embedding-3-small
 Step 1: Ingesting data into Couchbase vector store...
 Data ingestion completed
 
-Step 2: Creating BHIVE vector index manually...
-Executing BHIVE index creation query...
-BHIVE vector index 'bhive_glossary_index' already exists.
+Step 2: Creating Hyperscale vector index manually...
+Executing Hyperscale index creation query...
+Hyperscale vector index 'hyperscale_glossary_index' already exists.
 
 Step 3: Performing vector search...
    Found: API
@@ -370,7 +370,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 
 **Vector Store Classes:**
 - **`CouchbaseVectorStore`** - Main entry point for vector store operations
-- **`CouchbaseQueryCollection`** - Collection class for BHIVE and Composite indexes (SQL++)
+- **`CouchbaseQueryCollection`** - Collection class for Hyperscale and Composite indexes (SQL++)
 - **`CouchbaseSearchCollection`** - Collection class for FTS indexes (Search API)
 
 **Common Methods (all index types):**
@@ -380,7 +380,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 - **`VectorSearchOptions`** - Configures search behavior including filters and result count
 
 **Configuration Options:**
-- **`CouchbaseQueryCollectionOptions`** - For BHIVE and Composite indexes
+- **`CouchbaseQueryCollectionOptions`** - For Hyperscale and Composite indexes
 - **`CouchbaseSearchCollectionOptions`** - For FTS indexes
 
 For more documentation, visit the [connector repository](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel).
