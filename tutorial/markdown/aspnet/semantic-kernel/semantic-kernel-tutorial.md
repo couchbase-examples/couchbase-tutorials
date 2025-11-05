@@ -1,17 +1,19 @@
 ---
 # frontmatter
-path: "/tutorial-csharp-semantic-kernel-vector-search"
+path: "/tutorial-csharp-couchbase-vector-search-semantic-kernel"
 # title and description do not need to be added to markdown, start with H2 (##)
 title: Build Vector Search with Couchbase .NET Semantic Kernel Connector and OpenAI
 short_title: Vector Search with Semantic Kernel
 description:
-  - Build a semantic search application using Couchbase Hyperscale vector index with Semantic Kernel.
+  - Build a semantic search application using Couchbase Vector Search with Semantic Kernel.
   - Learn to use the Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel.
   - Discover how to generate embeddings with OpenAI and store them in Couchbase.
   - Perform vector similarity searches with filtering using SQL++ and ANN_DISTANCE.
 content_type: tutorial
 filter: sdk
 technology:
+  - hyperscale vector index
+  - composite vector index
   - fts
   - kv
 tags:
@@ -35,24 +37,24 @@ This demo showcases the **Semantic Kernel Couchbase connector** - a .NET library
 The connector supports three index types:
 - **Hyperscale Vector Index** - for pure vector search at scale ← *Used in this demo*
 - **Composite Vector Index** - for vector search with heavy scalar filtering
-- **FTS** (Full-Text Search) - for hybrid text + semantic search
+- **Search Vector Index** (using Search service) - for hybrid text + semantic search
 
 This makes the connector ideal for RAG (Retrieval-Augmented Generation) applications, semantic search engines, hybrid search, and recommendation systems.
 
 ## Prerequisites
 
-### 1. Couchbase Server Setup
+### Couchbase Server Setup
 - **Couchbase Server 8.0+**
 - Local installation or Couchbase Cloud/Capella
 - Bucket with proper read/write permissions
 - Query service enabled for SQL++ operations
 
-### 2. OpenAI API Access
+### OpenAI API Access
 - **OpenAI API Key** - Get one from: https://platform.openai.com/api-keys
 - Used for generating text embeddings with `text-embedding-3-small` model
 - Ensure you have sufficient API quota for embedding generation
 
-### 3. Development Environment
+### Development Environment
 - **.NET 8.0** or later
 - Visual Studio, VS Code, or JetBrains Rider
 - Basic understanding of C# and vector databases
@@ -60,18 +62,18 @@ This makes the connector ideal for RAG (Retrieval-Augmented Generation) applicat
 
 ## Setting Up the Environment
 
-### 1. Clone and Navigate
+### Clone and Navigate
 ```bash
 git clone https://github.com/couchbase-examples/couchbase-semantic-kernel-quickstart.git
 cd couchbase-semantic-kernel-quickstart/CouchbaseVectorSearchDemo
 ```
 
-### 2. Install Dependencies
+### Install Dependencies
 ```bash
 dotnet restore
 ```
 
-### 3. Configuration Setup
+### Configuration Setup
 
 Update `appsettings.Development.json` with your credentials:
 
@@ -124,14 +126,14 @@ internal sealed class Glossary
 
 ## Step-by-Step Tutorial
 
-### Step 1: Prepare Couchbase
+### Prepare Couchbase
 
 Ensure you have the bucket, scope, and collection ready in Couchbase:
 - **Bucket**: `demo`
 - **Scope**: `semantic-kernel`
 - **Collection**: `glossary`
 
-### Step 2: Data Ingestion and Embedding Generation
+### Data Ingestion and Embedding Generation
 
 This step demonstrates how the connector works with Semantic Kernel's vector store abstractions:
 
@@ -142,13 +144,12 @@ var collection = vectorStore.GetCollection<string, Glossary>(
     "glossary", 
     new CouchbaseQueryCollectionOptions 
     {
-        IndexName = "hyperscale_glossary_index",  // Hyperscale index name
         SimilarityMetric = "cosine"
     }
 );
 ```
 
-The `CouchbaseQueryCollectionOptions` works with both Hyperscale and Composite indexes - simply specify the appropriate index name. For FTS indexes, use `CouchbaseSearchCollection` with `CouchbaseSearchCollectionOptions` instead.
+The `CouchbaseQueryCollectionOptions` works with both Hyperscale and Composite indexes - simply specify the appropriate index name. For Search Vector indexes, use `CouchbaseSearchCollection` with `CouchbaseSearchCollectionOptions` instead.
 
 **Automatic Embedding Generation** - The connector integrates with Semantic Kernel's `IEmbeddingGenerator` interface to automatically generate embeddings from text. When you provide an embedding generator (in this case, OpenAI's `text-embedding-3-small`), the text is automatically converted to vectors:
 
@@ -178,9 +179,13 @@ This creates 6 sample glossary entries with technical terms, generates embedding
 }
 ```
 
-### Step 3: Hyperscale Index Creation
+### Hyperscale Index Creation
 
-This demo uses a **Hyperscale Vector Index** - optimized for pure vector searches without heavy scalar filtering. After documents are inserted, the demo creates the Hyperscale index:
+While the application works without creating indexes manually, you can optionally create a vector index for better performance.
+
+This demo uses a **Hyperscale Vector Index** - optimized for pure vector searches without heavy scalar filtering.
+
+After documents are inserted, the demo creates the Hyperscale index:
 
 ```sql
 CREATE VECTOR INDEX `hyperscale_glossary_index` 
@@ -200,9 +205,9 @@ USING GSI WITH {
 - **Include Fields**: Non-vector fields for faster retrieval
 - **Quantization**: `IVF,SQ8` (Inverted File with 8-bit scalar quantization)
 
-> **Note**: [Composite vector indexes](https://docs.couchbase.com/server/current/vector-index/composite-vector-index.html) can be created similarly by adding scalar fields to the index definition. Use Composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use Hyperscale since we're demonstrating pure semantic search capabilities.
+> **Note**: [Composite vector indexes](https://docs.couchbase.com/server/current/vector-index/composite-vector-index.html) can be created similarly by adding scalar fields to the index definition. Use Composite indexes when your queries frequently filter on scalar values before vector comparison. For this demo, we use Hyperscale since we are demonstrating pure semantic search capabilities.
 
-### Step 4: Vector Search Operations
+### Vector Search Operations
 
 The demo performs two types of searches using the connector's `SearchAsync()` method with the Hyperscale index:
 
@@ -227,6 +232,8 @@ FROM `demo`.`semantic-kernel`.`glossary`
 ORDER BY _distance ASC
 LIMIT 1
 ```
+
+> **Note**: The distance metric (`'cosine'` in this example) comes from the `SimilarityMetric` property configured when creating the collection:
 
 **Expected Result**: Finds "API" entry with high similarity
 
@@ -280,7 +287,7 @@ Couchbase offers three types of vector indexes optimized for different use cases
 - Ideal for: Compliance filtering, user-specific searches, time-bounded queries
 - **Creation**: Similar to Hyperscale but includes scalar fields in the index definition
 
-**3. FTS (Full-Text Search) Indexes**
+**3. Search Vector Indexes**
 - Uses Couchbase Search API via `CouchbaseSearchCollection`
 - Best for hybrid search scenarios combining full-text search with vector similarity
 - Supports text search, faceting, and vector search in a single query
@@ -293,7 +300,7 @@ All three index types work with the same Semantic Kernel abstractions (`SearchAs
 **Choosing the Right Type**:
 - Start with **Hyperscale** for pure vector searches and large datasets
 - Use **Composite** when scalar filters eliminate large portions of data before vector comparison
-- Use **FTS** when you need hybrid search combining full-text and semantic search
+- Use **Search Vector Index** when you need hybrid search combining full-text and semantic search
 
 For more details, see the [Couchbase Vector Index Documentation](https://docs.couchbase.com/server/current/vector-index/use-vector-indexes.html).
 
@@ -339,7 +346,7 @@ Data ingestion completed
 
 Step 2: Creating Hyperscale vector index manually...
 Executing Hyperscale index creation query...
-Hyperscale vector index 'hyperscale_glossary_index' already exists.
+Hyperscale vector index 'hyperscale_glossary_index' created successfully!
 
 Step 3: Performing vector search...
    Found: API
@@ -372,7 +379,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 **Vector Store Classes:**
 - **`CouchbaseVectorStore`** - Main entry point for vector store operations
 - **`CouchbaseQueryCollection`** - Collection class for Hyperscale and Composite indexes (SQL++)
-- **`CouchbaseSearchCollection`** - Collection class for FTS indexes (Search API)
+- **`CouchbaseSearchCollection`** - Collection class for Search Vector indexes (Search, formerly known as Full Text service)
 
 **Common Methods (all index types):**
 - **`GetCollection<TKey, TRecord>()`** - Returns a typed collection for CRUD operations
@@ -382,7 +389,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 
 **Configuration Options:**
 - **`CouchbaseQueryCollectionOptions`** - For Hyperscale and Composite indexes
-- **`CouchbaseSearchCollectionOptions`** - For FTS indexes
+- **`CouchbaseSearchCollectionOptions`** - For Search Vector indexes
 
 For more documentation, visit the [connector repository](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel).
 
