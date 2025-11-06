@@ -14,7 +14,6 @@ filter: sdk
 technology:
   - hyperscale vector index
   - composite vector index
-  - fts
   - kv
 tags:
   - Semantic Kernel
