@@ -19,7 +19,6 @@ tags:
   - LangChain
   - OpenAI
   - Artificial Intelligence
-  - Vector Search
 sdk_language:
   - python
 length: 45 Mins
