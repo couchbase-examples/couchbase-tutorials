@@ -1,6 +1,7 @@
 ---
 # frontmatter
 path: "/tutorial-crewai-couchbase-rag-with-fts"
+alt_path: "/alternate_path_for_composite"
 title: Retrieval-Augmented Generation (RAG) with Couchbase and CrewAI using FTS Service
 short_title: RAG with Couchbase and CrewAI using FTS
 description:
