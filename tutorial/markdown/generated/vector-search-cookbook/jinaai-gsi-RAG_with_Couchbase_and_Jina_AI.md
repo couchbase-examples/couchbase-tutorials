@@ -1,6 +1,7 @@
 ---
 # frontmatter
 path: "/tutorial-jina-couchbase-rag-with-global-secondary-index"
+alt_path: "/alternate_path_for_composite"
 title: Retrieval-Augmented Generation (RAG) with Couchbase and Jina AI using GSI
 short_title: RAG with Couchbase and Jina
 description:
