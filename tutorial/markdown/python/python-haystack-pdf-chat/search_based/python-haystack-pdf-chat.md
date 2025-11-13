@@ -1,9 +1,9 @@
 ---
 # frontmatter
-path: "/tutorial-python-haystack-pdf-chat"
+path: "/tutorial-python-haystack-pdf-chat-with-search-vector-index"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase Python SDK, Haystack and OpenAI
-short_title: Build PDF Chat App
+title: Build PDF Chat App With Haystack, OpenAI and Couchbase Search Vector Index
+short_title: Build PDF Chat App with Search Vector Index
 description:
   - Construct a PDF Chat App with Haystack, Couchbase Python SDK, Couchbase Vector Search, and Streamlit.
   - Learn to upload PDFs into Couchbase Vector Store with Haystack.
@@ -11,7 +11,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
 tags:
   - Streamlit
@@ -24,13 +24,20 @@ length: 45 Mins
 
 ## Introduction
 
-Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you’ll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
+Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application using **Couchbase Search Vector Index (SVI)**. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you'll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
+
+This tutorial demonstrates the **Search Vector Index**, which is ideal for:
+- **Hybrid search** scenarios combining full-text and vector search
+- **Rich text search** with vector similarity
+- **Complex filtering** using FTS queries
+- **Couchbase 7.6+** compatibility
 
 This tutorial will demonstrate how to:
 
-- Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for Vector Search.
-- Chunk PDFs into Vectors with [Haystack](https://haystack.deepset.ai/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into Couchbase.
-- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and querying the LLM.
+- Construct a [Couchbase Search Vector Index](https://docs.couchbase.com/cloud/vector-search/vector-search.html).
+- Chunk PDFs into Vectors with [Haystack](https://haystack.deepset.ai/) and use [Haystack-Couchbase Vector Store](https://haystack.deepset.ai/integrations/couchbase-document-store) to store the vectors into Couchbase.
+- We will use [OpenAI](https://openai.com) for generating Embeddings and querying the LLM.
+- Automatically create Search Vector Index with vector support from a JSON configuration file.
 - Craft an elegant UI with Streamlit. All these components come together to create a seamless, AI-powered chat experience.
 
 ## Prerequisites
@@ -40,7 +47,7 @@ This tutorial will demonstrate how to:
 - Couchbase Cluster (Self Managed or Capella) version 7.6+ with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html). Vector Search in Couchbase is only supported at Couchbase Version 7.6+. 
 - [Streamlit](https://streamlit.io/) installed via pip install streamlit.
 
-> Note that this tutorial is designed to work with the latest Python SDK version (4.2.0+) for Couchbase. It will not work with the older Python SDK versions.
+> Note that this tutorial is designed to work with the latest Couchbase-haystack SDK version (2.1.0+). It will not work with the older versions.
 
 ## Quick Start Guide:
 
@@ -76,33 +83,45 @@ Specifically, you need to do the following:
 ### Create Bucket
 
 - For this of this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
-- Create a bucket named `pdf-chat`. We will use the `_default` scope and `_default` collection of this bucket.
+- Create a bucket named `sample_bucket`. We will use the `scope` scope and `coll` collection of this bucket.
 
-### Create the Search Index on Full Text Service
+### Automatic Search Index Creation
 
-We need to create the Search Index on the Full Text Service in Couchbase. For this demo, you can import the following index using the instructions.
+The application automatically creates the Search Vector Index (SVI) index with vector support on startup. The index definition is loaded from the `sampleSearchIndex.json` file included in the repository, which is then customized with your bucket, scope, and collection names from the environment variables.
+
+If automatic creation fails or you prefer to create the index manually, you can use the following instructions:
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
-  - Copy the index definition to a new file index.json.
+  - Copy the index definition from `sampleSearchIndex.json` to a new file.
+  - Update `sourceName` to match your bucket name.
+  - Update the `types` key to match your `scope_name.collection_name`.
   - Import the file in Capella using the instructions in the documentation.
   - Click on Create Index to create the index.
 
 - [Couchbase Server](https://docs.couchbase.com/server/current/search/import-search-index.html)
 
   - Click on Search -> Add Index -> Import.
-  - Copy the following Index definition in the Import screen.
+  - Copy the contents of `sampleSearchIndex.json`.
+  - Update `sourceName` and `types` key as mentioned above.
+  - Paste the updated JSON in the Import screen.
   - Click on Create Index to create the index.
 
 You may also create a vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
 
 #### Index Definition
 
-Here, we are creating the index `pdf_search` on the documents. The Vector field is set to `embedding` with 1536 dimensions and the text field set to `text`. We are also indexing and storing all the fields under `metadata` in the document as a dynamic mapping to account for varying document structures. The similarity metric is set to `dot_product`. If there is a change in these parameters, please adapt the index accordingly.
+Here, we are creating the index on the documents with the following configuration:
+- **Vector field**: `embedding` with 1536 dimensions (matching OpenAI's text-embedding-ada-002/003 models)
+- **Text field**: `content` for document text content
+- **Metadata field**: `meta` with dynamic mapping to account for varying document structures
+- **Similarity metric**: `dot_product` (optimized for OpenAI embeddings)
+
+The index definition is stored in `sampleSearchIndex.json` and is automatically loaded and customized by the application.
 
 ```json
 {
-  "name": "pdf_search",
+  "name": "sample-index",
   "type": "fulltext-index",
   "params": {
     "doc_config": {
@@ -125,7 +144,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
       "store_dynamic": false,
       "type_field": "_type",
       "types": {
-        "_default._default": {
+        "scope.coll": {
           "dynamic": true,
           "enabled": true,
           "properties": {
@@ -143,11 +162,11 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
                 }
               ]
             },
-            "metadata": {
+            "meta": {
               "dynamic": true,
               "enabled": true
             },
-            "text": {
+            "content": {
               "enabled": true,
               "dynamic": false,
               "fields": [
@@ -169,7 +188,7 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
     }
   },
   "sourceType": "gocbcore",
-  "sourceName": "pdf-chat",
+  "sourceName": "sample_bucket",
   "sourceParams": {},
   "planParams": {
     "maxPartitionsPerPIndex": 64,
@@ -178,6 +197,8 @@ Here, we are creating the index `pdf_search` on the documents. The Vector field 
   }
 }
 ```
+
+> **Note**: The application automatically replaces `sample_bucket` with your actual bucket name and `scope.coll` with your actual `scope_name.collection_name` from the environment variables.
 
 ### Setup Environment Config
 
@@ -190,7 +211,7 @@ Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to `se
     DB_BUCKET = "<bucket_name>"
     DB_SCOPE = "<scope_name>"
     DB_COLLECTION = "<collection_name>"
-    INDEX_NAME = "<vector_capable_fts_index_name>"
+    INDEX_NAME = "<vector_index_name>"
     OPENAI_API_KEY = "<openai_api_key>"
 ```
 
@@ -198,19 +219,21 @@ Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to `se
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
-> For this tutorial, `DB_BUCKET = pdf-chat`, `DB_SCOPE = _default`, `DB_COLLECTION = _default` and `INDEX_NAME = pdf_search`.
+> For this tutorial, `DB_BUCKET = sample-bucket`, `DB_SCOPE = scope`, `DB_COLLECTION = coll` and `INDEX_NAME = sample-index`.
 
 ### Running the Application
 
-After starting Couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
+After starting Couchbase server and installing dependencies, our application is ready to run. The application will automatically create the scope, collection, and SVI on startup.
 
 In the projects root directory, run the following command
 
 ```sh
-streamlit run chat_with_pdf.py
+streamlit run chat_with_pdf_with_search_vector_index.py
 ```
 
 The application will run on your local machine at http://localhost:8501.
+
+> **Note**: The Search Vector Index is created automatically on startup. If the index already exists, the application will detect it and continue without errors.
 
 ### Using PDF Chat App
 
@@ -265,17 +288,20 @@ Haystack is a powerful library that simplifies the process of building applicati
 In the PDF Chat app, Haystack is used for several tasks:
 
 - **Loading and processing PDF documents**: Haystack's [_PyPDFToDocument_](https://docs.haystack.deepset.ai/docs/pypdftodocument) component can convert PDF files into Haystack Document objects, which can hold various types of content, including text, metadata, and embeddings.
-- **Text splitting**: Haystack's [_DocumentSplitter_](https://docs.haystack.deepset.ai/docs/documentsplitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Text preprocessing**: Haystack's [_DocumentCleaner_](https://docs.haystack.deepset.ai/docs/documentcleaner) removes unwanted characters and formatting from the extracted text, while [_DocumentSplitter_](https://docs.haystack.deepset.ai/docs/documentsplitter) splits the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Embedding generation**: Haystack's [_OpenAIDocumentEmbedder_](https://docs.haystack.deepset.ai/docs/openaidocumentembedder) and [_OpenAITextEmbedder_](https://docs.haystack.deepset.ai/docs/openaitextembedder) components convert text into vector embeddings using OpenAI's embedding models, enabling semantic search capabilities.
+- **Text generation**: Haystack's [_OpenAIGenerator_](https://docs.haystack.deepset.ai/docs/openaigenerator) component interfaces with OpenAI's language models to generate human-like responses based on the retrieved context and user queries.
+- **Document storage**: Haystack's [_DocumentWriter_](https://docs.haystack.deepset.ai/docs/documentwriter) component handles the storage of processed documents and their embeddings into the vector store.
 - **Vector store integration**: Haystack provides a [CouchbaseDocumentStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Pipelines**: Haystack uses [Pipelines](https://docs.haystack.deepset.ai/docs/pipelines) to combine different components for various tasks. In this app, we have an indexing pipeline for processing and storing documents, and a RAG pipeline for retrieval and generation.
-- **Prompt Building**: Haystack's [PromptBuilder](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
-- **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
+- **Prompt Building**: Haystack's [_PromptBuilder_](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
+- **Answer Building**: Haystack's [_AnswerBuilder_](https://docs.haystack.deepset.ai/docs/answerbuilder) component structures the final response by combining the generated text with metadata and source information.
 
 By combining Vector Search with Couchbase, RAG, and Haystack, the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models.
 
 ## Let us Understand the Flow
 
-To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn how to create the PDF Chat App. The whole code is written in `chat_with_pdf.py` file.
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn how to create the PDF Chat App using the Search Vector Index approach. The whole code is written in `chat_with_pdf_with_search_vector_index.py` file.
 
 ### App Flow
 
@@ -287,17 +313,17 @@ On the Chat Area, the user can pose questions. These inquiries are processed by 
 
 ## Connecting to Couchbase
 
-The first step is connecting to Couchbase. Couchbase Vector Search is required for PDF Upload as well as during chat (For Retrieval). We will use the Haystack CouchbaseDocumentStore to connect to the Couchbase cluster. The connection is established in the `get_document_store` function.
+The first step is connecting to Couchbase. Couchbase Vector Search via Search Vector Index (SVI) is required for PDF Upload as well as during chat (For Retrieval). We will use the Haystack **CouchbaseSearchDocumentStore** to connect to the Couchbase cluster with Search Vector Index support. The connection is established in the `get_document_store` function.
 
 The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `secrets.toml`, and then proceed to connect to the Couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
 
 ```python
-from couchbase_haystack import CouchbaseDocumentStore, CouchbasePasswordAuthenticator, CouchbaseClusterOptions
+from couchbase_haystack import CouchbaseSearchDocumentStore, CouchbasePasswordAuthenticator, CouchbaseClusterOptions
 
 @st.cache_resource(show_spinner="Connecting to Vector Store")
 def get_document_store():
     """Return the Couchbase document store"""
-    return CouchbaseDocumentStore(
+    return CouchbaseSearchDocumentStore(
         cluster_connection_string=Secret.from_env_var("DB_CONN_STR"),
         authenticator=CouchbasePasswordAuthenticator(
             username=Secret.from_env_var("DB_USERNAME"),
@@ -311,6 +337,8 @@ def get_document_store():
     )
 ```
 We will define the bucket, scope, collection and index names from [Environment Variables](#setup-environment-config).
+
+> **Key Point**: We use `CouchbaseSearchDocumentStore` which leverages the Search Service for vector search capabilities. This is different from the query-based approach that uses `CouchbaseQueryDocumentStore`.
 
 ## Initialize Couchbase Vector Store
 
@@ -374,7 +402,7 @@ from haystack.components.embedders import OpenAIDocumentEmbedder
 indexing_pipeline = Pipeline()
 indexing_pipeline.add_component("converter", PyPDFToDocument())
 indexing_pipeline.add_component("cleaner", DocumentCleaner())
-indexing_pipeline.add_component("splitter", DocumentSplitter(split_by="sentence", split_length=250, split_overlap=30))
+indexing_pipeline.add_component("splitter", DocumentSplitter(split_by="word", split_length=250, split_overlap=50))
 indexing_pipeline.add_component("embedder", OpenAIDocumentEmbedder())
 indexing_pipeline.add_component("writer", DocumentWriter(document_store=document_store))
 
@@ -395,20 +423,20 @@ We create a RAG (Retrieval-Augmented Generation) pipeline using Haystack compone
 The OpenAIGenerator is a crucial component in our RAG pipeline, responsible for generating human-like responses based on the retrieved context and user questions. Here's a more detailed explanation of its configuration and role:
 
 - API Key: The OpenAIGenerator uses the OPENAI_API_KEY from the environment variables to authenticate with the OpenAI API.
-- Model: It's configured to use the "gpt-4o" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
+- Model: It's configured to use the "gpt-5" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
 - Role in the Pipeline: The OpenAIGenerator receives a prompt constructed by the PromptBuilder, which includes the user's question and relevant context retrieved from the vector store. It then generates a response based on this input.
 - Integration: The generator's output is connected to the AnswerBuilder component, which formats the final response for display to the user.
 
 By using the OpenAIGenerator, we leverage state-of-the-art natural language processing capabilities to provide accurate, context-aware answers to user queries about the uploaded PDF content.
 
 ```python
-from haystack.components.embedders import OpenAIDocumentEmbedder
-from couchbase_haystack import CouchbaseEmbeddingRetriever
+from haystack.components.embedders import OpenAITextEmbedder
+from couchbase_haystack import CouchbaseSearchEmbeddingRetriever
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 
 rag_pipeline = Pipeline()
-rag_pipeline.add_component("query_embedder", OpenAIDocumentEmbedder())
-rag_pipeline.add_component("retriever", CouchbaseEmbeddingRetriever(document_store=document_store))
+rag_pipeline.add_component("query_embedder", OpenAITextEmbedder())
+rag_pipeline.add_component("retriever", CouchbaseSearchEmbeddingRetriever(document_store=document_store))
 rag_pipeline.add_component("prompt_builder", PromptBuilder(template="""
 You are a helpful bot. If you cannot answer based on the context provided, respond with a generic answer. Answer the question as truthfully as possible using the context below:
 {% for doc in documents %}
@@ -421,7 +449,7 @@ rag_pipeline.add_component(
     "llm",
     OpenAIGenerator(
         api_key=OPENAI_API_KEY,
-        model="gpt-4o",
+        model="gpt-5",
     ),
 )
 rag_pipeline.add_component("answer_builder", AnswerBuilder())
@@ -434,17 +462,19 @@ rag_pipeline.connect("llm.meta", "answer_builder.meta")
 rag_pipeline.connect("retriever", "answer_builder.documents")
 ```
 
+> **Key Point**: We use `CouchbaseSearchEmbeddingRetriever` which queries the Search Vector Index for vector search. This retriever leverages the Search Service for finding semantically similar documents.
+
 ### User Asks A Question
 
 This section creates an interactive chat interface where users can ask questions based on the uploaded PDF. The key steps are:
 
 1. Display a chat input box with the prompt "Ask a question based on the PDF".
 2. When the user submits a question:
-- Display the user's question in the chat interface.
-- Add the user's question to the chat history.
-- Run the RAG pipeline to generate a response.
-- Display the response in the chat interface.
-- Add the assistant's response to the chat history.
+    - Display the user's question in the chat interface.
+    - Add the user's question to the chat history.
+    - Run the RAG pipeline to generate a response.
+    - Display the response in the chat interface.
+    - Add the assistant's response to the chat history.
 
 ```python
 if question := st.chat_input("Ask a question based on the PDF"):
@@ -494,14 +524,14 @@ Similar to last section, we will get answer from LLM of the user question. Answe
 
 ### Conclusion
 
-Congratulations! You've successfully built a PDF Chat application using Couchbase, Haystack, and OpenAI. This application demonstrates the power of combining vector search capabilities with large language models to create an intelligent, context-aware chat interface for PDF documents.
+Congratulations! You've successfully built a PDF Chat application using Couchbase Search Vector Index, Haystack, and OpenAI. This application demonstrates the power of combining vector search capabilities with large language models to create an intelligent, context-aware chat interface for PDF documents.
 
 Through this tutorial, you've learned how to:
 
-1. Set up a Couchbase cluster with vector search capabilities.
+1. Set up a Couchbase cluster with Search Vector Index capabilities.
 2. Use Haystack to process and index PDF documents.
 3. Implement a Retrieval-Augmented Generation (RAG) pipeline.
 4. Create an interactive chat interface using Streamlit.
 5. Compare responses from RAG and pure LLM approaches.
 
-We hope this tutorial has given you a solid foundation for building AI-powered document interaction systems with Couchbase and Haystack. Happy coding!
+We hope this tutorial has given you a solid foundation for building AI-powered document interaction systems with Couchbase Search Vector Index and Haystack. Happy coding!
