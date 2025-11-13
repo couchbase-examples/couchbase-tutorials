@@ -26,21 +26,40 @@ length: 45 Mins
 
 Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application using **Couchbase's Hyperscale Vector Index**. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you'll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
 
-This tutorial demonstrates the **Hyperscale vector search approach**, which is ideal for:
-- **High-performance vector search at massive scale** (billions of documents)
-- **Pure vector search** optimized for RAG applications
-- **SQL++ queries** for efficient vector retrieval
-- **Couchbase 8.0+** recommended for optimal performance
+### Choosing Between Hyperscale and Composite Vector Indexes
 
-To learn more about the other vector search indexes options avaliable at Couchbase refer to the [docs](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
+Couchbase supports multiple types of vector indexes for different use cases. This tutorial uses **Hyperscale Vector Index**, but you should be aware of the alternatives:
+
+**Hyperscale Vector Index** (used in this tutorial):
+- Best for **pure vector similarity search** at massive scale
+- Optimized for RAG and chatbot applications
+- Handles billions of documents with sub-second query latency
+- Ideal when you need fast semantic search without metadata filtering
+
+**Composite Vector Index**:
+- Best for **vector search with metadata filtering**
+- Combines vector fields with scalar fields (e.g., date, category, user_id)
+- Enables pre-filtering before vector search for more efficient queries
+- Ideal when you need to filter documents by attributes before semantic search
+- Example use case: "Find similar documents from last month" or "Search within user's documents"
+
+**Search Vector Index**:
+- Best for **hybrid search** combining keywords, geospatial, and semantic search
+- Flexible full-text search combined with vector similarity
+- Complex filtering using FTS queries
+- Compatible with Couchbase 7.6+
+
+> **For this PDF chat demo, we use Hyperscale Vector Index** for optimal performance in pure RAG applications. If your use case requires filtering by metadata (e.g., searching only in specific user's documents, or documents from a certain date range), consider using Composite Vector Index instead.
+
+To learn more about choosing the right vector index, refer to the [official Couchbase vector index documentation](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
 
 This tutorial will demonstrate how to:
 
 - Create a [Couchbase Hyperscale Vector Index](https://docs.couchbase.com/cloud/vector-index/hyperscale-vector-index.html) for high-performance Vector Search.
 - Chunk PDFs into Vectors with [Haystack](https://haystack.deepset.ai/) and use [Couchbase Vector Store](https://haystack.deepset.ai/integrations/couchbase-document-store) to store the vectors into Couchbase.
-- Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and querying the LLM.
-- Automatically create Hyperscale vector indexe after document upload.
-- Craft an elegant UI with Streamlit. All these components come together to create a seamless, AI-powered chat experience.
+- Use large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [OpenAI](https://openai.com) for generating Embeddings and querying the LLM.
+- Automatically create Hyperscale vector index after document upload.
+- Use a Streamlit interface to see it working in action. All these components come together to create a seamless, AI-powered chat experience.
 
 ## Prerequisites
 
@@ -86,7 +105,7 @@ Specifically, you need to do the following:
 
 ### Create Bucket
 
-- For this of this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
+- For this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
 - Create a bucket named `sample-bucket`. We will use the `scope` scope and `coll` collection of this bucket.
 
 ### Automatic Hyperscale Vector Index Creation
@@ -119,18 +138,47 @@ The application uses `CouchbaseQueryDocumentStore` which leverages SQL++ queries
 
 > **Note**: If automatic creation fails, the application will attempt to create the index on first query as a fallback. If you prefer manual control, you can create the index yourself using the SQL++ query above after uploading documents.
 
+#### Alternative: Using Composite Vector Index
+
+If your application needs to filter documents by metadata before performing vector search, you can use a **Composite Vector Index** instead. The same code works with minimal changes!
+
+**Creating a Composite Vector Index:**
+
+```sql
+CREATE INDEX idx_<collection_name>_composite 
+ON `<bucket_name>`.`<scope_name>`.`<collection_name>`(embedding VECTOR) 
+WITH {
+  "dimension": 1536,
+  "similarity": "DOT"
+}
+```
+
+**Key Difference**: Notice the keyword is `INDEX` (not `VECTOR INDEX`). Composite indexes combine vector fields with other scalar fields.
+
+**When to Use Composite Vector Index:**
+- You need to filter by metadata (e.g., `user_id`, `date`, `category`) before vector search
+- Example: "Find similar documents uploaded by user X in the last 30 days"
+- Enables efficient pre-filtering to reduce the search space
+
+**Code Compatibility:**
+The same `CouchbaseQueryDocumentStore` and application code works with both Hyperscale and Composite indexes! The only difference is:
+1. The SQL++ statement used to create the index
+2. How you query it (Composite allows WHERE clauses for filtering)
+
+To learn more about Composite Vector Indexes, refer to the [official documentation](https://docs.couchbase.com/cloud/vector-index/composite-vector-index.html).
+
 ### Setup Environment Config
 
 Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to `secrets.toml` and replace the placeholders with the actual values for your environment. All configuration for communication with the database is read from the environment variables.
 
 ```bash
-    DB_CONN_STR = "<couchbase_cluster_connection_string>"
-    DB_USERNAME = "<couchbase_username>"
-    DB_PASSWORD = "<couchbase_password>"
-    DB_BUCKET = "<bucket_name>"
-    DB_SCOPE = "<scope_name>"
-    DB_COLLECTION = "<collection_name>"
-    OPENAI_API_KEY = "<openai_api_key>"
+DB_CONN_STR = "<couchbase_cluster_connection_string>"
+DB_USERNAME = "<couchbase_username>"
+DB_PASSWORD = "<couchbase_password>"
+DB_BUCKET = "<bucket_name>"
+DB_SCOPE = "<scope_name>"
+DB_COLLECTION = "<collection_name>"
+OPENAI_API_KEY = "<openai_api_key>"
 ```
 
 > [OpenAI](https://openai.com) API Key is required for usage in generating embedding and querying LLM.
@@ -213,7 +261,7 @@ In the PDF Chat app, Haystack is used for several tasks:
 - **Vector store integration**: Haystack provides a [CouchbaseDocumentStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Pipelines**: Haystack uses [Pipelines](https://docs.haystack.deepset.ai/docs/pipelines) to combine different components for various tasks. In this app, we have an indexing pipeline for processing and storing documents, and a RAG pipeline for retrieval and generation.
 - **Prompt Building**: Haystack's [PromptBuilder](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
-- **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
+- **Streaming Output**: LangChain supports [streaming](https://docs.langchain.com/oss/python/langchain/streaming), allowing the app to stream the generated answer to the client in real-time.
 
 By combining Vector Search with Couchbase, RAG, and Haystack, the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models.
 
@@ -232,6 +280,8 @@ On the Chat Area, the user can pose questions. These inquiries are processed by 
 ## Connecting to Couchbase
 
 The first step is connecting to Couchbase. Couchbase Hyperscale Vector Search is required for PDF Upload as well as during chat (For Retrieval). We will use the Haystack **CouchbaseQueryDocumentStore** to connect to the Couchbase cluster with Hyperscale vector search support. The connection is established in the `get_document_store` function.
+
+> **Note**: The same `CouchbaseQueryDocumentStore` configuration works with both **Hyperscale** and **Composite** vector indexes! You only need to change the SQL++ statement when creating the index.
 
 The connection string and credentials are read from the environment variables. We perform some basic required checks for the environment variable not being set in the `secrets.toml`, and then proceed to connect to the Couchbase cluster. We connect to the cluster using [connect](https://docs.couchbase.com/python-sdk/current/hello-world/start-using-sdk.html#connect) method.
 
@@ -279,7 +329,7 @@ We will define the bucket, scope, and collection names from [Environment Variabl
 
 ## Initialize Couchbase Vector Store
 
-We will now initialize the CouchbaseDocumentStore which will be used for storing and retrieving document embeddings.
+We will now initialize the CouchbaseQueryDocumentStore which will be used for storing and retrieving document embeddings.
 ```python
 # Initialize document store
 document_store = get_document_store()
@@ -334,7 +384,10 @@ The indexing pipeline is created to handle the entire process of ingesting PDFs 
 from haystack import Pipeline
 from haystack.components.converters import PyPDFToDocument
 from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
-from haystack.components.embedders import OpenAIDocumentEmbedder
+from haystack.components.embedders import OpenAIDocumentEmbedder, OpenAITextEmbedder
+from haystack.components.generators import OpenAIGenerator
+from haystack.components.builders import PromptBuilder, AnswerBuilder
+from haystack.components.writers import DocumentWriter
 
 indexing_pipeline = Pipeline()
 indexing_pipeline.add_component("converter", PyPDFToDocument())
@@ -362,7 +415,7 @@ We create a RAG (Retrieval-Augmented Generation) pipeline using Haystack compone
 The OpenAIGenerator is a crucial component in our RAG pipeline, responsible for generating human-like responses based on the retrieved context and user questions. Here's a more detailed explanation of its configuration and role:
 
 - API Key: The OpenAIGenerator uses the OPENAI_API_KEY from the environment variables to authenticate with the OpenAI API.
-- Model: It's configured to use the "gpt-4o" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
+- Model: It's configured to use the "gpt-5" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
 - Role in the Pipeline: The OpenAIGenerator receives a prompt constructed by the PromptBuilder, which includes the user's question and relevant context retrieved from the vector store. It then generates a response based on this input.
 - Integration: The generator's output is connected to the AnswerBuilder component, which formats the final response for display to the user.
 
@@ -388,7 +441,7 @@ rag_pipeline.add_component(
     "llm",
     OpenAIGenerator(
         api_key=OPENAI_API_KEY,
-        model="gpt-4o",
+        model="gpt-5",
     ),
 )
 rag_pipeline.add_component("answer_builder", AnswerBuilder())

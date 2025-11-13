@@ -3,7 +3,7 @@
 path: "/tutorial-python-haystack-pdf-chat-with-search-vector-index"
 # title and description do not need to be added to markdown, start with H2 (##)
 title: Build PDF Chat App With Haystack, OpenAI and Couchbase Search Vector Index
-short_title: Build PDF Chat App with Search Vector index
+short_title: Build PDF Chat App with Search Vector Index
 description:
   - Construct a PDF Chat App with Haystack, Couchbase Python SDK, Couchbase Vector Search, and Streamlit.
   - Learn to upload PDFs into Couchbase Vector Store with Haystack.
@@ -113,7 +113,7 @@ You may also create a vector index using Search UI on both [Couchbase Capella](h
 
 Here, we are creating the index on the documents with the following configuration:
 - **Vector field**: `embedding` with 1536 dimensions (matching OpenAI's text-embedding-ada-002/003 models)
-- **Text field**: `content` for document text content  
+- **Text field**: `content` for document text content
 - **Metadata field**: `meta` with dynamic mapping to account for varying document structures
 - **Similarity metric**: `dot_product` (optimized for OpenAI embeddings)
 
@@ -420,7 +420,7 @@ We create a RAG (Retrieval-Augmented Generation) pipeline using Haystack compone
 The OpenAIGenerator is a crucial component in our RAG pipeline, responsible for generating human-like responses based on the retrieved context and user questions. Here's a more detailed explanation of its configuration and role:
 
 - API Key: The OpenAIGenerator uses the OPENAI_API_KEY from the environment variables to authenticate with the OpenAI API.
-- Model: It's configured to use the "gpt-4o" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
+- Model: It's configured to use the "gpt-5" model, which is a powerful language model capable of understanding context and generating coherent, relevant responses.
 - Role in the Pipeline: The OpenAIGenerator receives a prompt constructed by the PromptBuilder, which includes the user's question and relevant context retrieved from the vector store. It then generates a response based on this input.
 - Integration: The generator's output is connected to the AnswerBuilder component, which formats the final response for display to the user.
 
@@ -446,7 +446,7 @@ rag_pipeline.add_component(
     "llm",
     OpenAIGenerator(
         api_key=OPENAI_API_KEY,
-        model="gpt-4o",
+        model="gpt-5",
     ),
 )
 rag_pipeline.add_component("answer_builder", AnswerBuilder())
