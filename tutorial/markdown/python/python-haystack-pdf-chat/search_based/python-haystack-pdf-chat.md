@@ -288,11 +288,14 @@ Haystack is a powerful library that simplifies the process of building applicati
 In the PDF Chat app, Haystack is used for several tasks:
 
 - **Loading and processing PDF documents**: Haystack's [_PyPDFToDocument_](https://docs.haystack.deepset.ai/docs/pypdftodocument) component can convert PDF files into Haystack Document objects, which can hold various types of content, including text, metadata, and embeddings.
-- **Text splitting**: Haystack's [_DocumentSplitter_](https://docs.haystack.deepset.ai/docs/documentsplitter) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Text preprocessing**: Haystack's [_DocumentCleaner_](https://docs.haystack.deepset.ai/docs/documentcleaner) removes unwanted characters and formatting from the extracted text, while [_DocumentSplitter_](https://docs.haystack.deepset.ai/docs/documentsplitter) splits the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Embedding generation**: Haystack's [_OpenAIDocumentEmbedder_](https://docs.haystack.deepset.ai/docs/openaidocumentembedder) and [_OpenAITextEmbedder_](https://docs.haystack.deepset.ai/docs/openaitextembedder) components convert text into vector embeddings using OpenAI's embedding models, enabling semantic search capabilities.
+- **Text generation**: Haystack's [_OpenAIGenerator_](https://docs.haystack.deepset.ai/docs/openaigenerator) component interfaces with OpenAI's language models to generate human-like responses based on the retrieved context and user queries.
+- **Document storage**: Haystack's [_DocumentWriter_](https://docs.haystack.deepset.ai/docs/documentwriter) component handles the storage of processed documents and their embeddings into the vector store.
 - **Vector store integration**: Haystack provides a [CouchbaseDocumentStore](https://haystack.deepset.ai/integrations/couchbase-document-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
 - **Pipelines**: Haystack uses [Pipelines](https://docs.haystack.deepset.ai/docs/pipelines) to combine different components for various tasks. In this app, we have an indexing pipeline for processing and storing documents, and a RAG pipeline for retrieval and generation.
-- **Prompt Building**: Haystack's [PromptBuilder](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
-- **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
+- **Prompt Building**: Haystack's [_PromptBuilder_](https://docs.haystack.deepset.ai/docs/promptbuilder) component allows you to create custom prompts that guide the language model's behavior and output.
+- **Answer Building**: Haystack's [_AnswerBuilder_](https://docs.haystack.deepset.ai/docs/answerbuilder) component structures the final response by combining the generated text with metadata and source information.
 
 By combining Vector Search with Couchbase, RAG, and Haystack, the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models.
 
