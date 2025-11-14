@@ -2,7 +2,7 @@
 # frontmatter
 path: "/tutorial-jina-couchbase-rag-with-hyperscale-or-composite-vector-index"
 alt_paths: ["/tutorial-jina-couchbase-rag-with-hyperscale-vector-index", "/tutorial-jina-couchbase-rag-with-composite-vector-index"]
-title: Retrieval-Augmented Generation (RAG) with Jina AI using Couchbase Hyperscale and Composite Vector Index which are part of the new Couchbase Vector Search introduced in Couchbase Version 8.0+
+title: Retrieval-Augmented Generation (RAG) with Jina AI using Couchbase Hyperscale and Composite Vector Index which are part of the new Couchbase Vector Search introduced in Couchbase Version 8.0+; Extra chars just to test the limits. char 1 char 2 char 3 char 4 char 5 char 6 char 7 char char char char char char char
 short_title: RAG with Couchbase and Jina
 description:
   - Learn how to build a semantic search engine using Couchbase and Jina.
