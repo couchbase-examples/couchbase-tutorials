@@ -13,9 +13,9 @@ technology:
   - query
 tags:
   - Airbyte
-  - Data Integration
-  - ETL
   - Connector
+  - Data Ingestion
+  - Best Practices
 sdk_language:
   - python
 length: 35 Mins
@@ -28,7 +28,9 @@ Airbyte is an open-source data integration platform that enables you to move dat
 - **Cross-bucket replication**: Sync data between buckets within the same or different Couchbase clusters
 - **Analytics pipelines**: Extract data from Couchbase to data warehouses or analytics platforms
 - **Data ingestion**: Load data from SaaS applications, databases, or APIs into Couchbase
-- **Change data capture**: Track and replicate document changes in near real-time
+- **Change data capture**: Track and replicate document changes with periodic syncs
+
+> **Note**: Airbyte is designed for batch/periodic data synchronization (typically 5-60 minute intervals), not sub-second real-time change tracking. For true real-time CDC, consider Couchbase's built-in XDCR or Eventing services.
 
 This tutorial will guide you through setting up Airbyte with Couchbase Capella (cloud-hosted) as both source and destination, covering configuration, sync modes, common patterns, and best practices.
 
@@ -93,6 +95,8 @@ This tutorial assumes you have:
 ## Part 1: Configuring Couchbase as a Source
 
 The Couchbase source connector allows Airbyte to extract data from your Couchbase buckets. It automatically discovers all collections within a bucket and creates individual streams for each.
+
+> **What is a stream?** In Airbyte, a stream represents a single data source (in this case, a Couchbase collection) that can be synced to a destination. Each stream has its own schema, sync mode, and cursor configuration. Learn more in [Airbyte's documentation](https://docs.airbyte.com/understanding-airbyte/connections/).
 
 ### Step 1: Prepare Your Couchbase Source
 
@@ -176,7 +180,7 @@ Example streams from a `travel-sample` bucket:
 {
   "_id": "string",              // Document key
   "_ab_cdc_updated_at": "integer",  // Modification timestamp (for incremental sync)
-  "travel-sample": {            // Collection name
+  "bucket": {                   // Bucket name
     // Original document fields
   }
 }
@@ -194,8 +198,8 @@ Syncs all documents from the collection every time.
 ```sql
 SELECT META().id as _id,
        TO_NUMBER(meta().xattrs.$document.last_modified) as _ab_cdc_updated_at,
-       *
-FROM `bucket`.`scope`.`collection`
+       c AS `bucket`
+FROM `bucket`.`scope`.`collection` AS c
 ```
 
 **When to use**:
@@ -217,8 +221,8 @@ Syncs only new or modified documents since the last sync.
 ```sql
 SELECT META().id as _id,
        TO_NUMBER(meta().xattrs.$document.last_modified) as _ab_cdc_updated_at,
-       *
-FROM `bucket`.`scope`.`collection`
+       c AS `bucket`
+FROM `bucket`.`scope`.`collection` AS c
 WHERE TO_NUMBER(meta().xattrs.$document.last_modified) > {last_cursor_value}
 ORDER BY TO_NUMBER(meta().xattrs.$document.last_modified) ASC
 ```
@@ -257,7 +261,7 @@ The Couchbase destination connector allows Airbyte to load data into your Couchb
    - **Permissions**: Assign "Data Reader", "Data Writer", and "Query Manager" roles
 4. Save the credentials
 
-**Note**: Query Manager role is required for automatic collection and index creation.
+**Note**: Query Manager role is required for automatic collection and index creation. These Database Access credentials are used for cluster connections via the SDK, distinct from Capella API credentials which would be used for Capella management operations.
 
 #### Ensure Network Access
 
@@ -425,12 +429,7 @@ For each enabled stream, select the appropriate sync mode combination:
 | Full Refresh | Overwrite | Complete replacement each sync | Mirror source exactly |
 | Full Refresh | Append | Multiple complete snapshots | Historical snapshots |
 | Incremental | Append | All changes tracked | Complete audit trail |
-| Incremental | Append Dedup | Current state maintained | Live replica (recommended) |
-
-**Recommended for Couchbase → Couchbase**:
-- **Incremental | Append Dedup** for most use cases
-- Provides efficient syncing with minimal data transfer
-- Maintains current state of documents
+| Incremental | Append Dedup | Current state maintained | Live replica |
 
 #### Configure Cursor Field
 
@@ -485,10 +484,6 @@ Predefined intervals:
 - Every 6 hours
 - Every 12 hours
 - Every 24 hours
-
-**Recommendation for Couchbase**:
-- Use incremental syncs with 15-60 minute intervals for near real-time replication
-- Use full refresh sparingly due to resource usage
 
 ### Step 4: Advanced Configuration
 
@@ -570,7 +565,7 @@ WHERE type = 'airbyte_record'
 
 ### Pattern 1: Couchbase to Couchbase (Cross-Bucket Replication)
 
-**Use Case**: Replicate production data to an analytics bucket for reporting without impacting production workload.
+**Use Case**: Replicate production data to a staging environment for testing and development without impacting production workload.
 
 **Configuration**:
 
@@ -581,7 +576,7 @@ WHERE type = 'airbyte_record'
 
 **Destination**:
 - Connection: Same cluster or different cluster
-- Bucket: `analytics`
+- Bucket: `staging`
 - Scope: `replicated`
 - User: Read-write user
 
@@ -591,23 +586,23 @@ WHERE type = 'airbyte_record'
 **Cursor**: `_ab_cdc_updated_at`
 
 **Benefits**:
-- Near real-time analytics without production impact
+- Safe testing and development environment
 - Automatic propagation of changes
 - Isolated workloads
 
 **Example Stream Configuration**:
 ```
 Stream: production.app.users
-Destination Collection: analytics.replicated.production_app_users
+Destination Collection: staging.replicated.production_app_users
 Sync Mode: Incremental | Append Dedup
 Primary Key: [["_id"]]
 ```
 
-**Query Pattern in Analytics Bucket**:
+**Query Pattern in Staging Bucket**:
 ```sql
 -- Access the original data
 SELECT data.*
-FROM `analytics`.`replicated`.`production_app_users`
+FROM `staging`.`replicated`.`production_app_users`
 WHERE type = 'airbyte_record'
 ```
 
@@ -631,8 +626,8 @@ WHERE type = 'airbyte_record'
 **Primary Key**: Business key (e.g., `[["data", "order_id"]]`)
 
 **Benefits**:
-- Join Couchbase data with other data sources
-- Use BI tools (Tableau, Looker) on Couchbase data
+- Enable business intelligence and cross-source analytics
+- Centralized data warehousing
 - Historical trend analysis
 
 **Transformation Example** (dbt):
@@ -684,48 +679,7 @@ WHERE data.customer_id = $customer_id
   AND type = 'airbyte_record'
 ```
 
-### Pattern 4: Real-Time Change Tracking
-
-**Use Case**: Maintain an audit log of all changes to critical collections.
-
-**Configuration**:
-
-**Source**:
-- Bucket: `production`
-- Collections: `financial_transactions`, `user_accounts`
-
-**Destination**:
-- Bucket: `audit_log`
-- Scope: `change_tracking`
-
-**Sync Mode**: Incremental | Append (not dedup!)
-**Schedule**: Every 5 minutes
-**Primary Key**: None (to track all versions)
-
-**Benefits**:
-- Complete history of all document changes
-- Compliance and audit requirements
-- Point-in-time recovery capability
-
-**Query Pattern**:
-```sql
--- View all changes to a specific document
-SELECT
-  data.*,
-  emitted_at,
-  TO_TIMESTAMP(data._ab_cdc_updated_at / 1000000000) as modified_at
-FROM `audit_log`.`change_tracking`.`production_app_user_accounts`
-WHERE data._id = 'user::12345'
-  AND type = 'airbyte_record'
-ORDER BY emitted_at DESC
-```
-
-**Storage Consideration**: This pattern will grow continuously. Plan for data lifecycle management:
-- Archive old audit records to object storage
-- Set up data retention policies
-- Monitor bucket size
-
-### Pattern 5: Multi-Environment Sync
+### Pattern 4: Multi-Environment Sync
 
 **Use Case**: Keep development/staging environments synchronized with production data.
 
@@ -749,10 +703,8 @@ ORDER BY emitted_at DESC
 - Safe environment for development
 
 **Security Note**: Implement data masking for sensitive fields:
-```
-Consider using Airbyte's transformation capabilities or custom dbt models
-to mask PII before syncing to non-production environments
-```
+> Consider using Airbyte's transformation capabilities or custom dbt models
+> to mask PII (Personally Identifiable Information, such as names, emails, SSNs) before syncing to non-production environments.
 
 ## Performance and Best Practices
 
@@ -782,13 +734,6 @@ ON `bucket`.`scope`.`collection`(TO_NUMBER(meta().xattrs.$document.last_modified
 - Collections are small (< 5,000 documents)
 - Most documents change frequently
 - You need guaranteed consistency
-
-**Performance Comparison**:
-```
-Full Refresh (100k docs): ~5-10 minutes
-Incremental (1k changes): ~30-60 seconds
-Savings: 83-90% reduction in time
-```
 
 #### 3. Start Date Configuration
 
@@ -876,9 +821,11 @@ Always use `couchbases://` for production:
 
 The connector uses these timeout settings:
 ```python
+from datetime import timedelta
+
 ClusterTimeoutOptions(
-    kv_timeout=5 seconds,
-    query_timeout=10 seconds
+    kv_timeout=timedelta(seconds=5),
+    query_timeout=timedelta(seconds=10)
 )
 ```
 
@@ -1174,7 +1121,7 @@ Monitor sync health in the Airbyte UI:
 
    Check existing indexes:
    SELECT * FROM system:indexes
-   WHERE keyspace_id = 'collection_name'
+   WHERE keyspace_id = 'collection'
    ```
 
 **Issue**: "No streams discovered"
