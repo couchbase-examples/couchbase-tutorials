@@ -106,7 +106,7 @@ Specifically, you need to do the following:
 ### Create Bucket
 
 - For this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
-- Create a bucket named `sample-bucket`. We will use the `scope` scope and `coll` collection of this bucket.
+- Create a bucket named `sample-bucket`. We will use the `pdf_data` scope and `pdf_chunks` collection of this bucket.
 
 ### Automatic Hyperscale Vector Index Creation
 
@@ -185,7 +185,7 @@ OPENAI_API_KEY = "<openai_api_key>"
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
-> For this tutorial, `DB_BUCKET = sample-bucket`, `DB_SCOPE = scope`, `DB_COLLECTION = coll`.
+> For this tutorial, `DB_BUCKET = sample-bucket`, `DB_SCOPE = pdf_data`, `DB_COLLECTION = pdf_chunks`.
 
 ### Running the Application
 
