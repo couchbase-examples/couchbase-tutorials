@@ -194,7 +194,7 @@ After starting Couchbase server and installing dependencies, our application is 
 In the projects root directory, run the following command
 
 ```sh
-streamlit run chat_with_pdf.py
+streamlit run chat_with_pdf_with_query_vector_index.py
 ```
 
 The application will run on your local machine at http://localhost:8501.
@@ -270,7 +270,7 @@ By combining Vector Search with Couchbase, RAG, and Haystack, the PDF Chat app c
 
 ## Let us Understand the Flow
 
-To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn how to create the PDF Chat App. The whole code is written in `chat_with_pdf.py` file.
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can learn how to create the PDF Chat App. The whole code is written in `chat_with_pdf_with_query_vector_index.py` file.
 
 ### App Flow
 
