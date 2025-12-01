@@ -30,7 +30,7 @@ Airbyte is an open-source data integration platform that enables you to move dat
 - **Data ingestion**: Load data from SaaS applications, databases, or APIs into Couchbase
 - **Change data capture**: Track and replicate document changes with periodic syncs
 
-> **Note**: Airbyte is designed for batch/periodic data synchronization (typically 5-60 minute intervals), not sub-second real-time change tracking. For true real-time CDC, consider Couchbase's built-in XDCR or Eventing services.
+> **Note**: Airbyte is designed for batch/periodic data synchronization, not sub-second real-time change tracking. Airbyte Cloud supports minimum 60-minute intervals (hourly syncs); self-hosted deployments may support more frequent syncs with configuration. For true real-time CDC, consider Couchbase's built-in XDCR or Eventing services.
 
 This tutorial will guide you through setting up Airbyte with Couchbase Capella (cloud-hosted) as both source and destination, covering configuration, sync modes, common patterns, and best practices.
 
@@ -367,7 +367,7 @@ All documents written to Couchbase by Airbyte follow this structure:
   "id": "stream_name::key_value",
   "type": "airbyte_record",
   "stream": "source_stream_name",
-  "emitted_at": 1642526400000,
+  "_airbyte_extracted_at": 1642526400000,
   "data": {
     // Original record data from source
   },
@@ -380,7 +380,7 @@ All documents written to Couchbase by Airbyte follow this structure:
 - `id`: Composite document ID (based on sync mode and primary key)
 - `type`: Always "airbyte_record"
 - `stream`: Name of the source stream
-- `emitted_at`: Unix timestamp (milliseconds) when record was synced
+- `_airbyte_extracted_at`: Unix timestamp (milliseconds) when Airbyte extracted the record from source
 - `data`: The actual record data from the source
 - `_ab_sync_mode`: Which sync mode was used
 - `namespace`: Optional logical grouping
@@ -555,9 +555,9 @@ After the sync completes:
 Example query to check synced data:
 ```sql
 SELECT COUNT(*) as doc_count,
-       MIN(emitted_at) as first_sync,
-       MAX(emitted_at) as last_sync
-FROM `analytics`.`_default`.`travel-sample.inventory.airline`
+       MIN(_airbyte_extracted_at) as first_sync,
+       MAX(_airbyte_extracted_at) as last_sync
+FROM `staging`.`_default`.`travel-sample.inventory.airline`
 WHERE type = 'airbyte_record'
 ```
 
@@ -1047,9 +1047,9 @@ Monitor sync health in the Airbyte UI:
    ```sql
    -- Monitor recent Airbyte writes
    SELECT COUNT(*) as recent_writes,
-          MAX(emitted_at) as last_sync
+          MAX(_airbyte_extracted_at) as last_sync
    FROM `bucket`.`scope`.`collection`
-   WHERE emitted_at > (UNIX_MILLIS() - 3600000) -- Last hour
+   WHERE _airbyte_extracted_at > (UNIX_MILLIS() - 3600000) -- Last hour
      AND type = 'airbyte_record'
    ```
 
@@ -1350,10 +1350,10 @@ SELECT COUNT(*) FROM `bucket`.`scope`.`collection`
 WHERE type = 'airbyte_record'
 
 -- View recent syncs
-SELECT stream, emitted_at, data
+SELECT stream, _airbyte_extracted_at, data
 FROM `bucket`.`scope`.`collection`
 WHERE type = 'airbyte_record'
-ORDER BY emitted_at DESC
+ORDER BY _airbyte_extracted_at DESC
 LIMIT 10
 
 -- Check for data quality issues
