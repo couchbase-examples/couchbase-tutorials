@@ -82,8 +82,8 @@ Specifically, you need to do the following:
 
 ### Create Bucket
 
-- For this of this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
-- Create a bucket named `sample_bucket`. We will use the `scope` scope and `coll` collection of this bucket.
+- For this tutorial, we will use a specific bucket, scope, and collection. However, you may use any name of your choice but make sure to update names in all the steps.
+- Create a bucket named `sample_bucket`. We will use the `pdf_data` scope and `pdf_chunks` collection of this bucket.
 
 ### Automatic Search Index Creation
 
@@ -95,7 +95,7 @@ If automatic creation fails or you prefer to create the index manually, you can 
 
   - Copy the index definition from `sampleSearchIndex.json` to a new file.
   - Update `sourceName` to match your bucket name.
-  - Update the `types` key to match your `scope_name.collection_name`.
+  - Update the `types` key to match your `scope_name.collection_name` (e.g., `pdf_data.pdf_chunks`).
   - Import the file in Capella using the instructions in the documentation.
   - Click on Create Index to create the index.
 
@@ -103,7 +103,7 @@ If automatic creation fails or you prefer to create the index manually, you can 
 
   - Click on Search -> Add Index -> Import.
   - Copy the contents of `sampleSearchIndex.json`.
-  - Update `sourceName` and `types` key as mentioned above.
+  - Update `sourceName` and `types` key as mentioned above (e.g., `pdf_data.pdf_chunks`).
   - Paste the updated JSON in the Import screen.
   - Click on Create Index to create the index.
 
@@ -144,7 +144,7 @@ The index definition is stored in `sampleSearchIndex.json` and is automatically 
       "store_dynamic": false,
       "type_field": "_type",
       "types": {
-        "scope.coll": {
+        "pdf_data.pdf_chunks": {
           "dynamic": true,
           "enabled": true,
           "properties": {
@@ -198,7 +198,7 @@ The index definition is stored in `sampleSearchIndex.json` and is automatically 
 }
 ```
 
-> **Note**: The application automatically replaces `sample_bucket` with your actual bucket name and `scope.coll` with your actual `scope_name.collection_name` from the environment variables.
+> **Note**: The application automatically replaces `sample_bucket` with your actual bucket name and `pdf_data.pdf_chunks` with your actual `scope_name.collection_name` from the environment variables.
 
 ### Setup Environment Config
 
@@ -219,7 +219,7 @@ Copy the `secrets.example.toml` file in `.streamlit` folder and rename it to `se
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part.
 
-> For this tutorial, `DB_BUCKET = sample-bucket`, `DB_SCOPE = scope`, `DB_COLLECTION = coll` and `INDEX_NAME = sample-index`.
+> For this tutorial, `DB_BUCKET = sample-bucket`, `DB_SCOPE = pdf_data`, `DB_COLLECTION = pdf_chunks` and `INDEX_NAME = sample-index`.
 
 ### Running the Application
 
