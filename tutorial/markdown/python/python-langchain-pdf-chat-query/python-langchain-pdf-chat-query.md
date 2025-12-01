@@ -449,7 +449,7 @@ After uploading the PDF into Couchbase, we are now ready to utilize the power of
 
 ### LangChain Expression Language (LCEL)
 
-We will now utilize the power of LangChain Chains using the [LangChain Expression Language](https://python.langchain.com/docs/expression_language/) (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
+We will now utilize the power of LangChain Chains using the LangChain Expression Language (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
 
 LCEL is a domain-specific language that provides several key advantages when working with LangChain:
 
@@ -473,7 +473,7 @@ The retriever uses Couchbase's Vector Search with Query Service to perform simil
 
 ### Prompt Chain
 
-A prompt for a language model is a set of instructions or input provided by a user to guide the model's response, helping it understand the context and generate relevant and coherent language-based output, such as answering questions, completing sentences, or engaging in a conversation. We will use a template and create a [prompt chain](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/) using [_ChatPromptTemplate_](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/#chatprompttemplate) Class of LangChain
+A prompt for a language model is a set of instructions or input provided by a user to guide the model's response, helping it understand the context and generate relevant and coherent language-based output, such as answering questions, completing sentences, or engaging in a conversation. We will use a template and create a prompt chain using [_ChatPromptTemplate_](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/#chatprompttemplate) Class of LangChain
 
 ```python
 template = """You are a helpful bot. If you cannot answer based on the context provided, respond with a generic answer. Answer the question as truthfully as possible using the context below:
