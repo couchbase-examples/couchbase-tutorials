@@ -1,23 +1,24 @@
 ---
 # frontmatter
-path: "/tutorial-python-langchain-pdf-chat"
+path: "/tutorial-python-langchain-pdf-chat-with-search-vector-index"
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build PDF Chat App With Couchbase Python SDK and LangChain
+title: Build PDF Chat App with LangChain and Couchbase Search Vector Index
 short_title: Build PDF Chat App
 description:
-  - Construct a PDF Chat App with LangChain, Couchbase Python SDK, Couchbase Vector Search, and Streamlit.
-  - Learn to upload PDFs into Couchbase Vector Store with LangChain.
-  - Discover how to use RAG’s for context-based Q&A’s from PDFs with LLMs.
+  - Construct a PDF Chat App with LangChain, Couchbase Python SDK, Search Vector Index, and Streamlit.
+  - Learn to upload PDFs into Couchbase Search Vector Store with LangChain.
+  - Discover how to use RAG for context-based Q&A from PDFs with LLMs.
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
 tags:
   - Streamlit
   - LangChain
   - OpenAI
   - Artificial Intelligence
+  - Search Vector Index
 sdk_language:
   - python
 length: 45 Mins
@@ -25,7 +26,9 @@ length: 45 Mins
 
 ## Introduction
 
-Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you’ll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
+Welcome to this comprehensive guide on constructing an AI-enhanced Chat Application. We will create a dynamic chat interface capable of delving into PDF documents to extract and provide summaries, key facts, and answers to your queries. By the end of this tutorial, you'll have a powerful tool at your disposal, transforming the way you interact with and utilize the information contained within PDFs.
+
+**This tutorial uses Search Vector Index** with Couchbase's Search service (formerly known as Full Text Search). If you are looking for Vector Search using Query Service with Hyperscale/Composite Vector Indexes, refer to [this tutorial](https://developer.couchbase.com/tutorial-python-langchain-pdf-chat-with-hyperscale-or-composite-vector-index/) instead.
 
 This tutorial will demonstrate how to -
 
@@ -80,9 +83,9 @@ Specifically, you need to do the following:
 - For the purpose of this tutorial, we will be using specific bucket, scope and collection. However, you may use any name of your choice but make sure to update names in all the steps.
 - Create a bucket named `pdf-chat`. We will use the `_default` scope and `_default` collection of this bucket.
 
-### Create the Search Index on Full Text Service
+### Create the Search Vector Index
 
-We need to create the Search Index on the Full Text Service in Couchbase. For this demo, you can import the following index using the instructions.
+We need to create the Search Vector Index in Couchbase. For this demo, you can import the following index using the instructions.
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
@@ -207,7 +210,7 @@ LOGIN_PASSWORD = "<password to access the streamlit app>"
 
 ### Running the Application
 
-After starting Couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
+After starting Couchbase server, adding search vector index and installing dependencies. Our Application is ready to run.
 
 In the projects root directory, run the following command
 
@@ -271,12 +274,12 @@ LangChain is a powerful library that simplifies the process of building applicat
 
 In the PDF Chat app, LangChain is used for several tasks:
 
-- **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) is used to load the PDF files and convert them into text documents.
-- **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
-- **Embedding generation**: LangChain integrates with [various embedding models](https://python.langchain.com/docs/modules/data_connection/text_embedding/), such as OpenAI's embeddings, to convert the text chunks into embeddings.
-- **Vector store integration**: LangChain provides a [_CouchbaseSearchVectorStore_](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
-- **Chains**: LangChain provides various [chains](https://python.langchain.com/docs/modules/chains/) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
-- **Streaming Output**: LangChain supports [streaming](https://python.langchain.com/docs/expression_language/streaming/), allowing the app to stream the generated answer to the client in real-time.
+- **Loading and processing PDF documents**: LangChain's [_PDFLoader_](https://docs.langchain.com/oss/python/integrations/document_loaders) is used to load the PDF files and convert them into text documents.
+- **Text splitting**: LangChain's [_RecursiveCharacterTextSplitter_](https://docs.langchain.com/oss/python/integrations/splitters) is used to split the text from the PDF documents into smaller chunks or passages, which are more suitable for embedding and retrieval.
+- **Embedding generation**: LangChain integrates with [various embedding models](https://docs.langchain.com/oss/python/integrations/text_embedding), such as OpenAI's embeddings, to convert the text chunks into embeddings.
+- **Vector store integration**: LangChain provides a [_CouchbaseSearchVectorStore_](https://couchbase-ecosystem.github.io/langchain-couchbase/langchain_couchbase.html#couchbase-search-vector-store) class that seamlessly integrates with Couchbase's Vector Search, allowing the app to store and search through the embeddings and their corresponding text.
+- **Chains**: LangChain provides various [chains](https://api.python.langchain.com/en/latest/langchain/chains.html) for different requirements. For using RAG concept, we require _Retrieval Chain_ for Retrieval and _Question Answering Chain_ for Generation part. We also add _Prompts_ that guide the language model's behavior and output. These all are combined to form a single chain which gives output from user questions.
+- **Streaming Output**: LangChain supports [streaming](https://docs.langchain.com/oss/python/langchain/streaming), allowing the app to stream the generated answer to the client in real-time.
 
 By combining Vector Search with Couchbase, RAG, and LangChain; the PDF Chat app can efficiently ingest PDF documents, convert their content into searchable embeddings, retrieve relevant information based on user queries and conversation context, and generate context-aware and informative responses using large language models. This approach provides users with a powerful and intuitive way to explore and interact with large PDF files.
 
@@ -390,7 +393,7 @@ with st.form("upload pdf"):
 
 This function ensures that the uploaded PDF file is properly handled, loaded, and prepared for storage or processing in the vector store. It first checks if file was actually uploaded. Then the uploaded file is saved to a temporary file in `binary` format.
 
-From the temporary file, PDF is loaded in [PyPDFLoader](https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf/) from the LangChain library which loads the PDF into [LangChain Document](https://python.langchain.com/docs/modules/data_connection/document_loaders/) Format
+From the temporary file, PDF is loaded in [PyPDFLoader](https://reference.langchain.com/python/langchain_core/document_loaders/) from the LangChain library which loads the PDF into [LangChain Document](https://reference.langchain.com/python/langchain_core/document_loaders/) Format
 
 ```python
 def save_to_vector_store(uploaded_file, vector_store):
@@ -407,7 +410,7 @@ def save_to_vector_store(uploaded_file, vector_store):
 
 ### Split Documents
 
-This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter/):
+This LangChain document array will contain huge individual files which defeats the purpose while retrieval as we want to send more relevant context to LLM. So we will split it into smaller chunks or passages using LangChain's [_RecursiveCharacterTextSplitter_](https://docs.langchain.com/oss/python/integrations/splitters):
 
 - chunk_size: 1500: This parameter specifies that each chunk should contain approximately 1500 characters.
 - chunk_overlap: 150: This parameter ensures that there is an overlap of 150 characters between consecutive chunks. This overlap helps maintain context and prevent important information from being split across chunk boundaries.
@@ -436,7 +439,7 @@ After uploading the PDF into Couchbase, we are now ready to utilize the power of
 
 ### LangChain Expression Language (LCEL)
 
-We will now utilize the power of LangChain Chains using the [LangChain Expression Language](https://python.langchain.com/docs/expression_language/) (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
+We will now utilize the power of LangChain Chains using the LangChain Expression Language (LCEL). LCEL makes it easy to build complex chains from basic components, and supports out of the box functionality such as streaming, parallelism, and logging.
 
 LCEL is a domain-specific language that provides several key advantages when working with LangChain:
 
@@ -450,7 +453,7 @@ We will be using LCEL chains in next few sections and will see how LCEL optimize
 
 ### Create Retriever Chain
 
-We also create the [retriever](https://python.langchain.com/docs/modules/data_connection/retrievers/vectorstore) of the couchbase vector store. This retriever will be used to retrieve the previously added documents which are similar to current query.
+We also create the [retriever](https://docs.langchain.com/oss/python/integrations/retrievers) of the couchbase vector store. This retriever will be used to retrieve the previously added documents which are similar to current query.
 
 ```python
 retriever = vector_store.as_retriever()
@@ -458,7 +461,7 @@ retriever = vector_store.as_retriever()
 
 ### Prompt Chain
 
-A prompt for a language model is a set of instructions or input provided by a user to guide the model's response, helping it understand the context and generate relevant and coherent language-based output, such as answering questions, completing sentences, or engaging in a conversation. We will use a template and create a [prompt chain](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/) using [_ChatPromptTemplate_](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/#chatprompttemplate) Class of LangChain
+A prompt for a language model is a set of instructions or input provided by a user to guide the model's response, helping it understand the context and generate relevant and coherent language-based output, such as answering questions, completing sentences, or engaging in a conversation. We will use a template and create a prompt chain using [_ChatPromptTemplate_](https://python.langchain.com/docs/modules/model_io/prompts/quick_start/#chatprompttemplate) Class of LangChain
 
 ```python
 template = """You are a helpful bot. If you cannot answer based on the context provided, respond with a generic answer. Answer the question as truthfully as possible using the context below:
@@ -525,7 +528,7 @@ This section creates an interactive chat interface where users can ask questions
    - Add the user's question to the chat history.
    - Create a placeholder for streaming the assistant's response.
    - Use the chain.stream(question) method to generate the response from the RAG chain.
-   - [Stream](https://python.langchain.com/docs/use_cases/question_answering/streaming/) the response in real-time by updating the placeholder with each response chunk.
+   - [Stream](https://docs.langchain.com/oss/python/langchain/streaming) the response in real-time by updating the placeholder with each response chunk.
    - Add the final assistant's response to the chat history.
 
 This setup allows users to have a conversational experience, asking questions related to the uploaded PDF, with responses generated by the RAG chain and streamed in real-time. Both the user's questions and the assistant's responses are displayed in the chat interface, along with their respective roles and avatars.
