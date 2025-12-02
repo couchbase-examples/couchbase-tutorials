@@ -125,6 +125,52 @@ The application will run on port 3000 of your local machine (http://localhost:30
 
 ![Swagger Documentation](swagger_documentation.png)
 
+## Health Check Endpoint
+
+The application provides a health check endpoint for monitoring application health and Couchbase connectivity:
+
+**Endpoint:** `GET /api/v1/health`
+
+**Response (200 OK):**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-12-02T10:00:00Z",
+  "services": {
+    "couchbase": {
+      "status": "up",
+      "message": "Connected to Couchbase bucket: travel-sample"
+    }
+  }
+}
+```
+
+**Response (503 Service Unavailable):**
+```json
+{
+  "status": "unhealthy",
+  "timestamp": "2025-12-02T10:00:00Z",
+  "services": {
+    "couchbase": {
+      "status": "down",
+      "message": "Connection error details"
+    }
+  }
+}
+```
+
+**Usage:**
+- Monitor application health in production environments
+- Use for container readiness/liveness probes in Kubernetes
+- Verify Couchbase connectivity before running integration tests
+- Include in uptime monitoring systems
+
+You can test the health check endpoint by navigating to `http://localhost:3000/api/v1/health` in your browser or using curl:
+
+```bash
+curl http://localhost:3000/api/v1/health
+```
+
 ## Data Model
 
 For this tutorial, we use three collections, `airport`, `airline` and `route` that contain sample airports, airlines and airline routes respectively. The route collection connects the airports and airlines as seen in the figure below. We use these connections in the quickstart to generate airports that are directly connected and airlines connecting to a destination airport. Note that these are just examples to highlight how you can use SQL++ queries to join the collections.
@@ -145,6 +191,8 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   │   │   └── v1
 │   │   │       ├── airlines_controller.rb
 │   │   │       ├── airports_controller.rb
+│   │   │       ├── health_controller.rb
+│   │   │       ├── hotels_controller.rb
 │   │   │       └── routes_controller.rb
 │   │   ├── application_controller.rb
 │   │   └── concerns
@@ -153,6 +201,7 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   │   ├── airport.rb
 │   │   ├── application_record.rb
 │   │   ├── concerns
+│   │   ├── hotel.rb
 │   │   └── route.rb
 │   └── views
 │       └── layouts
@@ -177,11 +226,17 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 ├── spec
 │   ├── rails_helper.rb
 │   ├── requests
-│   │   └── api
-│   │       └── v1
-│   │           ├── airlines_spec.rb
-│   │           ├── airports_spec.rb
-│   │           └── routes_spec.rb
+│   │   ├── api
+│   │   │   └── v1
+│   │   │       ├── airlines_spec.rb
+│   │   │       ├── airports_spec.rb
+│   │   │       ├── hotels_spec.rb
+│   │   │       └── routes_spec.rb
+│   │   └── swagger
+│   │       ├── airlines_spec.rb
+│   │       ├── airports_spec.rb
+│   │       ├── hotels_spec.rb
+│   │       └── routes_spec.rb
 │   ├── spec_helper.rb
 │   └── swagger_helper.rb
 ├── swagger
@@ -192,14 +247,13 @@ To begin this tutorial, clone the repo and open it up in the IDE of your choice.
 │   │   └── application_cable
 │   │       └── connection_test.rb
 │   ├── controllers
-│   ├── integration
-│   │   ├── airlines_spec.rb
-│   │   ├── airports_spec.rb
-│   │   └── routes_spec.rb
 │   ├── models
 ```
 
-The API endpoints are organized by entity (collection) with separate controller files in the `app/controllers/api/v1/` folder. Each entity has corresponding test files in the `test/integration/` and `spec/requests/api/v1/` folders.
+The API endpoints are organized by entity (collection) with separate controller files in the `app/controllers/api/v1/` folder. The application uses two types of tests:
+- **Integration tests** in `spec/requests/api/v1/` verify actual API functionality
+- **Swagger documentation specs** in `spec/requests/swagger/` generate OpenAPI documentation
+- The generated `swagger.yaml` file appears in `swagger/v1/`
 
 In `routes.rb`, we define the routes for the application including the API routes.
 
@@ -555,15 +609,133 @@ rescue StandardError => e
 end
 ```
 
+## Test Structure
+
+The application uses two types of tests with clear separation of concerns:
+
+### Integration Tests (`spec/requests/api/v1/`)
+
+Integration tests verify the actual functionality of API endpoints with real database operations.
+
+**Purpose:**
+- Verify actual API functionality and business logic
+- Test full CRUD operations (Create, Read, Update, Delete)
+- Validate error handling and edge cases
+- Ensure proper HTTP status codes and response formats
+
+**Characteristics:**
+- Use real Couchbase travel-sample data
+- Create and delete test documents
+- Include comprehensive assertions
+- Clean up created data in ensure blocks
+
+**Example integration test structure:**
+```ruby
+describe 'POST /api/v1/airlines/{id}' do
+  let(:airline_id) { 'airline_post' }
+  let(:airline_params) do
+    {
+      'name' => '40-Mile Air',
+      'iata' => 'Q5',
+      'icao' => 'MLA',
+      'callsign' => 'MILE-AIR',
+      'country' => 'United States'
+    }
+  end
+
+  it 'creates an airline' do
+    post "/api/v1/airlines/#{airline_id}", params: { airline: airline_params }
+
+    expect(response).to have_http_status(:created)
+    expect(response.content_type).to eq('application/json; charset=utf-8')
+    expect(JSON.parse(response.body)).to include(airline_params)
+  ensure
+    delete "/api/v1/airlines/#{airline_id}"  # Cleanup
+  end
+end
+```
+
+**Run command:**
+```bash
+bundle exec rspec spec/requests/api/v1/
+```
+
+### Swagger Documentation Tests (`spec/requests/swagger/`)
+
+Swagger documentation tests generate OpenAPI/Swagger documentation without performing actual database operations.
+
+**Purpose:**
+- Generate OpenAPI 3.0 specification
+- Document API contracts and schemas
+- Provide interactive API documentation
+- Define request/response examples
+
+**Characteristics:**
+- Documentation-only (no database mutations)
+- Use existing travel-sample data IDs for GET operations
+- Use placeholder IDs for other operations
+- Fast execution without setup/teardown
+- Reference integration tests in comments
+
+**Example swagger spec structure:**
+```ruby
+path '/api/v1/airlines/{id}' do
+  get 'Retrieves an airline by ID' do
+    tags 'Airlines'
+    produces 'application/json'
+    parameter name: :id, in: :path, type: :string
+
+    response '200', 'airline found' do
+      let(:id) { 'airline_10' }
+
+      run_test! do |response|
+        # Documentation-only - actual testing in spec/requests/api/v1/airlines_spec.rb
+      end
+    end
+
+    response '404', 'airline not found' do
+      let(:id) { 'invalid_id' }
+
+      run_test! do |response|
+        # Documentation-only - actual testing in spec/requests/api/v1/airlines_spec.rb
+      end
+    end
+  end
+end
+```
+
+**Run command:**
+```bash
+bundle exec rake rswag:specs:swaggerize
+```
+
+### Benefits of Test Separation
+
+This two-tier approach provides several advantages:
+
+1. **Fast Documentation Generation:** Swagger specs run quickly without database setup/teardown
+2. **Comprehensive Testing:** Integration tests thoroughly validate functionality
+3. **Clear Separation:** Documentation concerns are separate from functional testing
+4. **Maintainability:** Changes to API contracts don't require modifying integration tests
+5. **Safety:** Documentation generation doesn't risk modifying production data
+
 ## Running Tests
 
 Integration tests are implemented using [RSpec](https://rspec.info/) for all API endpoints. Tests verify operations by calling the API and confirming results in the database.
 
-To run all tests:
+To run the integration tests:
 
 ```bash
-rspec test/integration/
+bundle exec rspec spec/requests/api/v1/
 ```
+
+To generate the Swagger/OpenAPI documentation:
+
+```bash
+bundle exec rake rswag:specs:swaggerize
+```
+
+**Note:** The integration tests verify actual API functionality, while the swagger specs are documentation-only and generate the OpenAPI specification file.
 
 ## Appendix
 
@@ -572,11 +744,14 @@ rspec test/integration/
 If you would like to add another entity to the APIs, these are the steps to follow:
 
 - Create the new entity (collection) in the Couchbase bucket. You can create the collection using the [SDK](https://docs.couchbase.com/sdk-api/couchbase-ruby-client/Couchbase/Collection.html#create_collection-instance_method) or via the [Couchbase Server interface](https://docs.couchbase.com/server/current/manage/manage-settings/manage-collections.html).
-- Define the routes in a new file in the `api` folder similar to the existing routes like `airline_controller.rb`.
+- Define the routes in a new file in the `api` folder similar to the existing routes like `airlines_controller.rb`.
 - Add the new routes to the application in `routes.rb`.
-- Add the tests for the new routes in a new file in the `test/integration/api/v1` folder similar to `airlines_spec.rb`.
-- For Swagger documentation, add the configuration in the `spec/request/api/v1` folder similar to `airlines_spec.rb`.
-- Run the command `rake rswag:specs:swaggerize` to generate the Swagger documentation.
+- Add integration tests in a new file in the `spec/requests/api/v1/` folder (e.g., `spec/requests/api/v1/customers_spec.rb`) with comprehensive tests for all CRUD operations.
+- Add Swagger documentation in the `spec/requests/swagger/` folder (e.g., `spec/requests/swagger/customers_spec.rb`) as documentation-only specs:
+  - Use `run_test! do |response|` blocks with comments referencing integration tests
+  - Use existing travel-sample data IDs for GET operations
+  - Use placeholder IDs for create/update/delete operations
+- Run the command `bundle exec rake rswag:specs:swaggerize` to generate the Swagger documentation.
 - The new entity is now ready to be used in the API.
 
 ### Running Self Managed Couchbase Cluster
