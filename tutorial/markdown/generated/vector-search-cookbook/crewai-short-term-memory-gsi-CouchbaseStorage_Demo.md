@@ -12,6 +12,7 @@ filter: sdk
 technology:
   - vector search
 tags:
+  - GSI
   - Artificial Intelligence
   - LangChain
   - CrewAI
@@ -30,7 +31,7 @@ length: 45 Mins
 
 ## Overview
 
-This tutorial shows how to implement a custom memory backend for CrewAI agents using Couchbase's high-performance GSI (Global Secondary Index) vector search. CrewAI agents can retain and recall information across interactions, making them more contextually aware and effective. We'll demonstrate measurable performance improvements with GSI optimization.
+This tutorial shows how to implement a custom memory backend for CrewAI agents using Couchbase's high-performance GSI (Global Secondary Index) vector search. CrewAI agents can retain and recall information across interactions, making them more contextually aware and effective. We'll demonstrate measurable performance improvements with GSI optimization. Alternatively if you want to perform semantic search using the FTS, please take a look at [this.](https://developer.couchbase.com/tutorial-crewai-short-term-memory-couchbase-with-fts)
 
 **Key Features:**
 - Custom CrewAI memory storage with Couchbase GSI vector search
@@ -39,6 +40,8 @@ This tutorial shows how to implement a custom memory backend for CrewAI agents u
 - Performance benchmarks showing GSI benefits
 
 **Requirements:** Couchbase Server 8.0+ or Capella with Query Service enabled.
+
+You can access this notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/crewai-short-term-memory/gsi/CouchbaseStorage_Demo.ipynb).
 
 ## Prerequisites
 

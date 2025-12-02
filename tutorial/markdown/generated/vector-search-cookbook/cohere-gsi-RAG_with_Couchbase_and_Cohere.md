@@ -12,6 +12,7 @@ filter: sdk
 technology:
   - vector search
 tags:
+  - GSI
   - Artificial Intelligence
   - LangChain
   - Cohere
@@ -32,7 +33,7 @@ In this guide, we will walk you through building a powerful semantic search engi
 
 # How to run this tutorial
 
-This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/cohere/RAG_with_Couchbase_and_Cohere.ipynb).
+This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/cohere/gsi/RAG_with_Couchbase_and_Cohere.ipynb).
 
 You can either download the notebook file and run it on [Google Colab](https://colab.research.google.com/) or run it on your system by setting up the Python environment.
 

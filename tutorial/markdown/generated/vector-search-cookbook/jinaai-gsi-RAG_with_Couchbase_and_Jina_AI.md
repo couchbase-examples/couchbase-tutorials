@@ -12,6 +12,7 @@ filter: sdk
 technology:
   - vector search
 tags:
+  - GSI
   - Artificial Intelligence
   - LangChain
   - Jina AI
@@ -30,7 +31,7 @@ length: 60 Mins
 
 ## Overview
 
-This tutorial demonstrates building a high-performance semantic search engine using Couchbase's GSI (Global Secondary Index) vector search and Jina AI for embeddings and language models. We'll show measurable performance improvements with GSI optimization and implement a complete RAG (Retrieval-Augmented Generation) system.
+This tutorial demonstrates building a high-performance semantic search engine using Couchbase's GSI (Global Secondary Index) vector search and Jina AI for embeddings and language models. We'll show measurable performance improvements with GSI optimization and implement a complete RAG (Retrieval-Augmented Generation) system. Alternatively if you want to perform semantic search using the FTS, please take a look at [this.](https://developer.couchbase.com/tutorial-jina-couchbase-rag-with-fts)
 
 **Key Features:**
 - High-performance GSI vector search with BHIVE indexing
@@ -42,7 +43,7 @@ This tutorial demonstrates building a high-performance semantic search engine us
 
 ## How to Run This Tutorial
 
-This tutorial is available as a Jupyter Notebook that you can run interactively on [Google Colab](https://colab.research.google.com/) or locally by setting up the Python environment.
+This tutorial is available as a Jupyter Notebook that you can run interactively on [Google Colab](https://colab.research.google.com/) or locally by setting up the Python environment. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/jinaai/gsi/RAG_with_Couchbase_and_Jina_AI.ipynb).
 
 ## Prerequisites
 
