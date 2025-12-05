@@ -1,11 +1,12 @@
 ---
 # frontmatter
-path: "/tutorial-csharp-couchbase-vector-search-semantic-kernel"
+path: "/tutorial-csharp-semantic-kernel-vector-search-with-hyperscale-or-composite-vector-index"
+alt_paths: ["/tutorial-csharp-semantic-kernel-vector-search-with-hyperscale-vector-index", "/tutorial-csharp-semantic-kernel-vector-search-with-composite-vector-index"]
 # title and description do not need to be added to markdown, start with H2 (##)
-title: Build Vector Search with Couchbase .NET Semantic Kernel Connector and OpenAI
+title: Build Vector Search with Semantic Kernel, Couchbase Hyperscale and Composite Vector Index
 short_title: Vector Search with Semantic Kernel
 description:
-  - Build a semantic search application using Couchbase Vector Search with Semantic Kernel.
+  - Build a semantic search application using Semantic Kernel with Couchbase Hyperscale and Composite Vector Index.
   - Learn to use the Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel.
   - Discover how to generate embeddings with OpenAI and store them in Couchbase.
   - Perform vector similarity searches with filtering using SQL++ and ANN_DISTANCE.
@@ -19,19 +20,18 @@ tags:
   - Semantic Kernel
   - OpenAI
   - Artificial Intelligence
+  - Hyperscale Vector Index
+  - Composite Vector Index
 sdk_language:
   - csharp
 length: 30 Mins
 ---
 
-## Repository Links
-
-- **Connector Repository**: [couchbase-semantic-kernel](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel) - The official Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel
-- **This Example**: [CouchbaseVectorSearchDemo](https://github.com/couchbase-examples/couchbase-semantic-kernel-quickstart/tree/main/CouchbaseVectorSearchDemo) - Complete working example demonstrating vector search with Couchbase
-
 ## Introduction
 
 This demo showcases the **Semantic Kernel Couchbase connector** - a .NET library that bridges Microsoft's Semantic Kernel framework with Couchbase's vector search capabilities. The connector provides a seamless integration that allows developers to build AI-powered applications using familiar Semantic Kernel abstractions while leveraging Couchbase's vector indexing for high-performance semantic search.
+
+
 
 The connector supports three index types:
 - **Hyperscale Vector Index** - for pure vector search at scale ← *Used in this demo*
@@ -39,6 +39,11 @@ The connector supports three index types:
 - **Search Vector Index** (using Search service) - for hybrid text + semantic search
 
 This makes the connector ideal for RAG (Retrieval-Augmented Generation) applications, semantic search engines, hybrid search, and recommendation systems.
+
+### Repository Links
+
+- **Connector Repository**: [couchbase-semantic-kernel](https://github.com/Couchbase-Ecosystem/couchbase-semantic-kernel) - The official Couchbase .NET Vector Store Connector for Microsoft Semantic Kernel
+- **This Example**: [CouchbaseVectorSearchDemo](https://github.com/couchbase-examples/couchbase-semantic-kernel-quickstart/tree/main/CouchbaseVectorSearchDemo) - Complete working example demonstrating vector search with Couchbase
 
 ## Prerequisites
 
