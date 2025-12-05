@@ -31,8 +31,6 @@ length: 30 Mins
 
 This demo showcases the **Semantic Kernel Couchbase connector** - a .NET library that bridges Microsoft's Semantic Kernel framework with Couchbase's vector search capabilities. The connector provides a seamless integration that allows developers to build AI-powered applications using familiar Semantic Kernel abstractions while leveraging Couchbase's vector indexing for high-performance semantic search.
 
-
-
 The connector supports three index types:
 - **Hyperscale Vector Index** - for pure vector search at scale ← *Used in this demo*
 - **Composite Vector Index** - for vector search with heavy scalar filtering
