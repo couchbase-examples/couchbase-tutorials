@@ -13,8 +13,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - hyperscale vector index
-  - composite vector index
+  - vector search
   - kv
 tags:
   - Semantic Kernel
