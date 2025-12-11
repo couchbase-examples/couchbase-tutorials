@@ -65,8 +65,8 @@ Before starting this tutorial, ensure you have:
 2. **Running Cluster**: At least one operational cluster
 3. **Bucket Created**: One or more buckets with scopes and collections
 4. **Database User**: Users with appropriate permissions:
-   - **For Source**: Data Reader, Query Select roles
-   - **For Destination**: Data Reader, Data Writer, Query Manager roles
+   - **For Source**: Read access
+   - **For Destination**: Read/Write access
 5. **Network Access**: IP allowlist configured (we'll cover this in setup)
 
 ### Airbyte Setup
@@ -108,7 +108,7 @@ The Couchbase source connector allows Airbyte to extract data from your Couchbas
    - **Username**: `airbyte_source_user` (or your preferred name)
    - **Password**: Generate a secure password
    - **Bucket Access**: Select the source bucket
-   - **Permissions**: Assign "Data Reader" and "Query Select" roles
+   - **Access**: Select "Read" access for the bucket
 5. Save the credentials securely
 
 #### Configure Network Access
@@ -224,10 +224,10 @@ The Couchbase destination connector allows Airbyte to load data into your Couchb
    - **Username**: `airbyte_dest_user` (or your preferred name)
    - **Password**: Generate a secure password
    - **Bucket Access**: Select the destination bucket
-   - **Permissions**: Assign "Data Reader", "Data Writer", and "Query Manager" roles
+   - **Access**: Select "Read/Write" access for the bucket
 4. Save the credentials
 
-**Note**: Query Manager role is required for automatic collection creation. These Database Access credentials are used for cluster connections via the SDK, distinct from Capella API credentials which would be used for Capella management operations.
+**Note**: These Database Access credentials are used for cluster connections via the SDK, distinct from Capella API credentials which would be used for Capella management operations.
 
 #### Ensure Network Access
 
@@ -661,13 +661,8 @@ Set up alerts for high CPU, memory, and disk queue thresholds based on your clus
 
 **Permissions**:
 ```
-Source User:
-- Data Reader (read documents)
-- Query Select (run N1QL SELECT)
-
-Destination User:
-- Data Reader (verify existing data)
-- Data Writer (insert/update documents)
+Source User: Read access
+Destination User: Read/Write access
 ```
 
 #### 2. Network Security
@@ -796,7 +791,7 @@ Monitor sync health in the Airbyte UI:
 
 #### Destination Connector Issues
 
-**"Collection creation failed"**: Verify user has Data Writer and Query Manager permissions, and scope exists.
+**"Collection creation failed"**: Verify user has Read/Write access and scope exists.
 
 **"Batch write timeout"**: Scale up Capella cluster or reduce sync frequency.
 
