@@ -624,63 +624,6 @@ rescue StandardError => e
 end
 ```
 
-## Test Structure
-
-The application uses two types of tests with clear separation of concerns:
-
-### Integration Tests (`spec/requests/api/v1/`)
-
-Integration tests verify the actual functionality of the API endpoints:
-
-- **Purpose:** Verify actual API functionality with real database operations
-- **Coverage:** Full CRUD operations, error cases, input validation
-- **Database:** Uses real Couchbase travel-sample data
-- **Cleanup:** Tests clean up created data using `ensure` blocks
-- **Run:** `bundle exec rspec spec/requests/api/v1/`
-
-Example integration test structure:
-```ruby
-describe 'POST /api/v1/airlines/{id}' do
-  it 'creates an airline' do
-    post "/api/v1/airlines/airline_test", params: { airline: airline_params }
-
-    expect(response).to have_http_status(:created)
-    expect(JSON.parse(response.body)).to include(airline_params)
-  ensure
-    # Cleanup: delete the created airline
-    delete "/api/v1/airlines/airline_test"
-  end
-end
-```
-
-### Swagger Documentation Tests (`spec/requests/swagger/`)
-
-Swagger specs generate OpenAPI documentation without performing actual database operations:
-
-- **Purpose:** Generate OpenAPI/Swagger documentation for the API
-- **Coverage:** API contract definition and request/response schemas
-- **Database:** Uses existing travel-sample IDs, no data mutations
-- **Speed:** Fast execution with no setup/teardown overhead
-- **Run:** `bundle exec rake rswag:specs:swaggerize`
-
-Example swagger spec structure:
-```ruby
-response '201', 'airline created' do
-  let(:id) { 'airline_new_123' }
-  let(:airline) { { name: 'Test Airline', iata: 'TA', icao: 'TST', callsign: 'TEST', country: 'US' } }
-
-  run_test! do |response|
-    # Documentation-only - actual testing in spec/requests/api/v1/airlines_spec.rb
-  end
-end
-```
-
-**Benefits of this separation:**
-- Fast swagger documentation generation
-- Comprehensive integration testing without impacting documentation
-- Clear distinction between API contracts and functional testing
-- Easier maintenance with focused test purposes
-
 ## Running Tests
 
 We have defined integration tests using [RSpec](https://rspec.info/) for all the API end points. The integration tests use the same database configuration as the application. For the tests, we perform the operation using the API and confirm the results by checking the documents in the database. For example, to check the creation of the document by the API, we would call the API to create the document and then read the same document directly from the database and compare them. After the tests, the documents are cleaned up.
