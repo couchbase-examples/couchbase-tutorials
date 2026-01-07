@@ -21,8 +21,10 @@
   },
   "homepage": "https://github.com/couchbase-examples/couchbase-tutorials#readme",
   "dependencies": {
+    "cheerio": "^1.1.2",
     "fs": "^0.0.1-security",
     "js-yaml": "^4.1.0",
+    "marked": "^17.0.1",
     "path": "^0.12.7"
   },
   "devDependencies": {
