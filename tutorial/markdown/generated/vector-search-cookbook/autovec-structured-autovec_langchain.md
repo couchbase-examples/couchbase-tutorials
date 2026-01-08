@@ -59,25 +59,25 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 ## Selecting the Model 
 1. To select the model, you first need to navigate to the "<B>AI Services</B>" tab, then select "<B>Models</B>" and click on "<B>Deploy New Model</B>".
    
-   <img src="./img/importing_model.png" width="950px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/importing_model.png?raw=true" width="950px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 2. Enter the <B>model name</B>, and choose the model that you want to deploy. After selecting your model, choose the <B>model infrastructure</B> and <B>region</B> where the model will be deployed. **Ensure this matches your database cluster region.**
    
-   <img src="./img/deploying_model.png" width="800px" height="800px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/deploying_model.png?raw=true" width="800px" height="800px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 ## Access Control to the Model
 
 1. After deploying the model, go to the "<B>Models</B>" tab in the <B>AI Services</B> and click on "<B>Setup Access</B>".
 
-    <img src="./img/model_setup_access.png" width="1100px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/model_setup_access.png?raw=true" width="1100px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 2. Enter your <B>API key name</B>, <B>expiration time</B> and the <B>IP address</B> from which you will be accessing the model.
 
-    <img src="./img/model_api_key_form.png" width="1100px" height="600px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/model_api_key_form.png?raw=true" width="1100px" height="600px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 3. Download your API key
 
-   <img src="./img/download_api_key_details.png" width="1200px" height="800px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/download_api_key_details.png?raw=true" width="1200px" height="800px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 
 ## Deploying AutoVectorization Workflow
@@ -86,15 +86,15 @@ Now, we are at the step that will help us create the embeddings/vectors. To proc
 
 1. For deploying the autovectorization, you need to go to the <B>`AI Services`</B> tab, then click on <B>`Workflows`</B>, and then click on <B>`Create New Workflow`</B>.
 
-   <img src="./img/workflow.png" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/workflow.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
    
 2. Start your workflow deployment by giving it a name and selecting where your data will be provided to the auto-vectorization service. There are currently 3 options: <B>`pre-processed data (JSON format) from Capella`</B>, <B>`pre-processed data (JSON format) from external sources (S3 buckets)`</B> and <B>`unstructured data from external sources (S3 buckets)`</B>. For this tutorial, we will choose the first option, which is pre-processed data from Capella.
 
-   <img src="./img/start_workflow.png" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/start_workflow.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 3. Now, select the <B>`cluster`</B>, <B>`bucket`</B>, <B>`scope`</B> and <B>`collection`</B> from which you want to select the documents and get the data vectorized.
 
-   <img src="./img/vector_data_source.png" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/vector_data_source.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 4. <B>Field Mapping</B> will be used to tell the AutoVectorize service which data will be converted to embeddings.
 
@@ -105,20 +105,20 @@ Now, we are at the step that will help us create the embeddings/vectors. To proc
    - <B>`reviews`</B> - Customer reviews
    - <B> `state` </B> - State 
 
-   <img src="./img/vector_custom_field_mapping.png" width="900px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/vector_custom_field_mapping.png?raw=true" width="900px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
   
 5. After choosing the type of mapping, you can optionally create a vector index on the new vector embedding field. While vector search will work without an index using brute force, creating an index is **highly recommended** for better performance, especially with larger datasets.
 
-   <img src="./img/vector_index.png" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/vector_index.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 6. Below screenshot highlights the whole process which were mentioned above, and click next afterwards as shown below. We will be going ahead with the custom source field mappings for this tutorial.
 
-   <img src="./img/vector_index_page.png" width="900px" height="1200px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/vector_index_page.png?raw=true" width="900px" height="1200px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 
 7. Select the model which will be used to create the embeddings. There are two options to create the embeddings, `capella based` and `external model`.
    
-   <img src="./img/Select_embedding_model.png" width="500px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+   <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/Select_embedding_model.png?raw=true" width="500px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
    - For this tutorial, capella based embedding model is used as can be seen in the image above. API credentials can be uploaded using the file downloaded during model setup section or it can be entered manually as well.
    - Choices between private and insecure networking is available to choose.
@@ -128,18 +128,18 @@ Now, we are at the step that will help us create the embeddings/vectors. To proc
 
 8.  <B>`Workflow Summary`</B> will display all the necessary details of the workflow including `Data Source`, `Model Service` and `Billing Overview` as shown in image below.
 
-    <img src="./img/workflow_summary.png" width="500px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/workflow_summary.png?raw=true" width="500px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 
 
 9. <B>`Hurray! Workflow Deployed`</B> Now in the `workflow` tab we can see the workflow deployed and can check the status of our workflow run.
 
-      <img src="./img/workflow_deployed.png" width="1150px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+      <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/workflow_deployed.png?raw=true" width="1150px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 After this step, your vector embeddings for the selected fields should be ready and you can checkout in your document schema a vector field should be there as highlighter below in the image.
     
 
-<img src="./img/vector_field.png" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
+<img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/vector_field.png?raw=true" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
 In the next step, we will demonstrate how we can use the generated vectors to perform vector search.
 
@@ -325,6 +325,4 @@ The search results display the top 3 (or `k`) most semantically similar hotels b
 - The embedding combines `description`, `reviews` and `state` fields, so the search understands the hotel's overall quality based on multiple data points.
 
 > Your vector search pipeline is working if the returned documents feel meaningfully related to your natural language query—even when exact keywords do not match. Feel free to experiment with increasingly descriptive queries to observe the semantic power of the embeddings.
-
-
 
