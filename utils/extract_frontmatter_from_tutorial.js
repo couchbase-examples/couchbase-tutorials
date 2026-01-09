@@ -19,7 +19,7 @@ function extractFrontmatterFromContent(content) {
         return null;
     }
     
-    return yaml.safeLoad(match[1]);
+    return yaml.load(match[1]);
 }
 
 /**
