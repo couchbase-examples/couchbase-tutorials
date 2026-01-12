@@ -25,9 +25,6 @@ function validateH1MatchesFrontmatterTitle(fileContent, frontmatter, filePath) {
     
     // Check if the single H1 tag matches the expected title
     if (h1s[0] !== expectedTitle) {
-        if (filePath.includes("generated")) {
-            console.log(filePath, frontmatter, h1s);
-        }
         return {
             valid: false,
             h1s,
