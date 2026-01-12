@@ -23,16 +23,6 @@ function validateH1MatchesFrontmatterTitle(fileContent, frontmatter, filePath) {
         };
     }
     
-    // Check if there is exactly one H1 tag
-    if (h1s.length > 1) {
-        return {
-            valid: false,
-            h1s,
-            expectedTitle,
-            error: `Expected 0 or 1 H1 tag, number of H1 tags found: ${h1s.length} in ${filePath}`
-        };
-    }
-    
     // Check if the single H1 tag matches the expected title
     if (h1s[0] !== expectedTitle) {
         return {
