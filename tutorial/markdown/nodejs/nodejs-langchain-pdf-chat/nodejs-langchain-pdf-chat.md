@@ -11,9 +11,10 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
 tags:
+  - Search Vector Index
   - Next.js
   - LangChain
   - OpenAI
@@ -37,7 +38,7 @@ This tutorial will demonstrate how to -
 ## Prerequisites
 
 - [LTS Node.js Version](https://nodejs.org/en/download)
-- Couchbase Cluster (Self Managed or Capella) version 7.6+  with [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
+- Couchbase Cluster (Self Managed or Capella) version 7.6+  with [Search Service](https://docs.couchbase.com/server/current/search/search.html)
 
 > Note that this tutorial is designed to work with the latest Node SDK version (4.3.0+) for Couchbase. It will not work with the older Node.js versions.
 
@@ -72,7 +73,7 @@ Specifically, you need to do the following:
 
 #### Self Managed Setup
 
-- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance. Make sure to add the [Search Service](https://docs.couchbase.com/server/current/fts/fts-introduction.html)
+- Follow [Couchbase Installation Options](/tutorial-couchbase-installation-options) for installing the latest Couchbase Database Server Instance. Make sure to add the [Search Service](https://docs.couchbase.com/server/current/search/search.html)
 
 ### Create Bucket
 
@@ -193,7 +194,7 @@ DB_PASSWORD=<password_for_couchbase_cluster>
 DB_BUCKET=<name_of_bucket_to_store_documents>
 DB_SCOPE=<name_of_scope_to_store_documents>
 DB_COLLECTION=<name_of_collection_to_store_documents>
-INDEX_NAME=<name_of_fts_index_with_vector_support>
+INDEX_NAME=<name_of_search_index_with_vector_support>
 ```
 
 > [OpenAI](https://openai.com) API Key is required for usage in generating embedding and querying LLM
@@ -254,7 +255,7 @@ When a user asks a question or provides a prompt:
 - The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
 - The nearest neighbor embeddings represent the most semantically similar passages or sections from the PDF documents compared to the user's query.
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
-- Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
+- Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/search/create-search-index-rest-api.html) and [hybrid search](https://docs.couchbase.com/nodejs-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
 - The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
 - Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseSearchVectorStore](https://js.langchain.com/docs/integrations/vectorstores/couchbase#create-vector-store) class, abstracting away the complexities of vector similarity calculations.
 
