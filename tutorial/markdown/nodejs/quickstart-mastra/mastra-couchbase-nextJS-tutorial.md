@@ -21,7 +21,7 @@ sdk_language:
 length: 60 Mins
 ---
 
-# Building a RAG Application with Mastra and Couchbase: A Step-by-Step Tutorial
+# Building a RAG Application with Mastra and Couchbase
 
 This tutorial will guide you through building a complete Retrieval-Augmented Generation (RAG) application from scratch using [Next.js](https://nextjs.org/), the [Mastra AI framework](https://mastra.ai/), and [Couchbase](https://www.couchbase.com/) for [vector search](https://www.couchbase.com/products/vector-search/). We'll start by getting the pre-built application running and then break down how each part works so you can build it yourself.
 

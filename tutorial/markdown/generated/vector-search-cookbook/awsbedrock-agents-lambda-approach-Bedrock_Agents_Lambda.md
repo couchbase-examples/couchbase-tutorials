@@ -25,7 +25,7 @@ length: 90 Mins
 
 [View Source](https://github.com/couchbase-examples/vector-search-cookbook/tree/main/awsbedrock-agents/lambda-approach/Bedrock_Agents_Lambda.ipynb)
 
-# AWS Bedrock Agents with Couchbase Vector Search - Lambda Approach
+# Building Intelligent Agents with Amazon Bedrock (Lambda)
 
 This notebook demonstrates the Lambda approach for implementing AWS Bedrock agents with Couchbase Vector Search. In this approach, the agent invokes AWS Lambda functions to execute operations.
 
