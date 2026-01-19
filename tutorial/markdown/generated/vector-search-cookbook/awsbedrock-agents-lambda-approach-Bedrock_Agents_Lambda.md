@@ -406,7 +406,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
 
 ### 3.5 setup_search_index
 
-This function is responsible for creating or updating the Couchbase Search (FTS) index required for vector similarity search. Key operations include:
+This function is responsible for creating or updating the Couchbase Search index required for vector similarity search. Key operations include:
 - Loading the index definition from a specified JSON file (`index_definition_path`).
 - Dynamically updating the loaded index definition to use the correct `index_name` and `sourceName` (bucket name) provided as arguments. This allows for a template index definition file to be reused.
 - Using the `SearchIndexManager` (obtained from the cluster object) to `upsert_index`. Upserting means the index will be created if it doesn't exist, or updated if an index with the same name already exists. This makes the operation idempotent.
@@ -1612,7 +1612,7 @@ except Exception as e:
 
 This block focuses on preparing the Couchbase environment to serve as the vector store for the agent. It involves:
 1.  Calling `setup_collection()`: This helper function ensures that the target Couchbase bucket, scope, and collection (defined by `CB_BUCKET_NAME`, `SCOPE_NAME`, `COLLECTION_NAME`) are created if they don't already exist. It also ensures a primary index is present on the collection.
-2.  Calling `setup_search_index()`: This creates or updates the Couchbase Full-Text Search (FTS) index (named by `INDEX_NAME`) using the definition from `INDEX_JSON_PATH`. This search index is crucial for performing vector similarity searches.
+2.  Calling `setup_search_index()`: This creates or updates the Couchbase Search index (named by `INDEX_NAME`) using the definition from `INDEX_JSON_PATH`. This search index is crucial for performing vector similarity searches.
 3.  Calling `clear_collection()`: This function deletes all existing documents from the target collection. This step ensures that each run of the notebook starts with a clean slate, preventing data from previous experiments from interfering with the current one.
 If any part of this Couchbase setup fails, an exception is logged and re-raised to stop further execution.
 
