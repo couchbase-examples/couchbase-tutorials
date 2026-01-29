@@ -24,7 +24,7 @@ length: 30 Mins
 ---
 
 <!-- [abstract] -->
-# Quickstart for Couchbase in C++
+# Quickstart in Couchbase with C++
 
 In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents, how to write simple parametrized SQL++ queries and how to create, and perform simple and complex text search using Search indexes.
 

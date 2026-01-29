@@ -33,7 +33,7 @@ This tutorial will show how to create a connection between existing Grafana and 
 * [Couchbase documentation](https://docs.couchbase.com)
 * [Plugin sources](https://github.com/couchbaselabs/grafana-plugin)
 
-# Prerequisites
+## Prerequisites
 * Grafana >= 7.0
 * Couchbase >= 7.0
 * NodeJS >= 14

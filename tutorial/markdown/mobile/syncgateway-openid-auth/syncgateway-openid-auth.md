@@ -25,7 +25,7 @@ sdk_language:
 length: 30 Mins
 ---
 
-# Set up an OpenID Connect authentication for the Sync Gateway
+# OpenID Connect Authentication for Sync Gateway with Keycloak
 
 ## Introduction
 
