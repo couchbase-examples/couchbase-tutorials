@@ -1,7 +1,8 @@
 const fs = require('fs')
 const path = require('path')
-const yaml = require('js-yaml')
 const chalk = require('chalk')
+const { extractFrontmatterFromContent } = require('../utils/extract_frontmatter_from_tutorial')
+const validateH1MatchesFrontmatterTitle = require('./test-h1s-in-content')
 
 // accepted data field values
 const sdk_languages = ['nodejs', 'scala', 'python', 'swift', 'csharp', 'objective-c', 'android-java', 'any', 'java', 'kotlin', 'dart', 'golang', 'ruby', 'php', 'c++']
@@ -157,38 +158,33 @@ mdFiles = getAllFiles('./tutorial/markdown', mdFiles)
 mdFiles = getAllFiles('./learn/markdown', mdFiles)
 
 
-// parse data
-function ParseMarkdown(path) {
-
-  try {
-
-    let data = fs.readFileSync(path, { encoding: 'utf-8' })
-    extractedContent = data.match(/---\n([^]*?)\n---/) // for LF line break
-
-    if (!extractedContent)
-      extractedContent = data.match(/---\r\n([^]*?)\r\n---/) //for CRLF line break
-
-    if (!extractedContent)
-      throw `md file at: ${path} doesn't have data in the specified format`
-
-    const formattedData = yaml.load(extractedContent[1])
-
-    test(formattedData, path)
-
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      console.log('File not found : ', err)
-    } else {
-      throw err
-    }
-
-    process.exit(1)
-  }
-
-}
+let h1Failures = []
 
 mdFiles.forEach((e) => {
-  ParseMarkdown(e)
+  try {
+    const fileContent = fs.readFileSync(e, { encoding: 'utf-8' })    
+    const frontmatter = extractFrontmatterFromContent(fileContent)
+    
+    // test frontmatter
+    test(frontmatter, e)
+    
+    // test h1 matches frontmatter title
+    const h1Result = validateH1MatchesFrontmatterTitle(fileContent, frontmatter, e)
+    if (!h1Result.valid) {
+      h1Failures.push({ frontmatter, path: e, error: h1Result.error })
+    }
+  } catch (err) {
+    throw err
+  }
 })
 
-console.log(chalk.green('Test Completed:') + ' ' + chalk.bgGreen('SUCCESS') + '\n')
+// Print all H1 failures at the end
+if (h1Failures.length > 0) {
+  console.log(chalk.red(`\n=== H1 Title Mismatches (${h1Failures.length} files) ===\n`))
+  h1Failures.forEach((failure) => {
+    makeResponseFailure(failure.frontmatter, failure.path, failure.error, null, null)
+  })
+  process.exit(1)
+}
+
+console.log(chalk.green('Test Completed:') + ' ' + chalk.bgGreen(' SUCCESS ') + '\n')
