@@ -11,7 +11,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
 tags:
   - Streamlit
@@ -194,7 +194,7 @@ DB_PASSWORD = "<password_for_couchbase_cluster>"
 DB_BUCKET = "<name_of_bucket_to_store_documents>"
 DB_SCOPE = "<name_of_scope_to_store_documents>"
 DB_COLLECTION = "<name_of_collection_to_store_documents>"
-INDEX_NAME = "<name_of_fts_index_with_vector_support>"
+INDEX_NAME = "<name_of_search-vector_index_with_vector_support>"
 LOGIN_PASSWORD = "<password to access the streamlit app>"
 ```
 
