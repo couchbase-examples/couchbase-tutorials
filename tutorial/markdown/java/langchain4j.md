@@ -54,7 +54,7 @@ acquired from pretrained model embeddings in a dedicated storage, developers can
 AI-based applications.
 
 ## Couchbase Embedding Store 
-Couchbase langchain4j integration stores each embedding in a separate document and uses an search vector index to perform
+Couchbase langchain4j integration stores each embedding in a separate document and uses a search vector index to perform
 queries against stored vectors. Currently, it supports storing embeddings and their metadata, as well as removing 
 embeddings. Filtering selected by vector search embeddings by their metadata was not supported at the moment of writing 
 this tutorial. Please note that the embedding store integration is still under active development and the default 
