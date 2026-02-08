@@ -195,7 +195,7 @@ CB_PASSWORD=password_for_couchbase_cluster
 CB_BUCKET=name_of_bucket_to_store_documents
 CB_SCOPE=name_of_scope_to_store_documents
 CB_COLLECTION=name_of_collection_to_store_documents
-INDEX_NAME=name_of_fts_index_with_vector_support
+INDEX_NAME=name_of_search_vector_index_with_vector_support
 ```
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part. In the end, the connection string must look something like this: `couchbases://capella.connection.string.com`.
