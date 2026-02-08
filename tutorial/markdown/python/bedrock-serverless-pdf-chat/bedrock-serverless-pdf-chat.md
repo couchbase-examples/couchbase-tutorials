@@ -12,7 +12,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
   - eventing
 tags:
