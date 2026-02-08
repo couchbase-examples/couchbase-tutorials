@@ -54,7 +54,7 @@ acquired from pretrained model embeddings in a dedicated storage, developers can
 AI-based applications.
 
 ## Couchbase Embedding Store 
-Couchbase langchain4j integration stores each embedding in a separate document and uses an FTS vector index to perform
+Couchbase langchain4j integration stores each embedding in a separate document and uses an search vector index to perform
 queries against stored vectors. Currently, it supports storing embeddings and their metadata, as well as removing 
 embeddings. Filtering selected by vector search embeddings by their metadata was not supported at the moment of writing 
 this tutorial. Please note that the embedding store integration is still under active development and the default 
@@ -69,7 +69,7 @@ initialization:
 - name of the bucket in which embeddings should be stored
 - name of the scope in which embeddings should be stored
 - name of the collection in which embeddings should be stored
-- name of an FTS vector index to be used by the embedding store
+- name of an search vector index to be used by the embedding store
 - dimensionality (length) of vectors to be stored
 
 The following sample code illustrates how to initialize an embedding store that connects to a locally running Couchbase
@@ -109,10 +109,10 @@ CouchbaseEmbeddingStore embeddingStore = new CouchbaseEmbeddingStore.Builder(cou
 ```
 
 ### Vector Index
-The embedding store uses an FTS vector index in order to perform vector similarity lookups. If provided with a name for
+The embedding store uses an search vector index in order to perform vector similarity lookups. If provided with a name for
 vector index that does not exist on the cluster, the store will attempt to create a new index with default
 configuration based on the provided initialization settings. It is recommended to manually review the settings for the
-created index and adjust them according to specific use cases. More information about vector search and FTS index 
+created index and adjust them according to specific use cases. More information about vector search and search index 
 configuration can be found at [Couchbase Documentation](https://docs.couchbase.com/server/current/vector-search/vector-search.html).
 
 ### Embedding Documents
