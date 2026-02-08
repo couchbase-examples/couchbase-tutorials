@@ -109,7 +109,7 @@ CouchbaseEmbeddingStore embeddingStore = new CouchbaseEmbeddingStore.Builder(cou
 ```
 
 ### Vector Index
-The embedding store uses an search vector index in order to perform vector similarity lookups. If provided with a name for
+The embedding store uses a search vector index in order to perform vector similarity lookups. If provided with a name for
 vector index that does not exist on the cluster, the store will attempt to create a new index with default
 configuration based on the provided initialization settings. It is recommended to manually review the settings for the
 created index and adjust them according to specific use cases. More information about vector search and search vector index 
