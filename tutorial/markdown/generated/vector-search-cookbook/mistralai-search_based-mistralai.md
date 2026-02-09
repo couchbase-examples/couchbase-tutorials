@@ -34,7 +34,7 @@ Couchbase is a NoSQL distributed document database (JSON) with many of the best 
 
 Mistral AI is a research lab building the best open source models in the world. La Plateforme enables developers and enterprises to build new products and applications, powered by Mistral’s open source and commercial LLMs. 
 
-The [Mistral AI APIs](https://console.mistral.ai/) empower LLM applications via:
+The [Mistral AI APIs](https://console.mistral.ai/) empowers LLM applications by:
 
 - [Text generation](https://docs.mistral.ai/capabilities/completion/), enables streaming and provides the ability to display partial model results in real-time
 - [Code generation](https://docs.mistral.ai/capabilities/code_generation/), enpowers code generation tasks, including fill-in-the-middle and code completion
