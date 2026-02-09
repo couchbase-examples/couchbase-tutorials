@@ -740,7 +740,7 @@ Some of the features of smolagents are:
 
 - 🛠️ Tool-agnostic: you can use tools from LangChain, Anthropic's MCP, you can even use a Hub Space as a tool.
 
-# Building a RAG Agent using smolagents
+## Building a RAG Agent using smolagents
 
 smolagents allows users to define their own tools for the agent to use. These tools can be of two types:
 1. Tools defined as classes: These tools are subclassed from the `Tool` class and must override the `forward` method, which is called when the tool is used.

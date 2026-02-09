@@ -29,7 +29,7 @@ alt_paths:
 
 [View Source](https://github.com/couchbase-examples/vector-search-cookbook/tree/main/capella-model-services/langchain/query_based/RAG_with_Capella_Model_Services_and_LangChain.ipynb)
 
-# Introduction
+## Introduction
 In this guide, we will walk you through building a Retrieval Augmented Generation (RAG) application using Couchbase Capella as the database, [Mistral-7B-Instruct-v0.3](https://build.nvidia.com/mistralai/mistral-7b-instruct-v03/modelcard) model as the large language model provided by Capella Model Services. We will use the [NVIDIA NeMo Retriever Llama3.2](https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard) model for generating embeddings via Capella Model Services.
 
 This notebook demonstrates how to build a RAG system using:
