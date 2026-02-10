@@ -160,7 +160,7 @@ The application uses `CouchbaseSearchVectorStore`, which:
 - Maintains metadata alongside vector embeddings
 
 ### Vector Index
-The embedding store uses an Search Vector Index in order to perform vector similarity lookups. If provided with a name for
+The embedding store uses a Search Vector Index in order to perform vector similarity lookups. If provided with a name for
 vector index that does not exist on the cluster, the store will attempt to create a new index with default
 configuration based on the provided initialization settings. It is recommended to manually review the settings for the
 created index and adjust them according to specific use cases. More information about Search Vector Index 
