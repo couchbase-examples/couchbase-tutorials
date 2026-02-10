@@ -56,7 +56,7 @@ Spring AI brings several benefits to Java developers:
 
 
 ## Couchbase Embedding Store 
-Couchbase spring-ai integration stores each embedding in a separate document and uses an FTS vector index to perform
+Couchbase spring-ai integration stores each embedding in a separate document and uses an Search Vector Index to perform
 queries against stored vectors.
 - [Couchbase Integration with Spring AI Documentation](https://docs.spring.io/spring-ai/reference/api/vectordbs/couchbase.html)
 
@@ -225,6 +225,6 @@ In order to run this application, use the following command:
 ## Resources
 
 - [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/index.html)
-- [Couchbase Vector Search](https://docs.couchbase.com/server/current/fts/vector-search.html)
+- [Couchbase Vector Search](https://docs.couchbase.com/server/current/vector-search/vector-search.html)
 - [OpenAI Embeddings Documentation](https://platform.openai.com/docs/guides/embeddings)
 - [Spring Boot Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/)
