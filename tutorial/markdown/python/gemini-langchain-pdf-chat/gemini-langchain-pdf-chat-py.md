@@ -11,13 +11,14 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
 tags:
   - Streamlit
   - LangChain
   - Google Gemini
   - Artificial Intelligence
+  - Search Vector Index
 sdk_language:
   - python
 length: 45 Mins
@@ -81,9 +82,9 @@ Specifically, you need to do the following:
 - For the purpose of this tutorial, we will be using specific bucket, scope and collection. However, you may use any name of your choice but make sure to update names in all the steps.
 - Create a bucket named `pdf-chat`. We will use the `_default` scope and `_default` collection of this bucket.
 
-### Create the Search Index on Full Text Service
+### Create the Search Index on Search Service
 
-We need to create the Search Index on the Full Text Service in Couchbase. For this demo, you can import the following index using the instructions.
+We need to create the Search Index on the Search Service in Couchbase. For this demo, you can import the following index using the instructions.
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
@@ -194,7 +195,7 @@ DB_PASSWORD = "<password_for_couchbase_cluster>"
 DB_BUCKET = "<name_of_bucket_to_store_documents>"
 DB_SCOPE = "<name_of_scope_to_store_documents>"
 DB_COLLECTION = "<name_of_collection_to_store_documents>"
-INDEX_NAME = "<name_of_fts_index_with_vector_support>"
+INDEX_NAME = "<name_of_search-vector_index_with_vector_support>"
 LOGIN_PASSWORD = "<password to access the streamlit app>"
 ```
 
