@@ -158,7 +158,7 @@ If you examine the `EXPLAIN` plan for the query near the bottom you will see:
   "sort_terms": [
     {
       "desc": true,
-      "expr": "cover ((`customer`.`orderDate`))"
+      "expr": "cover ((`ecommerce`.`orderDate`))"
     }
   ]
 }
@@ -167,7 +167,7 @@ If you examine the `EXPLAIN` plan for the query near the bottom you will see:
 The Order operator takes all of the documents from the previous operator (IndexScan) and must loop over all of the records and sort them in-memory based on the `ORDER BY` statement. Data is pre-sorted `ASC` by default, with the previous index the `ASC` is implied but would look like:
 
 ```sql
-CREATE INDEX `idx_order_history2` ON `customer` (
+CREATE INDEX `idx_order_history2` ON `ecommerce` (
   userId ASC, orderDate ASC, orderTotal ASC, orderId ASC
 )
 WHERE docType = "order"
@@ -430,7 +430,7 @@ The query is still covered, as before but now the "Limit" and "Offset" are pushe
     "offset": "300",
     "sort_terms": [{
       "desc": true,
-      "expr": "cover ((`customer`.`productPrice`))"
+      "expr": "cover ((`ecommerce`.`productPrice`))"
     }]
   }, {
     "#operator": "Offset",
