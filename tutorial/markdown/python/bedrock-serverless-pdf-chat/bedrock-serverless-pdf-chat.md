@@ -12,7 +12,7 @@ description:
 content_type: tutorial
 filter: sdk
 technology:
-  - fts
+  - vector search
   - kv
   - eventing
 tags:
@@ -32,7 +32,7 @@ Welcome to this comprehensive guide on constructing an AI-enhanced Chat Applicat
 
 This tutorial will demonstrate how to -
 
-- Construct a [Couchbase Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search.
+- Construct a [Couchbase Vector Search Index](https://www.couchbase.com/products/vector-search/) for doing Vector Search.
 - Use AWS Serverless Architecture with services like API Gateway, SQS, Lambdas, Bedrock.
 - Chunk PDFs into Vectors with [LangChain](https://langchain.com/) and use [Couchbase Vector Store](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) to store the vectors into Couchbase.
 - Query large language models via the [RAG framework](https://aws.amazon.com/what-is/retrieval-augmented-generation/) for contextual insights. We will use [AWS Bedrock](https://aws.amazon.com/bedrock/) for generating Embeddings and LLM.
@@ -83,9 +83,9 @@ Specifically, you need to do the following:
 - For the purpose of this tutorial, we will be using specific bucket, scope and collection. However, you may use any name of your choice but make sure to update names in all the steps.
 - Create a bucket named `pdf-chat`. We will use the `shared` scope and `docs` collection of this bucket which needs to be created. [Read more](https://docs.couchbase.com/cloud/clusters/data-service/about-buckets-scopes-collections.html) 
 
-### Create the Search Index on Full Text Service
+### Create the Vector Search Index on Search Service
 
-We need to create the Search Index on the Full Text Service in Couchbase. For this demo, you can import the following index using the instructions.
+We need to create the Vector Search Index on the Search Service in Couchbase. For this demo, you can import the following index using the instructions.
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
@@ -99,7 +99,7 @@ We need to create the Search Index on the Full Text Service in Couchbase. For th
   - Copy the following Index definition in the Import screen.
   - Click on Create Index to create the index.
 
-You may also create a vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
+You may also create a vector search index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
 
 #### Index Definition
 
@@ -195,7 +195,7 @@ CB_PASSWORD=password_for_couchbase_cluster
 CB_BUCKET=name_of_bucket_to_store_documents
 CB_SCOPE=name_of_scope_to_store_documents
 CB_COLLECTION=name_of_collection_to_store_documents
-INDEX_NAME=name_of_fts_index_with_vector_support
+INDEX_NAME=name_of_search_vector_index
 ```
 
 > The [connection string](https://docs.couchbase.com/python-sdk/current/howtos/managing-connections.html#connection-strings) expects the `couchbases://` or `couchbase://` part. In the end, the connection string must look something like this: `couchbases://capella.connection.string.com`.
@@ -268,7 +268,7 @@ After saving, Deploy the created function. Now our setup process is completed wi
 
 ### Running the Application
 
-After starting Couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
+After starting Couchbase server, adding vector search index and installing dependencies. Our Application is ready to run.
 
 In the projects root directory, run the following command
 
@@ -314,12 +314,12 @@ The PDF Chat app uses LangChain to convert the text from the PDF documents into 
 When a user asks a question or provides a prompt:
 
 - The app converts the user's query into an embedding using LangChain's embedding models (e.g., OpenAI's embeddings).
-- [Couchbase's Vector Search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#vector-search) capability is utilized, which supports search indexes. A dedicated search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
-- The app queries this search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
+- [Couchbase's Vector Search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#vector-search) capability is utilized, which supports vector search indexes. A dedicated vector search index is created for the PDF embeddings and their corresponding text content, configured with the necessary indexing parameters (bucket, scope, collection, index name).
+- The app queries this vector search index using the user's query embedding. Couchbase's Vector Search calculates the [similarity](https://www.couchbase.com/blog/vector-similarity-search/) (e.g., dot product) between the query embedding and the indexed PDF embeddings, enabling fast retrieval of the nearest neighbor embeddings.
 - The nearest neighbor embeddings represent the most semantically similar passages or sections from the PDF documents compared to the user's query.
 - The app retrieves the text content associated with these nearest neighbor embeddings, providing the necessary context for generating a relevant response.
 - Couchbase's Vector Search supports advanced indexing techniques, such as [scoped indexes](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#scoped-vs-global-indexes), [dynamic indexing](https://docs.couchbase.com/server/current/fts/fts-creating-index-from-REST-dynamic.html) and [hybrid search](https://docs.couchbase.com/python-sdk/current/howtos/full-text-searching-with-sdk.html#combining-fts-and-vector-queries), allowing for efficient management, better scaling of the vector store and multiple types of search supported.
-- The search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
+- The vector search index facilitates fast and accurate retrieval, enabling the app to provide context-aware and relevant responses to the user's queries, even when the phrasing or terminology differs from the PDF content.
 - Couchbase's Vector Search integrates seamlessly with LangChain's [CouchbaseSearchVectorStore](https://python.langchain.com/docs/integrations/vectorstores/couchbase/) class, abstracting away the complexities of vector similarity calculations.
 
 ### LangChain
