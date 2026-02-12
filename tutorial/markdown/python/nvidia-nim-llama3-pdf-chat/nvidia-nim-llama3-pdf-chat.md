@@ -19,6 +19,7 @@ tags:
   - Nvidia NIM
   - LLama3
   - Artificial Intelligence
+  - Search Vector Index
 sdk_language:
   - python
 length: 45 Mins
@@ -89,9 +90,9 @@ Specifically, you need to do the following:
 - For the purpose of this tutorial, we will be using specific bucket, scope and collection. However, you may use any name of your choice but make sure to update names in all the steps.
 - Create a bucket named `pdf-chat`. We will use the `_default` scope and `_default` collection of this bucket.
 
-### Create the Search Index on Full Text Service
+### Create the Search Vector Index on Search Service
 
-We need to create the Search Index on the Full Text Service in Couchbase. For this demo, you can import the following index using the instructions.
+We need to create the Search Vector Index on the Search Service in Couchbase. For this demo, you can import the following index using the instructions.
 
 - [Couchbase Capella](https://docs.couchbase.com/cloud/search/import-search-index.html)
 
@@ -105,7 +106,7 @@ We need to create the Search Index on the Full Text Service in Couchbase. For th
   - Copy the following Index definition in the Import screen.
   - Click on Create Index to create the index.
 
-You may also create a vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
+You may also create a search vector index using Search UI on both [Couchbase Capella](https://docs.couchbase.com/cloud/vector-search/create-vector-search-index-ui.html) and [Couchbase Self Managed Server](https://docs.couchbase.com/server/current/vector-search/create-vector-search-index-ui.html).
 
 #### Index Definition
 
@@ -216,7 +217,7 @@ LOGIN_PASSWORD = "<password to access the streamlit app>"
 
 ### Running the Application
 
-After starting Couchbase server, adding vector index and installing dependencies. Our Application is ready to run.
+After starting Couchbase server, adding search vector index and installing dependencies. Our Application is ready to run.
 
 In the projects root directory, run the following command
 
