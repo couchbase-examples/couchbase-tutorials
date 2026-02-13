@@ -3,7 +3,7 @@
 path: "/tutorial-openai-llamaindex-rag-with-hyperscale-or-composite-vector-index"
 alt_paths: ["/tutorial-openai-llamaindex-rag-with-hyperscale-vector-index", "/tutorial-openai-llamaindex-rag-with-composite-vector-index"]
 title: "RAG with OpenAI, LlamaIndex and Couchbase Hyperscale and Composite Vector Index"
-short_title: "RAG with OpenAI, LlamaIndex and Couchbase Vector Indexes"
+short_title: "RAG with LlamaIndex, Couchbase Hyperscale and Composite Vector Index"
 description:
   - Learn how to build a semantic search engine using Couchbase's Hyperscale and Composite Vector Indexes.
   - This tutorial demonstrates how to integrate Couchbase's Hyperscale and Composite Vector Index search capabilities with OpenAI embeddings.
@@ -47,7 +47,13 @@ Couchbase offers two types of vector indexes for high-performance vector search:
 
 For more details, see the [Couchbase Vector Index documentation](https://docs.couchbase.com/cloud/vector-index/use-vector-indexes.html).
 
-Semantic search goes beyond simple keyword matching by understanding the context and meaning behind the words in a query, making it an essential tool for applications that require intelligent information retrieval. This tutorial will equip you with the knowledge to create a fully functional RAG system using OpenAI Services and LlamaIndex with Couchbase's Hyperscale and Composite Vector Indexes.
+Semantic search goes beyond simple keyword matching by understanding the context and meaning behind the words in a query, making it an essential tool for applications that require intelligent information retrieval. This tutorial will equip you with the knowledge to create a fully functional RAG system using OpenAI Services and LlamaIndex with Couchbase's Hyperscale and Composite Vector Indexes. Alternatively if you want to perform semantic search using the Search Vector Index, please take a look at [this.](https://developer.couchbase.com/tutorial-openai-llamaindex-rag-with-search-vector-index)
+
+## How to run this tutorial
+
+This tutorial is available as a Jupyter Notebook (`.ipynb` file) that you can run interactively. You can access the original notebook [here](https://github.com/couchbase-examples/vector-search-cookbook/blob/main/llamaindex/query_based/RAG_with_Couchbase_Capella_and_OpenAI.ipynb).
+
+You can either download the notebook file and run it on [Google Colab](https://colab.research.google.com/) or run it on your system by setting up the Python environment.
 
 ## Before you start
 
@@ -91,8 +97,14 @@ To build our RAG system, we need a set of libraries. The libraries we install ha
 
 ```python
 # Install required packages
-%pip install datasets llama-index-vector-stores-couchbase==0.6.0 llama-index-embeddings-openai==0.5.1 llama-index-llms-openai==0.5.6 llama-index==0.14.2
+%pip install --no-user --quiet datasets==3.6.0 llama-index==0.14.13 llama-index-vector-stores-couchbase==0.6.0 llama-index-embeddings-openai==0.5.1 llama-index-llms-openai==0.6.18 python-dotenv==1.2.1
 ```
+
+    
+    [notice] A new release of pip is available: 25.0.1 -> 26.0.1
+    [notice] To update, run: pip install --upgrade pip
+    Note: you may need to restart the kernel to use updated packages.
+
 
 ## Importing Necessary Libraries
 The script starts by importing a series of libraries required for various tasks, including handling JSON, logging, time tracking, Couchbase connections, embedding generation, and dataset loading.
@@ -101,28 +113,36 @@ The script starts by importing a series of libraries required for various tasks,
 
 ```python
 import getpass
-import base64
+import hashlib
+import json
 import logging
+import os
 import sys
 import time
 from datetime import timedelta
 
+from dotenv import load_dotenv
+
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import CouchbaseException
+from couchbase.management.buckets import CreateBucketSettings
 from couchbase.options import ClusterOptions, KnownConfigProfiles, QueryOptions
 
 from datasets import load_dataset
 
-from llama_index.core import Settings, Document
+from llama_index.core import Settings, Document, VectorStoreIndex
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SentenceSplitter
-from llama_index.vector_stores.couchbase import CouchbaseQueryVectorStore
+from llama_index.core.schema import MetadataMode
+from llama_index.vector_stores.couchbase import CouchbaseQueryVectorStore, QueryVectorSearchSimilarity, QueryVectorSearchType
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
-from llama_index.vector_stores.couchbase import CouchbaseQueryVectorStore, QueryVectorSearchSimilarity, QueryVectorSearchType
-
 ```
+
+    /Users/kaustavghosh/Desktop/vector-search-cookbook/.venv/lib/python3.12/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+
 
 ## Loading Sensitive Information
 In this section, we prompt the user to input essential configuration settings needed. These settings include sensitive information like database credentials, collection names, and API keys. Instead of hardcoding these details into the script, we request the user to provide them at runtime, ensuring flexibility and security.
@@ -135,19 +155,22 @@ The script also validates that all required inputs are provided, raising an erro
 
 
 ```python
-CB_CONNECTION_STRING = input("Couchbase Cluster URL (default: localhost): ") or "localhost"
-CB_USERNAME = input("Couchbase Username (default: admin): ") or "admin"
-CB_PASSWORD = input("Couchbase password (default: Password@12345): ") or "Password@12345"
-CB_BUCKET_NAME = input("Couchbase Bucket: ")
-SCOPE_NAME = input("Couchbase Scope: ")
-COLLECTION_NAME = input("Couchbase Collection: ")
-INDEX_NAME = input("Vector Search Index: ")
-OPENAI_API_KEY = input("OpenAI API Key: ")
+load_dotenv()
 
-# Check if the variables are correctly loaded
-if not all([CB_CONNECTION_STRING, CB_USERNAME, CB_PASSWORD, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME, INDEX_NAME, OPENAI_API_KEY]):
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') or getpass.getpass('Enter your OpenAI API key: ')
+CB_HOST = os.getenv('CB_HOST', 'couchbase://localhost') or input('Enter Couchbase host (default: couchbase://localhost): ') or 'couchbase://localhost'
+CB_USERNAME = os.getenv('CB_USERNAME', 'Administrator') or input('Enter Couchbase username (default: Administrator): ') or 'Administrator'
+CB_PASSWORD = os.getenv('CB_PASSWORD', 'password') or getpass.getpass('Enter Couchbase password (default: password): ') or 'password'
+CB_BUCKET_NAME = os.getenv('CB_BUCKET_NAME', 'vector-search-testing') or input('Enter Couchbase bucket name: ')
+SCOPE_NAME = os.getenv('SCOPE_NAME', 'shared') or input('Enter scope name: ')
+COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'llamaindex') or input('Enter collection name: ')
+INDEX_NAME = os.getenv('INDEX_NAME', 'vector_search_llamaindex') or input('Enter index name: ')
+
+if not all([OPENAI_API_KEY, CB_HOST, CB_USERNAME, CB_PASSWORD, CB_BUCKET_NAME, SCOPE_NAME, COLLECTION_NAME, INDEX_NAME]):
     raise ValueError("All configuration variables must be provided.")
 
+if 'OPENAI_API_KEY' not in os.environ:
+    os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
 ```
 
 ## Setting Up Logging
@@ -162,6 +185,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
 ```
 
 ## Connecting to Couchbase Capella
@@ -176,7 +200,7 @@ try:
     options = ClusterOptions(auth)
     options.apply_profile(KnownConfigProfiles.WanDevelopment)
     # Connect to the cluster
-    cluster = Cluster(CB_CONNECTION_STRING, options)
+    cluster = Cluster(CB_HOST, options)
     
     # Wait for the cluster to be ready
     cluster.wait_until_ready(timedelta(seconds=5))
@@ -186,14 +210,14 @@ except CouchbaseException as e:
     raise RuntimeError(f"Failed to connect to Couchbase: {str(e)}")
 ```
 
+    2026-02-12 09:57:53,948 - INFO - Successfully connected to the Couchbase cluster
+
+
 ## Setting Up the Bucket, Scope, and Collection
 Before we can store our data, we need to ensure that the appropriate bucket, scope, and collection exist in our Couchbase cluster. The code below checks if these components exist and creates them if they don't, providing a foundation for storing our vector embeddings and documents.
 
 
 ```python
-from couchbase.management.buckets import CreateBucketSettings
-import json
-
 # Create bucket if it does not exist
 bucket_manager = cluster.buckets()
 try:
@@ -230,15 +254,19 @@ else:
 scope = cluster.bucket(CB_BUCKET_NAME).scope(SCOPE_NAME)
 ```
 
-## Setting Up Hyperscale and Composite Vector Search
-In this section, we'll set up the Couchbase vector store using Hyperscale and Composite Vector Indexes for high-performance vector search. These vector indexes provide optimized performance for pure vector similarity operations and can scale to billions of vectors with low memory footprint.
+    Bucket 'vector-search-testing' already exists.
+    Scope 'shared' already exists.
+    Collection 'llamaindex' already exists in scope 'shared'.
 
-Couchbase supports two main vector index types:
+
+## Setting Up Query-Based Vector Search
+In this section, we'll set up the Couchbase vector store using Couchbase Hyperscale and Composite Vector Index for high-performance vector search. Unlike Search Vector Index based vector search, Hyperscale and Composite Vector Index search provides optimized performance for pure vector similarity operations and can scale to billions of vectors with low memory footprint.
+
+Hyperscale and Composite Vector Index search supports two main index types:
 - **Hyperscale Vector Indexes**: Best for pure vector searches with high performance and concurrent operations
 - **Composite Vector Indexes**: Best for filtered vector searches combining vector similarity with scalar filtering
 
-For this tutorial, we'll use the Query vector store which supports both index types.
-
+For this tutorial, we'll use the Query vector store.
 
 ## Load the BBC News Dataset
 To build a RAG engine, we need data to search through. We use the [BBC Realtime News dataset](https://huggingface.co/datasets/RealTimeData/bbc_news_alltime), a dataset with up-to-date BBC news articles grouped by month. This dataset contains articles that were created after the LLM was trained. It will showcase the use of RAG to augment the LLM. 
@@ -252,8 +280,15 @@ try:
     news_dataset = load_dataset('RealTimeData/bbc_news_alltime', '2024-12', split="train")
     print(f"Loaded the BBC News dataset with {len(news_dataset)} rows")
 except Exception as e:
-    raise ValueError(f"Error loading TREC dataset: {str(e)}")
+    raise ValueError(f"Error loading BBC News dataset: {str(e)}")
 ```
+
+    Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+
+    2026-02-12 09:57:54,440 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+    Loaded the BBC News dataset with 2687 rows
+
 
 ## Preview the Data
 
@@ -265,29 +300,38 @@ print("\nFirst two examples:")
 print(news_dataset[:2])
 ```
 
+    Dataset columns: ['title', 'published_date', 'authors', 'description', 'section', 'content', 'link', 'top_image']
+    
+    First two examples:
+    {'title': ["Pakistan protest: Bushra Bibi's march for Imran Khan disappeared - BBC News", 'Lockdown DIY linked to Walleys Quarry gases - BBC News'], 'published_date': ['2024-12-01', '2024-12-01'], 'authors': ['https://www.facebook.com/bbcnews', 'https://www.facebook.com/bbcnews'], 'description': ["Imran Khan's third wife guided protesters to the heart of the capital - and then disappeared.", 'An academic says an increase in plasterboard sent to landfill could be behind a spike in smells.'], 'section': ['Asia', 'Stoke & Staffordshire'], 'content': ['Bushra Bibi led a protest to free Imran Khan - what happened next is a mystery\n\nImran Khan\'s wife, Bushra Bibi, encouraged protesters into the heart of Pakistan\'s capital, Islamabad\n\nA charred lorry, empty tear gas shells and posters of former Pakistan Prime Minister Imran Khan - it was all that remained of a massive protest led by Khan’s wife, Bushra Bibi, that had sent the entire capital into lockdown. Just a day earlier, faith healer Bibi - wrapped in a white shawl, her face covered by a white veil - stood atop a shipping container on the edge of the city as thousands of her husband’s devoted followers waved flags and chanted slogans beneath her. It was the latest protest to flare since Khan, the 72-year-old cricketing icon-turned-politician, was jailed more than a year ago after falling foul of the country\'s influential military which helped catapult him to power. “My children and my brothers! You have to stand with me,” Bibi cried on Tuesday afternoon, her voice cutting through the deafening roar of the crowd. “But even if you don’t,” she continued, “I will still stand firm. “This is not just about my husband. It is about this country and its leader.” It was, noted some watchers of Pakistani politics, her political debut. But as the sun rose on Wednesday morning, there was no sign of Bibi, nor the thousands of protesters who had marched through the country to the heart of the capital, demanding the release of their jailed leader. While other PMs have fallen out with Pakistan\'s military in the past, Khan\'s refusal to stay quiet behind bars is presenting an extraordinary challenge - escalating the standoff and leaving the country deeply divided. Exactly what happened to the so-called “final march”, and Bibi, when the city went dark is still unclear. All eyewitnesses like Samia* can say for certain is that the lights went out suddenly, plunging D Chowk, the square where they had gathered, into blackness.\n\nWithin a day of arriving, the protesters had scattered - leaving behind Bibi\'s burnt-out vehicle\n\nAs loud screams and clouds of tear gas blanketed the square, Samia describes holding her husband on the pavement, bloodied from a gun shot to his shoulder. "Everyone was running for their lives," she later told BBC Urdu from a hospital in Islamabad, adding it was "like doomsday or a war". "His blood was on my hands and the screams were unending.” But how did the tide turn so suddenly and decisively? Just hours earlier, protesters finally reached D Chowk late afternoon on Tuesday. They had overcome days of tear gas shelling and a maze of barricaded roads to get to the city centre. Many of them were supporters and workers of the Pakistan Tehreek-e-Insaf (PTI), the party led by Khan. He had called for the march from his jail cell, where he has been for more than a year on charges he says are politically motivated. Now Bibi - his third wife, a woman who had been largely shrouded in mystery and out of public view since their unexpected wedding in 2018 - was leading the charge. “We won’t go back until we have Khan with us,” she declared as the march reached D Chowk, deep in the heart of Islamabad’s government district.\n\nThousands had marched for days to reach Islamabad, demanding former Prime Minister Imran Khan be released from jail\n\nInsiders say even the choice of destination - a place where her husband had once led a successful sit in - was Bibi’s, made in the face of other party leader’s opposition, and appeals from the government to choose another gathering point. Her being at the forefront may have come as a surprise. Bibi, only recently released from prison herself, is often described as private and apolitical. Little is known about her early life, apart from the fact she was a spiritual guide long before she met Khan. Her teachings, rooted in Sufi traditions, attracted many followers - including Khan himself. Was she making her move into politics - or was her sudden appearance in the thick of it a tactical move to keep Imran Khan’s party afloat while he remains behind bars? For critics, it was a move that clashed with Imran Khan’s oft-stated opposition to dynastic politics. There wasn’t long to mull the possibilities. After the lights went out, witnesses say that police started firing fresh rounds of tear gas at around 21:30 local time (16:30 GMT). The crackdown was in full swing just over an hour later. At some point, amid the chaos, Bushra Bibi left. Videos on social media appeared to show her switching cars and leaving the scene. The BBC couldn’t verify the footage. By the time the dust settled, her container had already been set on fire by unknown individuals. By 01:00 authorities said all the protesters had fled.\n\nSecurity was tight in the city, and as night fell, lights were switched off - leaving many in the dark as to what exactly happened next\n\nEyewitnesses have described scenes of chaos, with tear gas fired and police rounding up protesters. One, Amin Khan, said from behind an oxygen mask that he joined the march knowing that, "either I will bring back Imran Khan or I will be shot". The authorities have have denied firing at the protesters. They also said some of the protesters were carrying firearms. The BBC has seen hospital records recording patients with gunshot injuries. However, government spokesperson Attaullah Tarar told the BBC that hospitals had denied receiving or treating gunshot wound victims. He added that "all security personnel deployed on the ground have been forbidden" from having live ammunition during protests. But one doctor told BBC Urdu that he had never done so many surgeries for gunshot wounds in a single night. "Some of the injured came in such critical condition that we had to start surgery right away instead of waiting for anaesthesia," he said. While there has been no official toll released, the BBC has confirmed with local hospitals that at least five people have died. Police say at least 500 protesters were arrested that night and are being held in police stations. The PTI claims some people are missing. And one person in particular hasn’t been seen in days: Bushra Bibi.\n\nThe next morning, the protesters were gone - leaving behind just wrecked cars and smashed glass\n\nOthers defended her. “It wasn’t her fault,” insisted another. “She was forced to leave by the party leaders.” Political commentators have been more scathing. “Her exit damaged her political career before it even started,” said Mehmal Sarfraz, a journalist and analyst. But was that even what she wanted? Khan has previously dismissed any thought his wife might have her own political ambitions - “she only conveys my messages,” he said in a statement attributed to him on his X account.\n\nImran Khan and Bushra Bibi, pictured here arriving at court in May 2023, married in 2018\n\nSpeaking to BBC Urdu, analyst Imtiaz Gul calls her participation “an extraordinary step in extraordinary circumstances". Gul believes Bushra Bibi’s role today is only about “keeping the party and its workers active during Imran Khan’s absence”. It is a feeling echoed by some PTI members, who believe she is “stepping in only because Khan trusts her deeply”. Insiders, though, had often whispered that she was pulling the strings behind the scenes - advising her husband on political appointments and guiding high-stakes decisions during his tenure. A more direct intervention came for the first time earlier this month, when she urged a meeting of PTI leaders to back Khan’s call for a rally. Pakistan’s defence minister Khawaja Asif accused her of “opportunism”, claiming she sees “a future for herself as a political leader”. But Asma Faiz, an associate professor of political science at Lahore University of Management Sciences, suspects the PTI’s leadership may have simply underestimated Bibi. “It was assumed that there was an understanding that she is a non-political person, hence she will not be a threat,” she told the AFP news agency. “However, the events of the last few days have shown a different side of Bushra Bibi.” But it probably doesn’t matter what analysts and politicians think. Many PTI supporters still see her as their connection to Imran Khan. It was clear her presence was enough to electrify the base. “She is the one who truly wants to get him out,” says Asim Ali, a resident of Islamabad. “I trust her. Absolutely!”', 'Walleys Quarry was ordered not to accept any new waste as of Friday\n\nA chemist and former senior lecturer in environmental sustainability has said powerful odours from a controversial landfill site may be linked to people doing more DIY during the Covid-19 pandemic. Complaints about Walleys Quarry in Silverdale, Staffordshire – which was ordered to close as of Friday – increased significantly during and after coronavirus lockdowns. Issuing the closure notice, the Environment Agency described management of the site as poor, adding it had exhausted all other enforcement tactics at premises where gases had been noxious and periodically above emission level guidelines - which some campaigners linked to ill health locally. Dr Sharon George, who used to teach at Keele University, said she had been to the site with students and found it to be clean and well-managed, and suggested an increase in plasterboard heading to landfills in 2020 could be behind a spike in stenches.\n\n“One of the materials that is particularly bad for producing odours and awful emissions is plasterboard," she said. “That’s one of the theories behind why Walleys Quarry got worse at that time.” She said the landfill was in a low-lying area, and that some of the gases that came from the site were quite heavy. “They react with water in the atmosphere, so some of the gases you smell can be quite awful and not very good for our health. “It’s why, on some days when it’s colder and muggy and a bit misty, you can smell it more.” Dr George added: “With any landfill, you’re putting things into the ground – and when you put things into the ground, if they can they will start to rot. When they start to rot they’re going to give off gases.” She believed Walleys Quarry’s proximity to people’s homes was another major factor in the amount of complaints that arose from its operation. “If you’ve got a gas that people can smell, they’re going to report it much more than perhaps a pollutant that might go unnoticed.”\n\nRebecca Currie said she did not think the site would ever be closed\n\nLocal resident and campaigner Rebecca Currie said the closure notice served to Walleys Quarry was "absolutely amazing". Her son Matthew has had breathing difficulties after being born prematurely with chronic lung disease, and Ms Currie says the site has made his symptoms worse. “I never thought this day was going to happen,” she explained. “We fought and fought for years.” She told BBC Midlands Today: “Our community have suffered. We\'ve got kids who are really poorly, people have moved homes.”\n\nComplaints about Walleys Quarry to Newcastle-under-Lyme Borough Council exceeded 700 in November, the highest amount since 2021 according to council leader Simon Tagg. The Environment Agency (EA), which is responsible for regulating landfill sites, said it had concluded further operation at the site could result in "significant long-term pollution". A spokesperson for Walley\'s Quarry Ltd said the firm rejected the EA\'s accusations of poor management, and would be challenging the closure notice. Dr George said she believed the EA was likely to be erring on the side of caution and public safety, adding safety standards were strict. She said a lack of landfill space in the country overall was one of the broader issues that needed addressing. “As people, we just keep using stuff and then have nowhere to put it, and then when we end up putting it in places like Walleys Quarry that is next to houses, I think that’s where the problems are.”\n\nTell us which stories we should cover in Staffordshire'], 'link': ['http://www.bbc.co.uk/news/articles/cvg02lvj1e7o', 'http://www.bbc.co.uk/news/articles/c5yg1v16nkpo'], 'top_image': ['https://ichef.bbci.co.uk/ace/standard/3840/cpsprodpb/9975/live/b22229e0-ad5a-11ef-83bc-1153ed943d1c.jpg', 'https://ichef.bbci.co.uk/ace/standard/3840/cpsprodpb/0896/live/55209f80-adb2-11ef-8f6c-f1a86bb055ec.jpg']}
+
+
 ## Preparing the Data for RAG
 
 We need to extract the context passages from the dataset to use as our knowledge base for the RAG system.
 
 
 ```python
-import hashlib
+try:
+    news_articles = news_dataset
+    unique_articles = {}
 
-news_articles = news_dataset
-unique_articles = {}
+    for article in news_articles:
+        content = article.get("content")
+        if content:
+            content_hash = hashlib.md5(content.encode()).hexdigest()
+            if content_hash not in unique_articles:
+                unique_articles[content_hash] = article
 
-for article in news_articles:
-    content = article.get("content")
-    if content:
-        content_hash = hashlib.md5(content.encode()).hexdigest()  # Generate hash of content
-        if content_hash not in unique_articles:
-            unique_articles[content_hash] = article  # Store full article
+    unique_news_articles = list(unique_articles.values())
 
-unique_news_articles = list(unique_articles.values())  # Convert back to list
-
-print(f"We have {len(unique_news_articles)} unique articles in our database.")
-
+    logging.info(f"We have {len(unique_news_articles)} unique articles in our database.")
+except Exception as e:
+    raise RuntimeError(f"Failed to prepare data: {str(e)}")
 ```
+
+    2026-02-12 09:57:57,723 - INFO - We have 1749 unique articles in our database.
+
 
 ## Creating Embeddings using OpenAI
 Embeddings are numerical representations of text that capture semantic meaning. Unlike keyword-based search, embeddings enable semantic search to understand context and retrieve documents that are conceptually similar even without exact keyword matches. We'll use OpenAI's `text-embedding-3-large` model to create high-quality embeddings with 3,072 dimensions. This model transforms our text data into vector representations that can be efficiently searched, with a batch size of 30 for optimal processing.
@@ -310,17 +354,82 @@ except Exception as e:
     raise ValueError(f"Error creating embedding model: {str(e)}")
 ```
 
+    Successfully created embedding model
+
+
 ## Testing the Embeddings Model
 We can test the embeddings model by generating an embedding for a string
 
 
 ```python
-test_embedding = embed_model.get_text_embedding("this is a test sentence")
-print(f"Embedding dimension: {len(test_embedding)}")
+try:
+    test_embedding = embed_model.get_text_embedding("this is a test sentence")
+    logging.info(f"Embedding dimension: {len(test_embedding)}")
+except Exception as e:
+    raise RuntimeError(f"Failed to generate test embedding: {str(e)}")
 ```
 
-## Setting Up the Couchbase Vector Store
-The vector store is set up to store the documents from the dataset using Couchbase's Hyperscale and Composite Vector Index capabilities. This vector store is optimized for high-performance vector similarity search operations and can scale to billions of vectors.
+    2026-02-12 09:58:00,654 - INFO - Embedding dimension: 3072
+
+
+## Understanding Hyperscale and Composite Vector Search
+
+### Optimizing Vector Search with Hyperscale and Composite Vector Index
+
+With Couchbase 8.0+, you can leverage the power of query-based vector search, which offers significant performance improvements over Search Vector Index approaches for vector-first workloads. Hyperscale and Composite Vector Index search provides high-performance vector similarity search with advanced filtering capabilities and is designed to scale to billions of vectors.
+
+#### Hyperscale/Composite vs Search Vector Index: Choosing the Right Approach
+
+| Feature               | Hyperscale/Composite Vector Index                                               | Search Vector Index                         |
+| --------------------- | --------------------------------------------------------------- | ----------------------------------------- |
+| **Best For**          | Vector-first workloads, complex filtering, high QPS performance| Hybrid search and high recall rates      |
+| **Couchbase Version** | 8.0.0+                                                         | 7.6+                                      |
+| **Filtering**         | Pre-filtering with `WHERE` clauses (Composite) or post-filtering (Hyperscale) | Pre-filtering with flexible ordering |
+| **Scalability**       | Up to billions of vectors (Hyperscale)                              | Up to 10 million vectors                  |
+| **Performance**       | Optimized for concurrent operations with low memory footprint  | Good for mixed text and vector queries   |
+
+#### Query-Based Vector Index Types
+
+Couchbase offers two distinct query-based vector index types, each optimized for different use cases:
+
+##### Hyperscale Vector Indexes
+
+- **Best for**: Pure vector searches like content discovery, recommendations, and semantic search
+- **Use when**: You primarily perform vector-only queries without complex scalar filtering
+- **Features**: 
+  - High performance with low memory footprint
+  - Optimized for concurrent operations
+  - Designed to scale to billions of vectors
+  - Supports post-scan filtering for basic metadata filtering
+
+##### Composite Vector Indexes
+
+- **Best for**: Filtered vector searches that combine vector similarity with scalar value filtering
+- **Use when**: Your queries combine vector similarity with scalar filters that eliminate large portions of data
+- **Features**: 
+  - Efficient pre-filtering where scalar attributes reduce the vector comparison scope
+  - Best for well-defined workloads requiring complex filtering
+  - Supports range lookups combined with vector search
+
+#### Understanding Index Configuration
+
+The `index_description` parameter controls how Couchbase optimizes vector storage through centroids and quantization.
+
+##### Index Description Format: `'IVF[<centroids>],{PQ|SQ}<settings>'`
+
+**Centroids (IVF - Inverted File)**:
+- Controls how the dataset is subdivided for faster searches
+- More centroids = faster search, slower training
+- If omitted (like `IVF,SQ8`), Couchbase auto-selects based on dataset size
+
+**Quantization Options**:
+- **SQ (Scalar Quantization)**: SQ4, SQ6, SQ8 (4, 6, or 8 bits per dimension)
+- **PQ (Product Quantization)**: PQ<subquantizers>x<bits> (e.g., PQ32x8)
+
+For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/cloud/vector-index/hyperscale-vector-index.html#algo_settings).
+
+## Setting Up the Couchbase Query Vector Store
+The query vector store is set up to store the documents from the dataset using Couchbase's query-based vector search capabilities. This vector store is optimized for high-performance vector similarity search operations and can scale to billions of vectors.
 
 
 ```python
@@ -340,6 +449,9 @@ except Exception as e:
     raise ValueError(f"Failed to create vector store: {str(e)}")
 ```
 
+    Successfully created vector store
+
+
 ## Creating LlamaIndex Documents
 In this section, we'll process our news articles and create LlamaIndex Document objects.
 Each Document is created with specific metadata and formatting templates to control what the LLM and embedding model see.
@@ -347,11 +459,9 @@ We'll observe examples of the formatted content to understand how the documents 
 
 
 ```python
-from llama_index.core.schema import MetadataMode
-
 llama_documents = []
 # Process and store documents
-for article in unique_news_articles:  # Limit to first 100 for demo
+for article in unique_news_articles:
     try:
         document = Document(
             text=article["content"],
@@ -376,9 +486,69 @@ print("The LLM sees this:")
 print(llama_documents[0].get_content(metadata_mode=MetadataMode.LLM))
 print("The Embedding model sees this:")
 print(llama_documents[0].get_content(metadata_mode=MetadataMode.EMBED))
-
-        
 ```
+
+    The LLM sees this:
+    Metadata: 
+    title=>Pakistan protest: Bushra Bibi's march for Imran Khan disappeared - BBC News
+    published_date=>2024-12-01
+    link=>http://www.bbc.co.uk/news/articles/cvg02lvj1e7o
+    -----
+    Content: Bushra Bibi led a protest to free Imran Khan - what happened next is a mystery
+    
+    Imran Khan's wife, Bushra Bibi, encouraged protesters into the heart of Pakistan's capital, Islamabad
+    
+    A charred lorry, empty tear gas shells and posters of former Pakistan Prime Minister Imran Khan - it was all that remained of a massive protest led by Khan’s wife, Bushra Bibi, that had sent the entire capital into lockdown. Just a day earlier, faith healer Bibi - wrapped in a white shawl, her face covered by a white veil - stood atop a shipping container on the edge of the city as thousands of her husband’s devoted followers waved flags and chanted slogans beneath her. It was the latest protest to flare since Khan, the 72-year-old cricketing icon-turned-politician, was jailed more than a year ago after falling foul of the country's influential military which helped catapult him to power. “My children and my brothers! You have to stand with me,” Bibi cried on Tuesday afternoon, her voice cutting through the deafening roar of the crowd. “But even if you don’t,” she continued, “I will still stand firm. “This is not just about my husband. It is about this country and its leader.” It was, noted some watchers of Pakistani politics, her political debut. But as the sun rose on Wednesday morning, there was no sign of Bibi, nor the thousands of protesters who had marched through the country to the heart of the capital, demanding the release of their jailed leader. While other PMs have fallen out with Pakistan's military in the past, Khan's refusal to stay quiet behind bars is presenting an extraordinary challenge - escalating the standoff and leaving the country deeply divided. Exactly what happened to the so-called “final march”, and Bibi, when the city went dark is still unclear. All eyewitnesses like Samia* can say for certain is that the lights went out suddenly, plunging D Chowk, the square where they had gathered, into blackness.
+    
+    Within a day of arriving, the protesters had scattered - leaving behind Bibi's burnt-out vehicle
+    
+    As loud screams and clouds of tear gas blanketed the square, Samia describes holding her husband on the pavement, bloodied from a gun shot to his shoulder. "Everyone was running for their lives," she later told BBC Urdu from a hospital in Islamabad, adding it was "like doomsday or a war". "His blood was on my hands and the screams were unending.” But how did the tide turn so suddenly and decisively? Just hours earlier, protesters finally reached D Chowk late afternoon on Tuesday. They had overcome days of tear gas shelling and a maze of barricaded roads to get to the city centre. Many of them were supporters and workers of the Pakistan Tehreek-e-Insaf (PTI), the party led by Khan. He had called for the march from his jail cell, where he has been for more than a year on charges he says are politically motivated. Now Bibi - his third wife, a woman who had been largely shrouded in mystery and out of public view since their unexpected wedding in 2018 - was leading the charge. “We won’t go back until we have Khan with us,” she declared as the march reached D Chowk, deep in the heart of Islamabad’s government district.
+    
+    Thousands had marched for days to reach Islamabad, demanding former Prime Minister Imran Khan be released from jail
+    
+    Insiders say even the choice of destination - a place where her husband had once led a successful sit in - was Bibi’s, made in the face of other party leader’s opposition, and appeals from the government to choose another gathering point. Her being at the forefront may have come as a surprise. Bibi, only recently released from prison herself, is often described as private and apolitical. Little is known about her early life, apart from the fact she was a spiritual guide long before she met Khan. Her teachings, rooted in Sufi traditions, attracted many followers - including Khan himself. Was she making her move into politics - or was her sudden appearance in the thick of it a tactical move to keep Imran Khan’s party afloat while he remains behind bars? For critics, it was a move that clashed with Imran Khan’s oft-stated opposition to dynastic politics. There wasn’t long to mull the possibilities. After the lights went out, witnesses say that police started firing fresh rounds of tear gas at around 21:30 local time (16:30 GMT). The crackdown was in full swing just over an hour later. At some point, amid the chaos, Bushra Bibi left. Videos on social media appeared to show her switching cars and leaving the scene. The BBC couldn’t verify the footage. By the time the dust settled, her container had already been set on fire by unknown individuals. By 01:00 authorities said all the protesters had fled.
+    
+    Security was tight in the city, and as night fell, lights were switched off - leaving many in the dark as to what exactly happened next
+    
+    Eyewitnesses have described scenes of chaos, with tear gas fired and police rounding up protesters. One, Amin Khan, said from behind an oxygen mask that he joined the march knowing that, "either I will bring back Imran Khan or I will be shot". The authorities have have denied firing at the protesters. They also said some of the protesters were carrying firearms. The BBC has seen hospital records recording patients with gunshot injuries. However, government spokesperson Attaullah Tarar told the BBC that hospitals had denied receiving or treating gunshot wound victims. He added that "all security personnel deployed on the ground have been forbidden" from having live ammunition during protests. But one doctor told BBC Urdu that he had never done so many surgeries for gunshot wounds in a single night. "Some of the injured came in such critical condition that we had to start surgery right away instead of waiting for anaesthesia," he said. While there has been no official toll released, the BBC has confirmed with local hospitals that at least five people have died. Police say at least 500 protesters were arrested that night and are being held in police stations. The PTI claims some people are missing. And one person in particular hasn’t been seen in days: Bushra Bibi.
+    
+    The next morning, the protesters were gone - leaving behind just wrecked cars and smashed glass
+    
+    Others defended her. “It wasn’t her fault,” insisted another. “She was forced to leave by the party leaders.” Political commentators have been more scathing. “Her exit damaged her political career before it even started,” said Mehmal Sarfraz, a journalist and analyst. But was that even what she wanted? Khan has previously dismissed any thought his wife might have her own political ambitions - “she only conveys my messages,” he said in a statement attributed to him on his X account.
+    
+    Imran Khan and Bushra Bibi, pictured here arriving at court in May 2023, married in 2018
+    
+    Speaking to BBC Urdu, analyst Imtiaz Gul calls her participation “an extraordinary step in extraordinary circumstances". Gul believes Bushra Bibi’s role today is only about “keeping the party and its workers active during Imran Khan’s absence”. It is a feeling echoed by some PTI members, who believe she is “stepping in only because Khan trusts her deeply”. Insiders, though, had often whispered that she was pulling the strings behind the scenes - advising her husband on political appointments and guiding high-stakes decisions during his tenure. A more direct intervention came for the first time earlier this month, when she urged a meeting of PTI leaders to back Khan’s call for a rally. Pakistan’s defence minister Khawaja Asif accused her of “opportunism”, claiming she sees “a future for herself as a political leader”. But Asma Faiz, an associate professor of political science at Lahore University of Management Sciences, suspects the PTI’s leadership may have simply underestimated Bibi. “It was assumed that there was an understanding that she is a non-political person, hence she will not be a threat,” she told the AFP news agency. “However, the events of the last few days have shown a different side of Bushra Bibi.” But it probably doesn’t matter what analysts and politicians think. Many PTI supporters still see her as their connection to Imran Khan. It was clear her presence was enough to electrify the base. “She is the one who truly wants to get him out,” says Asim Ali, a resident of Islamabad. “I trust her. Absolutely!”
+    The Embedding model sees this:
+    Metadata: 
+    title=>Pakistan protest: Bushra Bibi's march for Imran Khan disappeared - BBC News
+    -----
+    Content: Bushra Bibi led a protest to free Imran Khan - what happened next is a mystery
+    
+    Imran Khan's wife, Bushra Bibi, encouraged protesters into the heart of Pakistan's capital, Islamabad
+    
+    A charred lorry, empty tear gas shells and posters of former Pakistan Prime Minister Imran Khan - it was all that remained of a massive protest led by Khan’s wife, Bushra Bibi, that had sent the entire capital into lockdown. Just a day earlier, faith healer Bibi - wrapped in a white shawl, her face covered by a white veil - stood atop a shipping container on the edge of the city as thousands of her husband’s devoted followers waved flags and chanted slogans beneath her. It was the latest protest to flare since Khan, the 72-year-old cricketing icon-turned-politician, was jailed more than a year ago after falling foul of the country's influential military which helped catapult him to power. “My children and my brothers! You have to stand with me,” Bibi cried on Tuesday afternoon, her voice cutting through the deafening roar of the crowd. “But even if you don’t,” she continued, “I will still stand firm. “This is not just about my husband. It is about this country and its leader.” It was, noted some watchers of Pakistani politics, her political debut. But as the sun rose on Wednesday morning, there was no sign of Bibi, nor the thousands of protesters who had marched through the country to the heart of the capital, demanding the release of their jailed leader. While other PMs have fallen out with Pakistan's military in the past, Khan's refusal to stay quiet behind bars is presenting an extraordinary challenge - escalating the standoff and leaving the country deeply divided. Exactly what happened to the so-called “final march”, and Bibi, when the city went dark is still unclear. All eyewitnesses like Samia* can say for certain is that the lights went out suddenly, plunging D Chowk, the square where they had gathered, into blackness.
+    
+    Within a day of arriving, the protesters had scattered - leaving behind Bibi's burnt-out vehicle
+    
+    As loud screams and clouds of tear gas blanketed the square, Samia describes holding her husband on the pavement, bloodied from a gun shot to his shoulder. "Everyone was running for their lives," she later told BBC Urdu from a hospital in Islamabad, adding it was "like doomsday or a war". "His blood was on my hands and the screams were unending.” But how did the tide turn so suddenly and decisively? Just hours earlier, protesters finally reached D Chowk late afternoon on Tuesday. They had overcome days of tear gas shelling and a maze of barricaded roads to get to the city centre. Many of them were supporters and workers of the Pakistan Tehreek-e-Insaf (PTI), the party led by Khan. He had called for the march from his jail cell, where he has been for more than a year on charges he says are politically motivated. Now Bibi - his third wife, a woman who had been largely shrouded in mystery and out of public view since their unexpected wedding in 2018 - was leading the charge. “We won’t go back until we have Khan with us,” she declared as the march reached D Chowk, deep in the heart of Islamabad’s government district.
+    
+    Thousands had marched for days to reach Islamabad, demanding former Prime Minister Imran Khan be released from jail
+    
+    Insiders say even the choice of destination - a place where her husband had once led a successful sit in - was Bibi’s, made in the face of other party leader’s opposition, and appeals from the government to choose another gathering point. Her being at the forefront may have come as a surprise. Bibi, only recently released from prison herself, is often described as private and apolitical. Little is known about her early life, apart from the fact she was a spiritual guide long before she met Khan. Her teachings, rooted in Sufi traditions, attracted many followers - including Khan himself. Was she making her move into politics - or was her sudden appearance in the thick of it a tactical move to keep Imran Khan’s party afloat while he remains behind bars? For critics, it was a move that clashed with Imran Khan’s oft-stated opposition to dynastic politics. There wasn’t long to mull the possibilities. After the lights went out, witnesses say that police started firing fresh rounds of tear gas at around 21:30 local time (16:30 GMT). The crackdown was in full swing just over an hour later. At some point, amid the chaos, Bushra Bibi left. Videos on social media appeared to show her switching cars and leaving the scene. The BBC couldn’t verify the footage. By the time the dust settled, her container had already been set on fire by unknown individuals. By 01:00 authorities said all the protesters had fled.
+    
+    Security was tight in the city, and as night fell, lights were switched off - leaving many in the dark as to what exactly happened next
+    
+    Eyewitnesses have described scenes of chaos, with tear gas fired and police rounding up protesters. One, Amin Khan, said from behind an oxygen mask that he joined the march knowing that, "either I will bring back Imran Khan or I will be shot". The authorities have have denied firing at the protesters. They also said some of the protesters were carrying firearms. The BBC has seen hospital records recording patients with gunshot injuries. However, government spokesperson Attaullah Tarar told the BBC that hospitals had denied receiving or treating gunshot wound victims. He added that "all security personnel deployed on the ground have been forbidden" from having live ammunition during protests. But one doctor told BBC Urdu that he had never done so many surgeries for gunshot wounds in a single night. "Some of the injured came in such critical condition that we had to start surgery right away instead of waiting for anaesthesia," he said. While there has been no official toll released, the BBC has confirmed with local hospitals that at least five people have died. Police say at least 500 protesters were arrested that night and are being held in police stations. The PTI claims some people are missing. And one person in particular hasn’t been seen in days: Bushra Bibi.
+    
+    The next morning, the protesters were gone - leaving behind just wrecked cars and smashed glass
+    
+    Others defended her. “It wasn’t her fault,” insisted another. “She was forced to leave by the party leaders.” Political commentators have been more scathing. “Her exit damaged her political career before it even started,” said Mehmal Sarfraz, a journalist and analyst. But was that even what she wanted? Khan has previously dismissed any thought his wife might have her own political ambitions - “she only conveys my messages,” he said in a statement attributed to him on his X account.
+    
+    Imran Khan and Bushra Bibi, pictured here arriving at court in May 2023, married in 2018
+    
+    Speaking to BBC Urdu, analyst Imtiaz Gul calls her participation “an extraordinary step in extraordinary circumstances". Gul believes Bushra Bibi’s role today is only about “keeping the party and its workers active during Imran Khan’s absence”. It is a feeling echoed by some PTI members, who believe she is “stepping in only because Khan trusts her deeply”. Insiders, though, had often whispered that she was pulling the strings behind the scenes - advising her husband on political appointments and guiding high-stakes decisions during his tenure. A more direct intervention came for the first time earlier this month, when she urged a meeting of PTI leaders to back Khan’s call for a rally. Pakistan’s defence minister Khawaja Asif accused her of “opportunism”, claiming she sees “a future for herself as a political leader”. But Asma Faiz, an associate professor of political science at Lahore University of Management Sciences, suspects the PTI’s leadership may have simply underestimated Bibi. “It was assumed that there was an understanding that she is a non-political person, hence she will not be a threat,” she told the AFP news agency. “However, the events of the last few days have shown a different side of Bushra Bibi.” But it probably doesn’t matter what analysts and politicians think. Many PTI supporters still see her as their connection to Imran Khan. It was clear her presence was enough to electrify the base. “She is the one who truly wants to get him out,” says Asim Ali, a resident of Islamabad. “I trust her. Absolutely!”
+
 
 ## Creating and Running the Ingestion Pipeline
 
@@ -392,18 +562,21 @@ This process transforms our raw documents into a searchable knowledge base that 
 
 
 ```python
+try:
+    # Process documents: split into nodes, generate embeddings, and store in vector database
+    index_pipeline = IngestionPipeline(
+        transformations=[SentenceSplitter(), embed_model],
+        vector_store=vector_store,
+    )
 
-
-# Process documents: split into nodes, generate embeddings, and store in vector database
-# Step 3: Create and Run IndexPipeline
-index_pipeline = IngestionPipeline(
-    transformations=[SentenceSplitter(),embed_model], 
-    vector_store=vector_store,
-)
-
-index_pipeline.run(documents=llama_documents)
-
+    nodes = index_pipeline.run(documents=llama_documents)
+    logging.info(f"Successfully ingested {len(nodes)} nodes into the vector store.")
+except Exception as e:
+    raise RuntimeError(f"Failed to run ingestion pipeline: {str(e)}")
 ```
+
+    2026-02-12 09:58:56,401 - INFO - Successfully ingested 2329 nodes into the vector store.
+
 
 ## Using OpenAI's Large Language Model (LLM)
 Large language models are AI systems that are trained to understand and generate human language. We'll be using OpenAI's `gpt-4o` model to process user queries and generate meaningful responses based on the retrieved context from our Couchbase vector store. This model is a key component of our RAG system, allowing it to go beyond simple keyword matching and truly understand the intent behind a query. By integrating OpenAI's LLM, we equip our RAG system with the ability to interpret complex queries, understand the nuances of language, and provide more accurate and contextually relevant responses.
@@ -428,6 +601,9 @@ except Exception as e:
     raise ValueError(f"Error creating OpenAI LLM: {str(e)}")
 ```
 
+    2026-02-12 09:58:56,407 - INFO - Successfully created the OpenAI LLM
+
+
 ## Creating the Vector Store Index
 
 In this section, we'll create a VectorStoreIndex from our Couchbase vector store. This index serves as the foundation for our RAG system, enabling semantic search capabilities and efficient retrieval of relevant information.
@@ -440,25 +616,39 @@ The VectorStoreIndex provides a high-level interface to interact with our vector
 
 
 ```python
-# Create your index
-from llama_index.core import VectorStoreIndex
-
-index = VectorStoreIndex.from_vector_store(vector_store)
-rag = index.as_query_engine()
+try:
+    # Create your index
+    index = VectorStoreIndex.from_vector_store(vector_store)
+    rag = index.as_query_engine()
+    logging.info("Successfully created vector store index and query engine.")
+except Exception as e:
+    raise RuntimeError(f"Failed to create vector store index: {str(e)}")
 ```
 
-## Retrieval-Augmented Generation (RAG) with Couchbase and LlamaIndex
+    2026-02-12 09:58:56,413 - INFO - Successfully created vector store index and query engine.
 
-Let's test our RAG system by performing a semantic search on a sample query. In this example, we'll use a question about Pep Guardiola's reaction to Manchester City's recent form. The RAG system will:
 
-1. Process the natural language query
-2. Search through our vector database for relevant information
-3. Retrieve the most semantically similar documents
-4. Generate a comprehensive response using the LLM
+## Understanding Semantic Search in Couchbase
 
-This demonstrates how our system combines the power of vector search with language model capabilities to provide accurate, contextual answers based on the information in our database.
+Semantic search goes beyond traditional keyword matching by understanding the meaning and context behind queries. Here's how it works in Couchbase:
 
-**Note:** By default, without any Hyperscale or Composite Vector Index, Couchbase uses linear brute force search which compares the query vector against every document in the collection. This works for small datasets but can become slow as the dataset grows.
+### How Semantic Search Works
+
+1. **Vector Embeddings**: Documents and queries are converted into high-dimensional vectors using an embeddings model (in our case, OpenAI's text-embedding-3-large model)
+
+2. **Similarity Calculation**: When a query is made, Couchbase compares the query vector against stored document vectors using the DOT product similarity metric
+
+3. **Result Ranking**: Documents are ranked by their vector similarity scores
+
+4. **Flexible Configuration**: Different similarity metrics (dot product, cosine, euclidean) and embedding models can be used based on your needs
+
+Now let's see semantic search in action and measure its performance with different optimization strategies.
+
+## Vector Search Performance Testing
+
+### Phase 1: Baseline Performance (No Hyperscale Index)
+
+First, we'll run a RAG query without using a Hyperscale index to establish our baseline performance. This search uses linear brute force which compares the query vector against every document in the collection. This works for small datasets but can become slow as the dataset grows.
 
 
 ```python
@@ -470,67 +660,29 @@ try:
     # Perform the semantic search
     start_time = time.time()
     response = rag.query(query)
-    search_elapsed_time = time.time() - start_time
+    baseline_time = time.time() - start_time
 
     # Display search results
-    print(f"\nSemantic Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print(f"\nSemantic Search Results (completed in {baseline_time:.2f} seconds):")
     print(response)
 
-except RecursionError as e:
+except Exception as e:
     raise RuntimeError(f"Error performing semantic search: {e}")
 ```
 
-## Optimizing Vector Search with Hyperscale and Composite Vector Indexes
+    
+    Semantic Search Results (completed in 2.32 seconds):
+    Daniel Dubois will fight Joseph Parker in Saudi Arabia on 22 February.
 
-While the above RAG system works effectively, we can significantly improve query performance by leveraging Couchbase's advanced vector index capabilities.
 
-Couchbase offers 3 main types of vector indexes, 2 of which are:
+### Creating the Hyperscale Index
 
-**Hyperscale Vector Indexes**
-- Best for pure vector searches - content discovery, recommendations, semantic search
-- High performance with low memory footprint - designed to scale to billions of vectors
-- Optimized for concurrent operations - supports simultaneous searches and inserts
-- Use when: You primarily perform vector-only queries without complex scalar filtering
-- Ideal for: Large-scale semantic search, recommendation systems, content discovery
+Now we'll create a Hyperscale index to significantly improve query performance. The index uses IVF (Inverted File) with PQ (Product Quantization) for optimal balance between speed and accuracy.
 
-**Composite Vector Indexes**
-- Best for filtered vector searches - combines vector search with scalar value filtering
-- Efficient pre-filtering - scalar attributes reduce the vector comparison scope
-- Use when: Your queries combine vector similarity with scalar filters that eliminate large portions of data
-- Ideal for: Compliance-based filtering, user-specific searches, time-bounded queries
-
-**Choosing the Right Index Type**
-- Start with Hyperscale Vector Index for pure vector searches and large datasets
-- Use Composite Vector Index when scalar filters significantly reduce your search space
-- Consider your dataset size: Hyperscale scales to billions, Composite works well for tens of millions to billions
-
-For more details, see the [Couchbase Vector Index documentation](https://docs.couchbase.com/server/current/vector-index/use-vector-indexes.html).
-
-## Understanding Index Configuration (Couchbase 8.0 Feature)
-
-The index_description parameter controls how Couchbase optimizes vector storage and search performance through centroids and quantization:
-
-Format: `'IVF[<centroids>],{PQ|SQ}<settings>'`
-
-**Centroids (IVF - Inverted File):**
-- Controls how the dataset is subdivided for faster searches
-- More centroids = faster search, slower training  
-- Fewer centroids = slower search, faster training
-- If omitted (like IVF,SQ8), Couchbase auto-selects based on dataset size
-
-**Quantization Options:**
-- SQ (Scalar Quantization): SQ4, SQ6, SQ8 (4, 6, or 8 bits per dimension)
-- PQ (Product Quantization): PQ<subquantizers>x<bits> (e.g., PQ32x8)
-- Higher values = better accuracy, larger index size
-
-**Common Examples:**
-- IVF,SQ8 - Auto centroids, 8-bit scalar quantization (good default)
-- IVF1000,SQ6 - 1000 centroids, 6-bit scalar quantization  
-- IVF,PQ32x8 - Auto centroids, 32 subquantizers with 8 bits
-
-For detailed configuration options, see the [Quantization & Centroid Settings](https://docs.couchbase.com/server/current/vector-index/hyperscale-vector-index.html#algo_settings).
-
-In the code below, we demonstrate creating a Hyperscale Vector Index for optimal performance. This method takes an index type (Hyperscale or Composite) and description parameter for optimization settings. Alternatively, vector indexes can be created manually from the Couchbase UI. 
+The index configuration uses:
+- **IVF1024**: 1024 centroids for fast search
+- **PQ32x8**: Product quantization with 32 subquantizers and 8 bits each
+- **DOT similarity**: Optimized for dot product similarity matching
 
 
 ```python
@@ -545,7 +697,7 @@ try:
     }
     scope.query(
         f"""
-        CREATE INDEX {hyperscale_index_name}
+        CREATE INDEX IF NOT EXISTS {hyperscale_index_name}
         ON {COLLECTION_NAME} (embedding VECTOR)
         USING GSI WITH {json.dumps(options)}
         """,
@@ -554,11 +706,15 @@ try:
     )).execute()
     print(f"Successfully created Hyperscale Vector Index: {hyperscale_index_name}")
 except Exception as e:
-    print(f"Hyperscale Vector Index may already exist or error occurred: {str(e)}")
-
+    print(f"Error creating Hyperscale Vector Index: {str(e)}")
 ```
 
-The example below shows running the same RAG query, but now using the Hyperscale Vector Index we created above. You'll notice improved performance as the index efficiently retrieves data.
+    Successfully created Hyperscale Vector Index: vector_search_llamaindex_hyperscale
+
+
+### Phase 2: Hyperscale-Optimized Performance
+
+Now let's run the same RAG query using the Hyperscale index we just created. You'll notice improved performance as the index efficiently retrieves data.
 
 
 ```python
@@ -571,26 +727,72 @@ try:
     # Perform the semantic search with Hyperscale Vector Index optimization
     start_time = time.time()
     response = optimized_rag.query(query)
-    search_elapsed_time = time.time() - start_time
+    optimized_time = time.time() - start_time
 
     # Display search results
-    print(f"\nOptimized Vector Search Results (completed in {search_elapsed_time:.2f} seconds):")
+    print(f"\nOptimized Vector Search Results (completed in {optimized_time:.2f} seconds):")
     print(response)
 
 except Exception as e:
     raise RuntimeError(f"Error performing optimized semantic search: {e}")
-
 ```
 
+    
+    Optimized Vector Search Results (completed in 1.66 seconds):
+    Daniel Dubois will fight Joseph Parker in Saudi Arabia on 22 February.
+
+
+
+```python
+# Performance Analysis Summary
+print("=" * 80)
+print("VECTOR SEARCH PERFORMANCE OPTIMIZATION SUMMARY")
+print("=" * 80)
+print(f"Phase 1 - Baseline Search (No Hyperscale):     {baseline_time:.4f} seconds")
+print(f"Phase 2 - Hyperscale-Optimized Search:         {optimized_time:.4f} seconds")
+
+print()
+print("-" * 80)
+print("VECTOR SEARCH OPTIMIZATION IMPACT:")
+print("-" * 80)
+
+if optimized_time < baseline_time:
+    speedup = baseline_time / optimized_time
+    improvement = ((baseline_time - optimized_time) / baseline_time) * 100
+    print(f"Hyperscale Index Benefit:      {speedup:.2f}x faster ({improvement:.1f}% improvement)")
+else:
+    print(f"Note: Hyperscale index did not show improvement in this run.")
+    print(f"This may occur if the index is still training or the dataset is small.")
+    print(f"Re-run Phase 2 after the index is fully built for accurate results.")
+
+print()
+print("Key Insights for Vector Search Performance:")
+print("• Hyperscale indexes provide significant performance improvements for vector similarity search")
+print("• Performance gains are most dramatic for large datasets and complex semantic queries")
+print("• Hyperscale vector index optimization is particularly effective for high-dimensional embeddings")
+print("• Combined with proper quantization (PQ32x8), Hyperscale delivers production-ready performance")
+print("• These performance improvements directly benefit any application using the vector store")
+```
+
+    ================================================================================
+    VECTOR SEARCH PERFORMANCE OPTIMIZATION SUMMARY
+    ================================================================================
+    Phase 1 - Baseline Search (No Hyperscale):     2.3237 seconds
+    Phase 2 - Hyperscale-Optimized Search:         1.6570 seconds
+    
+    --------------------------------------------------------------------------------
+    VECTOR SEARCH OPTIMIZATION IMPACT:
+    --------------------------------------------------------------------------------
+    Hyperscale Index Benefit:      1.40x faster (28.7% improvement)
+    
+    Key Insights for Vector Search Performance:
+    • Hyperscale indexes provide significant performance improvements for vector similarity search
+    • Performance gains are most dramatic for large datasets and complex semantic queries
+    • Hyperscale vector index optimization is particularly effective for high-dimensional embeddings
+    • Combined with proper quantization (PQ32x8), Hyperscale delivers production-ready performance
+    • These performance improvements directly benefit any application using the vector store
+
+
 ## Conclusion
-In this tutorial, we've built a Retrieval Augmented Generation (RAG) system using Couchbase Capella's Hyperscale and Composite Vector Indexes, OpenAI, and LlamaIndex. We used the BBC News dataset, which contains real-time news articles, to demonstrate how RAG can be used to answer questions about current events and provide up-to-date information that extends beyond the LLM's training data.
 
-The key components of our RAG system include:
-
-1. **Couchbase Capella Hyperscale and Composite Vector Indexes** as the high-performance vector database for storing and retrieving document embeddings
-2. **LlamaIndex** as the framework for connecting our data to the LLM
-3. **OpenAI Services** for generating embeddings (`text-embedding-3-large`) and LLM responses (`gpt-4o`)
-4. **Vector Indexes** (Hyperscale/Composite) for optimized vector search performance
-
-This approach allows us to enhance the capabilities of large language models by grounding their responses in specific, up-to-date information from our knowledge base, while leveraging Couchbase's advanced vector indexes for optimal performance and scalability.
-
+You've built a RAG system using Couchbase Hyperscale/Composite indexes with OpenAI and LlamaIndex. For the Search Vector Index alternative, see the [search_based tutorial](https://developer.couchbase.com/tutorial-openai-llamaindex-rag-with-search-vector-index).
