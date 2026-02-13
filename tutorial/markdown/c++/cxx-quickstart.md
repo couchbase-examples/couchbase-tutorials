@@ -4,7 +4,7 @@ path: "/tutorial-cxx-quickstart"
 title: Quickstart in Couchbase with C++
 short_title: C++ Quickstart
 description:
-  - Learn to to use Couchbase C++ SDK to interact with the database.
+  - Learn to use the Couchbase C++ SDK to interact with the database.
   - See how you can fetch data from Couchbase using SQL++ queries
   - Explore how you can perform search operations using Search indexes.
   - Explore CRUD operations in action with Couchbase
@@ -23,10 +23,9 @@ sdk_language:
 length: 30 Mins
 ---
 
-<!-- [abstract] -->
-# Quickstart in Couchbase with C++
+## Introduction
 
-In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents, how to write simple parametrized SQL++ queries and how to create, and perform simple and complex text search using Search indexes.
+In this tutorial, you will learn how to connect to a Couchbase Capella cluster to create, read, update, and delete documents, how to write simple parameterized SQL++ queries, and how to create and perform simple and complex search operations using Search indexes.
 
 ## Prerequisites
 
@@ -61,7 +60,7 @@ Specifically, you need to do the following:
 - Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the application.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the Cluster from the IP on which the application is running.
 
-All configuration for communication with the database is read from the environment variables. We have provided a convenience feature in this quickstart to setup the required environment variables using a shell script `setup_env_vars.sh`. Change the values of the following lines:
+All configuration for communication with the database is read from the environment variables. We have provided a convenience feature in this quickstart to setup the required environment variables using a shell script `set_env_vars.sh`. Change the values of the following lines:
 
 ```sh
 export DB_CONN_STR=<connection_string>
@@ -75,13 +74,13 @@ export COL_NAME=<collection_name>
 
 Run the command:
 ```sh
-source setup_env_vars.sh
+source set_env_vars.sh
 ```
 This will set the environment variables for that session.
 
 ### Install Dependencies and Building
 
-This project makes use of CMake and CPM to install dependencies. 
+This project makes use of CMake and CPM to install dependencies.
 
 
 ```sh
@@ -91,7 +90,7 @@ cmake ..
 cmake --build .
 ```
 
-This will download and install all the dependencies required for the project to built. Along with that it will build the executable required to run the application.
+This will download and install all the dependencies required for the project to be built. Along with that it will build the executable required to run the application.
 
 ## Running The Application
 
@@ -127,12 +126,12 @@ This quickstart utilizes two collections: **airline** and **hotel**. The **airli
 
 ## Code Review
 
-To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can explore about how to interact with Couchbase Server using the C++ SDK.
+To begin this tutorial, clone the repo and open it up in the IDE of your choice. Now you can explore how to interact with Couchbase Server using the C++ SDK.
 
-We have separated out the SDK code and the main function. The `db.h` and `db.cpp` contain the declaration and the implementation of utility functions we will use to parse environment variables and create a connection to the cluster. `operations.h` and `operations.cpp` contain all the functions that perform operations on the db. Both `db.cpp` and `operations.cpp` are combined to make a static library. The tests are similarly separated out in the `tests` folder which utilise the library created earlier. The `main.cpp` is the executable which is also built by linking the library and contains code that demonstrates the usage of the functions we defined earlier to initeract with the db.
+We have separated out the SDK code and the main function. The `db.h` and `db.cpp` contain the declaration and the implementation of utility functions we will use to parse environment variables and create a connection to the cluster. `operations.h` and `operations.cpp` contain all the functions that perform operations on the database. Both `db.cpp` and `operations.cpp` are combined to make a static library. The tests are similarly separated out in the `tests` folder which utilize the library created earlier. The `main.cpp` is the executable which is also built by linking the library and contains code that demonstrates the usage of the functions we defined earlier to interact with the database.
 
 ### Connecting to the Cluster
-In `db.h`, we include the required header files to work with C++ SDK in order to for implement the functions required to initialize the DB. In the `db.cpp` we implement the functions that help us connect to the db. We begin by implementing few utility functions that will help us later. The `parseEnvironmentVariables` serves as a utility to get the values set for a list of environment variables. This enables us to get the connection parameters and credentials, set by running `source set_env_vars.sh`. Following this `checkScopeAndColExists` and `checkSearchEnabled` are implemented, used to check for existence of scope and collection of given name and to check if search service enabled respectively. Finally we have the InitCluster function which returns the connection objects as a tuple.
+In `db.h`, we include the required header files to work with C++ SDK in order to implement the functions required to initialize the database. In the `db.cpp` we implement the functions that help us connect to the database. We begin by implementing a few utility functions that will help us later. The `parseEnvironmentVariables` serves as a utility to get the values set for a list of environment variables. This enables us to get the connection parameters and credentials set by running `source set_env_vars.sh`. Following this, `checkScopeAndColExists` and `checkSearchEnabled` are implemented to check for the existence of a scope and collection of a given name and to verify if the search service is enabled respectively. Finally we have the InitCluster function which returns the connection objects as a tuple.
 
 ```c++
 // db.h
@@ -164,7 +163,7 @@ return {cluster, bucket, scope, col};
 
 
 ## Operations
-Operations for interacting with the db is defined and implemented in `operations.h` and `operations.cpp`
+Operations for interacting with the database are defined and implemented in `operations.h` and `operations.cpp`.
 ### Insert Document
 Insert function is the equivalent of the POST request and can be used to insert new documents to the collection. We can pass the document to be inserted as a JSON string or as a JSON file path, the function takes in file_flag which is used to differentiate between the two.
 - The value gets converted to the type `tao::json::value` and inserts it to the collection if `file_flag=false`
@@ -196,7 +195,7 @@ auto upsert_res2 = Upsert(col, "quickstart_test2", "doc.json", true);
 ```
 
 ### Read
-Read function is equivalent to GET requests and can be used fetch documents using the `doc_id`.
+Read function is equivalent to GET requests and can be used to fetch documents using the `doc_id`.
 - First checks if the document exists using `col.exists(doc_id)`.
 - If the document exists, it retrieves the document's content using `col.get(doc_id)` and returns it after converting it to `tao::json::value` for easier usage on return.
 - If an error occurs (e.g., document not found), it prints an error message and returns an empty tao::json::value object.
@@ -231,7 +230,7 @@ auto res = Delete(col, doc_id);
 We can use the `Query` function to execute any N1QL (SQL++) query on a scope.
 - Executes the N1QL query using the provided `scope.query(query, opts)`.
 - Returns the result of the query if successful. The result is added to a `std::vector<std::string>` object that contains the `id, country, avg_rating, title`.
-- We can pass `opts` parameter, which can be used to insert positonal parameters in the query.
+- We can pass `opts` parameter, which can be used to insert positional parameters in the query.
 - If there is an error, it prints an error message and returns an empty result object.
 
 ```c++
@@ -272,7 +271,7 @@ std::string index_name = CreateSearchIndex(scope, "hotel_search_index.json");
 ```
 
 ### Search By Name
-The `SearchByName` function aims to demonstrates the usage of a search index to search for documents in a scope.
+The `SearchByName` function aims to demonstrate the usage of a search index to search for documents in a scope.
 Params:
 - `scope`: The Couchbase scope to search in.
 - `index`: The search index name to use for the query.
@@ -297,7 +296,7 @@ std::cout << "Search result contains:\t" << search_res.size() << std::endl;
 ```
 
 ### Filter
-The `Filter` function aims to demo the construction and execution of a `conjuction_query` which can be described as an `AND` operation on two or more types of filters. This particular implementation performs a conjunction on `couchbase::match_query("United States").field("country")` and `couchbase::term_query("San Diego").field("city")`.
+The `Filter` function aims to demo the construction and execution of a `conjunction_query` which can be described as an `AND` operation on two or more types of filters. This particular implementation performs a conjunction on `couchbase::match_query("United States").field("country")` and `couchbase::term_query("San Diego").field("city")`.
 
 ```c++
 //operations.cpp
