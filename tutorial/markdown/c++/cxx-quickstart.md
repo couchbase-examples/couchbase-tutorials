@@ -163,7 +163,7 @@ return {cluster, bucket, scope, col};
 
 
 ## Operations
-Operations for interacting with the db are defined and implemented in `operations.h` and `operations.cpp`.
+Operations for interacting with the database are defined and implemented in `operations.h` and `operations.cpp`.
 ### Insert Document
 Insert function is the equivalent of the POST request and can be used to insert new documents to the collection. We can pass the document to be inserted as a JSON string or as a JSON file path, the function takes in file_flag which is used to differentiate between the two.
 - The value gets converted to the type `tao::json::value` and inserts it to the collection if `file_flag=false`
