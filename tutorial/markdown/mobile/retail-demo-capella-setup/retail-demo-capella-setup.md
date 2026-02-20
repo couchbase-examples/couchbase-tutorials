@@ -83,7 +83,7 @@ Follow these [instructions](https://docs.couchbase.com/cloud/clusters/data-servi
 
 After completing these steps, your cluster configuration should look like this:
 
-![Data Model](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/data-model.png)
+![Data Model](data-model.png)
 
 ```
 📦 supermarket (bucket)
@@ -108,7 +108,7 @@ After completing these steps, your cluster configuration should look like this:
 
 3. **Important**: When importing data, select the **Field** option to map the document ID
 
-![Import Data](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/import-data.png)
+![Import Data](import-data.png)
 
 4. Repeat for each collection in both scopes
 
@@ -135,7 +135,7 @@ Follow these [instructions](https://docs.couchbase.com/cloud/get-started/configu
 
 Your App Endpoint configuration should look like this:
 
-![App Endpoint Configuration](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/appendpoint.png)
+![App Endpoint Configuration](appendpoint.png)
 
 ### Link Collections to App Endpoints
 
@@ -162,7 +162,7 @@ Follow these [instructions](https://docs.couchbase.com/cloud/app-services/user-m
 
 Your App User configuration should look like this:
 
-![App User Configuration](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/appuser.png)
+![App User Configuration](appuser.png)
 
 ## Step 8: Record Your Connection URL
 
@@ -170,7 +170,7 @@ Your App User configuration should look like this:
 
 2. Copy the **Public Connection URL** - you'll need this when configuring your apps
 
-![Connection URL](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/connectapp.png)
+![Connection URL](connectapp.png)
 
 The URL format is:
 ```
@@ -189,13 +189,13 @@ For **each** App Endpoint (supermarket-aa and supermarket-nyc):
 
 2. Set **Origin** as `http://localhost:8080`
 
-![CORS Origin](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/cors1.png)
+![CORS Origin](cors1.png)
 
 3. Set **Login Origin** as `http://localhost:8080`
 
 4. Set **Allowed Headers** as `Authorization`
 
-![CORS Headers](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/cors2.png)
+![CORS Headers](cors2.png)
 
 > **NOTE**: If your web app runs on a different port, adjust the CORS settings accordingly.
 

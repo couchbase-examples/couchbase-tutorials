@@ -187,7 +187,7 @@ const val P2P_PEER_GROUP_ID = "retail-demo-group"
 
 Watch P2P sync in action between two Android devices and an iPhone:
 
-![P2P Demo](https://raw.githubusercontent.com/couchbase-examples/couchbase-lite-retail-demo/main/common/assets/P2P_demo_android-android-ios.mp4)
+![P2P Demo](P2P_demo_android-android-ios.mp4)
 
 ### Step-by-Step Testing
 
@@ -340,4 +340,15 @@ To use the Community Edition, you would need to:
 * [URL Endpoint Listener](https://docs.couchbase.com/couchbase-lite/current/swift/p2psync-listener.html)
 * [Network Service Discovery (Android)](https://developer.android.com/training/connect-devices-wirelessly/nsd)
 * [Bonjour/mDNS (iOS)](https://developer.apple.com/bonjour/)
+
+## Congratulations!
+
+You have completed the **Couchbase Lite and Offline First Retail Applications** learning path! You now know how to:
+
+* Build an offline-first mobile app using Couchbase Lite as a local embedded database
+* Set up Couchbase Capella with the correct bucket, scope, and collection structure for a multi-store retail application
+* Configure Capella App Services for real-time bidirectional synchronization between mobile clients and the cloud
+* Enable peer-to-peer sync between iOS and Android devices on a local network without cloud connectivity
+
+You can explore the full source code of the retail demo at the [couchbase-lite-retail-demo repository](https://github.com/couchbase-examples/couchbase-lite-retail-demo).
 
