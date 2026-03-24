@@ -15,13 +15,11 @@ technology:
   - query
   - fts
 tags:
-  - ToolJet
-  - Low-Code
   - Data API
   - Connector
-  - Internal Tools
-  - SQL++
-  - Full-Text Search
+  - SQL++ (N1QL)
+  - FTS
+  - REST API
 sdk_language:
   - nodejs
 length: 30 Mins
@@ -74,7 +72,8 @@ Couchbase Capella is the easiest way to get started. It has a free tier and the 
    - Note down the **username** and **password**
 4. **Allow network access**:
    - Go to **Allowed IP Addresses**
-   - Add the IP address of your ToolJet instance (or `0.0.0.0/0` for testing)
+   - Add the IP address of your ToolJet instance (visit [whatismyip.com](https://whatismyip.com) to find your public IP if self-hosting)
+   > **Security Note**: Never allow `0.0.0.0/0` (all IPs). Always restrict access to specific IP addresses, even in development.
 5. **Find your Data API endpoint**:
    - Go to **Connect** tab
    - Look for the **Data API** endpoint URL — it will look like `https://<cluster-id>.data.cloud.couchbase.com`
@@ -94,7 +93,7 @@ docker run -d --name couchbase-server \
   -p 8091-8096:8091-8096 \
   -p 11210-11211:11210-11211 \
   -p 18091-18096:18091-18096 \
-  couchbase:latest
+  couchbase:7.6.2
 ```
 
 2. **Initialize the cluster**:
@@ -131,7 +130,7 @@ docker run -d --name couchbase-server \
 docker run -d \
   --name tooljet \
   -p 80:80 \
-  tooljet/tooljet-ce:latest
+  tooljet/tooljet-ce:v3.16.0-LTS
 ```
 
 Open `http://localhost` and create your admin account.
@@ -214,6 +213,33 @@ LIMIT 50
 You should see results in the preview panel — a list of airlines with their names, countries, and callsigns.
 
 > **How it works**: This SQL++ query runs against the `airline` collection inside the `inventory` scope of the `travel-sample` bucket. `META().id` gives us the document ID, which we'll need for CRUD operations later.
+
+### Using Parameterized Queries
+
+Now let's create a second query that uses **parameterized arguments** — this is the recommended way to pass dynamic values in SQL++ because it prevents injection attacks.
+
+1. Create another query named `listAirlinesByCountry`
+2. Configure it:
+   - **Operation**: **Query**
+   - **SQL++ Query**:
+
+```sql
+SELECT META().id AS doc_id, name, country, callsign, iata, icao
+FROM `travel-sample`.`inventory`.`airline`
+WHERE country = $country
+ORDER BY name
+LIMIT 50
+```
+
+   - **Arguments (Key-Value)**:
+
+```json
+{ "$country": "United States" }
+```
+
+3. Click **Run** — you should see only airlines from the United States
+
+> **Why parameterized queries?** Instead of concatenating user input directly into SQL++ strings (which risks injection attacks), Couchbase's `$parameter` syntax sends values separately from the query statement. The plugin passes these through the `args` field in the Data API request body. You can also pass **Query Options** like `{ "readonly": true, "timeout": "30s" }` for additional control.
 
 ## Step 4: Display Airlines in a Table
 
@@ -443,7 +469,6 @@ You've built a complete Airline Dashboard that demonstrates all 6 Couchbase oper
 ### Next Steps
 
 - **Add vector search**: Replace the FTS match query with a vector search query for semantic/AI-powered search
-- **Add parameterized queries**: Use `$parameter` syntax in SQL++ for advanced filtering
 - **Build more apps**: Customer support tools, inventory managers, reporting dashboards — all on your Couchbase data
 - **Explore ToolJet components**: Charts, maps, JSON viewers, and 50+ other widgets can visualize your Couchbase data in different ways
 
