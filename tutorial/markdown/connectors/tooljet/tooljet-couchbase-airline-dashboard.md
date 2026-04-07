@@ -200,6 +200,8 @@ Now connect ToolJet to your Couchbase cluster:
 5. Click **Test Connection** — you should see a green "Connection successful" message
 6. Click **Save**
 
+![Couchbase data source connection configuration in ToolJet](connection-v2.png)
+
 ## Step 3: Create a SQL++ Query to List Airlines
 
 Let's fetch airline data from the `travel-sample` dataset.
@@ -208,7 +210,10 @@ Let's fetch airline data from the `travel-sample` dataset.
 2. In the bottom panel, click **+ Add** → **Query** → select your **Couchbase** data source
 3. Name the query `listAirlines`
 4. Configure the query:
-   - **Operation**: Select **Query** from the dropdown
+   - **Operation**: Select **Query** from the dropdown (see all available operations below)
+
+![Available Couchbase operations in ToolJet](listops.png)
+
    - **SQL++ Query**: Enter the following:
 
 ```sql
@@ -219,6 +224,8 @@ LIMIT 50
 ```
 
 5. Click **Run** to test the query
+
+![SQL++ Query operation configured in ToolJet](query-v2.png)
 
 You should see results in the preview panel — a list of airlines with their names, countries, and callsigns.
 
@@ -280,6 +287,8 @@ Let's add the ability to view a single airline's full document when a user click
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
 
+![Get Document operation configured in ToolJet](get-doc.png)
+
 2. Drag a **Modal** component onto the canvas and add **Text** components inside it to display:
    - `{{queries.getAirline.data.name}}` — Airline name
    - `{{queries.getAirline.data.country}}` — Country
@@ -324,6 +333,8 @@ Now when you click any airline row, it fetches the full document and displays it
 }
 ```
 
+![Create Document operation configured in ToolJet](create-doc.png)
+
 4. Wire it up:
    - "Add Airline" button → **Show modal** (the creation form modal)
    - "Create" button inside modal → **Run query** `createAirline`, then **Run query** `listAirlines` (to refresh the table), then **Hide modal**
@@ -358,6 +369,8 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
 }
 ```
 
+![Update Document operation configured in ToolJet](update-doc.png)
+
 4. Wire the "Save" button to: **Run query** `updateAirline` → **Run query** `listAirlines` → **Hide modal**
 
 > **Important**: The Update operation performs a **full document replacement** (HTTP PUT), not a partial update. Make sure your document JSON includes all fields, not just the ones you changed.
@@ -372,6 +385,8 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
    - **Scope**: `inventory`
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
+
+![Delete Document operation configured in ToolJet](delete-doc.png)
 
 3. Wire the "Delete" button to show a **confirmation dialog**, then:
    - **Run query** `deleteAirline` → **Run query** `listAirlines` (to refresh the table)
@@ -403,6 +418,8 @@ Now let's add a search bar that uses Couchbase's Full-Text Search to find airlin
   "size": 20
 }
 ```
+
+![FTS Search operation configured in ToolJet](fts-search-v2.png)
 
 3. Add an event handler on the search input: **On change** → **Run query** `searchAirlines`
 
