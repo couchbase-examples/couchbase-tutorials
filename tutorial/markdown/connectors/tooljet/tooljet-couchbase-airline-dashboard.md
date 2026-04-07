@@ -25,6 +25,8 @@ sdk_language:
 length: 30 Mins
 ---
 
+## Overview
+
 In this tutorial, you will build an **Airline Dashboard** — a fully functional internal tool that lets you browse, search, create, edit, and delete airline records stored in Couchbase. You'll use ToolJet's visual app builder and connect it to Couchbase using the Couchbase marketplace plugin, covering all 6 supported operations.
 
 By the end, you'll have a deployed web app that your team can use immediately — no backend code, no frontend framework, no deployment pipeline required.
@@ -51,8 +53,8 @@ An Airline Dashboard with:
 
 To follow this tutorial, you will need:
 
-- A **Couchbase cluster** with the `travel-sample` bucket loaded (see setup instructions below)
-- A **ToolJet instance** — either [ToolJet Cloud](https://www.tooljet.com) (free tier available) or self-hosted via Docker
+- A **Couchbase cluster** with the `travel-sample` bucket loaded (see [Couchbase Cluster Setup](#couchbase-cluster-setup))
+- A **ToolJet instance** — either [ToolJet Cloud](https://www.tooljet.com) (free tier available) or self-hosted via Docker (see [ToolJet Setup](#tooljet-setup))
 
 ### Couchbase Cluster Setup
 
@@ -66,6 +68,7 @@ Couchbase Capella is the easiest way to get started. It has a free tier and the 
    - Go to your cluster → **Settings** → **Sample Buckets**
    - Select `travel-sample` and click **Load Sample Data**
    - Wait for the import to complete
+   - For detailed instructions, see [Load travel-sample bucket in Couchbase Capella](https://docs.couchbase.com/cloud/clusters/data-service/import-data-documents.html#import-sample-data)
 3. **Create database credentials**:
    - Go to **Cluster Access** → **Database Access**
    - Create a new user with **Read/Write** access to the `travel-sample` bucket
@@ -73,6 +76,7 @@ Couchbase Capella is the easiest way to get started. It has a free tier and the 
 4. **Allow network access**:
    - Go to **Allowed IP Addresses**
    - Add the IP address of your ToolJet instance (visit [whatismyip.com](https://whatismyip.com) to find your public IP if self-hosting)
+   - For detailed instructions, see [Allow IP Address on Capella](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html)
    > **Security Note**: Never allow `0.0.0.0/0` (all IPs). Always restrict access to specific IP addresses, even in development.
 5. **Find your Data API endpoint**:
    - Go to **Connect** tab
@@ -97,7 +101,7 @@ docker run -d --name couchbase-server \
 ```
 
 2. **Initialize the cluster**:
-   - Open `http://localhost:8091` in your browser
+   - Open `http://<your-server-hostname-or-ip>:8091` in your browser (use `localhost` if running Docker on your local machine)
    - Follow the setup wizard to create the cluster
    - Create an admin user (note the **username** and **password**)
 
@@ -105,10 +109,11 @@ docker run -d --name couchbase-server \
    - Go to **Settings** → **Sample Buckets**
    - Check `travel-sample` and click **Load Sample Data**
 
-4. **Your Data API endpoint** is:
+4. **Your Data API endpoint** is the base URL of the server running Couchbase:
    ```
-   http://localhost:8091
+   http://<your-server-hostname-or-ip>:8091
    ```
+   Use `http://localhost:8091` only if Couchbase is running on the same machine as ToolJet. For remote servers, replace with the server's actual hostname or IP address.
    > Note: For self-managed clusters, the Data API is available on the same port as the management API. Ensure Data API is enabled in your cluster configuration.
 
 </details>
@@ -133,7 +138,41 @@ docker run -d \
   tooljet/tooljet-ce:v3.16.0-LTS
 ```
 
-Open `http://localhost` and create your admin account.
+Open `http://localhost` and create your admin account. For more setup options (Kubernetes, AWS, GCP, Azure), see the [ToolJet self-hosting guide](https://docs.tooljet.com/docs/setup/docker).
+
+</details>
+
+### Create an FTS Index
+
+Step 9 of this tutorial uses Couchbase Full-Text Search. Create the index now so it's ready when you need it.
+
+<details>
+<summary><b>Capella Users</b></summary>
+
+1. In the Capella UI, go to your cluster → **Search**
+2. Click **Create Index**
+3. Configure:
+   - **Index Name**: `airline-name-index`
+   - **Bucket**: `travel-sample`
+   - **Scope**: `inventory`
+   - Add a **Type Mapping** for the `airline` collection
+   - Index the `name` field as **text**
+4. Click **Create**
+
+</details>
+
+<details>
+<summary><b>Self-Managed Users</b></summary>
+
+1. Open the Couchbase Web Console → **Search**
+2. Click **Add Index**
+3. Configure:
+   - **Index Name**: `airline-name-index`
+   - **Bucket**: `travel-sample`
+   - **Scope**: `inventory`
+   - Add a **Type Mapping** for the `airline` collection
+   - Index the `name` field as **text**
+4. Click **Create Index**
 
 </details>
 
@@ -157,36 +196,7 @@ Now connect ToolJet to your Couchbase cluster:
 1. Go to **Data Sources** (left sidebar, database icon)
 2. Click **+ Add new data source**
 3. Search for **"Couchbase"** and select it
-4. Fill in the connection details:
-
-| Field | Value |
-|-------|-------|
-| **Data API Endpoint** | Your Couchbase Data API URL (see prerequisites) |
-| **Username** | Your Couchbase database username |
-| **Password** | Your Couchbase database password |
-
-<details>
-<summary><b>Capella Users</b></summary>
-
-Your Data API endpoint will look like:
-```
-https://<cluster-id>.data.cloud.couchbase.com
-```
-Find it in the Capella UI under **Connect** → **Data API**.
-
-</details>
-
-<details>
-<summary><b>Self-Managed Users</b></summary>
-
-Your Data API endpoint will be:
-```
-http://localhost:8091
-```
-Or replace `localhost` with your server's IP/hostname.
-
-</details>
-
+4. Enter your **Data API Endpoint**, **Username**, and **Password** from the prerequisites section
 5. Click **Test Connection** — you should see a green "Connection successful" message
 6. Click **Save**
 
@@ -370,39 +380,7 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
 
 Now let's add a search bar that uses Couchbase's Full-Text Search to find airlines by name.
 
-### Create an FTS Index (One-Time Setup)
-
-Before you can search, you need to create an FTS index on the airline collection.
-
-<details>
-<summary><b>Capella Users</b></summary>
-
-1. In the Capella UI, go to your cluster → **Search**
-2. Click **Create Index**
-3. Configure:
-   - **Index Name**: `airline-name-index`
-   - **Bucket**: `travel-sample`
-   - **Scope**: `inventory`
-   - Add a **Type Mapping** for the `airline` collection
-   - Index the `name` field as **text**
-4. Click **Create**
-
-</details>
-
-<details>
-<summary><b>Self-Managed Users</b></summary>
-
-1. Open the Couchbase Web Console → **Search**
-2. Click **Add Index**
-3. Configure:
-   - **Index Name**: `airline-name-index`
-   - **Bucket**: `travel-sample`
-   - **Scope**: `inventory`
-   - Add a **Type Mapping** for the `airline` collection
-   - Index the `name` field as **text**
-4. Click **Create Index**
-
-</details>
+> Before continuing, ensure you have created the `airline-name-index` FTS index as described in the [Prerequisites](#create-an-fts-index) section.
 
 ### Add Search to ToolJet
 
