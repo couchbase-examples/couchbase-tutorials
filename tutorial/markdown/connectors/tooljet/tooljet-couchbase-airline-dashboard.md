@@ -225,8 +225,6 @@ LIMIT 50
 
 5. Click **Run** to test the query
 
-![SQL++ Query operation configured in ToolJet](query-v2.png)
-
 You should see results in the preview panel — a list of airlines with their names, countries, and callsigns.
 
 > **How it works**: This SQL++ query runs against the `airline` collection inside the `inventory` scope of the `travel-sample` bucket. `META().id` gives us the document ID, which we'll need for CRUD operations later.
@@ -253,6 +251,8 @@ LIMIT 50
 ```json
 { "$country": "United States" }
 ```
+
+![SQL++ Query with parameterized arguments and query options in ToolJet](query-v2.png)
 
 3. Click **Run** — you should see only airlines from the United States
 
@@ -287,7 +287,7 @@ Let's add the ability to view a single airline's full document when a user click
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
 
-![Get Document operation configured in ToolJet](get-doc.png)
+![Get Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](get-doc.png)
 
 2. Drag a **Modal** component onto the canvas and add **Text** components inside it to display:
    - `{{queries.getAirline.data.name}}` — Airline name
@@ -333,7 +333,7 @@ Now when you click any airline row, it fetches the full document and displays it
 }
 ```
 
-![Create Document operation configured in ToolJet](create-doc.png)
+![Create Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](create-doc.png)
 
 4. Wire it up:
    - "Add Airline" button → **Show modal** (the creation form modal)
@@ -369,7 +369,7 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
 }
 ```
 
-![Update Document operation configured in ToolJet](update-doc.png)
+![Update Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](update-doc.png)
 
 4. Wire the "Save" button to: **Run query** `updateAirline` → **Run query** `listAirlines` → **Hide modal**
 
@@ -386,7 +386,7 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
 
-![Delete Document operation configured in ToolJet](delete-doc.png)
+![Delete Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](delete-doc.png)
 
 3. Wire the "Delete" button to show a **confirmation dialog**, then:
    - **Run query** `deleteAirline` → **Run query** `listAirlines` (to refresh the table)
@@ -419,7 +419,7 @@ Now let's add a search bar that uses Couchbase's Full-Text Search to find airlin
 }
 ```
 
-![FTS Search operation configured in ToolJet](fts-search-v2.png)
+![FTS Search operation in ToolJet — use `airline-name-index` for Index Name in place of the `hotel-index` value shown](fts-search-v2.png)
 
 3. Add an event handler on the search input: **On change** → **Run query** `searchAirlines`
 
