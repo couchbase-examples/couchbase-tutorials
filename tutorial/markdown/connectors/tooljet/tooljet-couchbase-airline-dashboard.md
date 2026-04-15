@@ -79,9 +79,11 @@ Couchbase Capella is the easiest way to get started. It has a free tier and the 
    - For detailed instructions, see [Allow IP Address on Capella](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html)
    > **Security Note**: Never allow `0.0.0.0/0` (all IPs). Always restrict access to specific IP addresses, even in development.
 5. **Find your Data API endpoint**:
-   - Go to **Connect** tab
-   - Look for the **Data API** endpoint URL — it will look like `https://<cluster-id>.data.cloud.couchbase.com`
-   - Copy this URL
+   - Go to **Connect** tab → **Data API**
+   - If the status shows **NOT ENABLED**, click **Enable Data API** and confirm (this can take a few minutes)
+   - Once enabled, copy the endpoint URL — it will look like `https://<cluster-id>.data.cloud.couchbase.com`
+
+![Capella Connect → Data API page showing the ENABLED badge and the endpoint URL to copy](images/capella/data-api-enabled.png)
 
 </details>
 
@@ -187,6 +189,8 @@ The Couchbase integration is a **marketplace plugin** — you need to install it
 3. Search for **"Couchbase"**
 4. Click **Install**
 
+![Couchbase plugin listed in the ToolJet Marketplace, ready to install](images/setup/marketplace-install.png)
+
 You should see the Couchbase plugin with its red logo appear in your installed plugins list.
 
 ## Step 2: Configure the Couchbase Data Source
@@ -200,7 +204,7 @@ Now connect ToolJet to your Couchbase cluster:
 5. Click **Test Connection** — you should see a green "Connection successful" message
 6. Click **Save**
 
-![Couchbase data source connection configuration in ToolJet](connection-v2.png)
+![Couchbase data source connection configuration in ToolJet](images/setup/data-source-connection.png)
 
 ## Step 3: Create a SQL++ Query to List Airlines
 
@@ -212,7 +216,7 @@ Let's fetch airline data from the `travel-sample` dataset.
 4. Configure the query:
    - **Operation**: Select **Query** from the dropdown (see all available operations below)
 
-![Available Couchbase operations in ToolJet](listops.png)
+![Available Couchbase operations in ToolJet](images/setup/plugin-operations.png)
 
    - **SQL++ Query**: Enter the following:
 
@@ -252,7 +256,7 @@ LIMIT 50
 { "$country": "United States" }
 ```
 
-![SQL++ Query with parameterized arguments and query options in ToolJet](query-v2.png)
+![SQL++ Query with parameterized arguments and query options in ToolJet](images/operations/sql-query.png)
 
 3. Click **Run** — you should see only airlines from the United States
 
@@ -276,6 +280,8 @@ You should now see a table showing airline names, countries, callsigns, IATA cod
 - Hide the `doc_id` column if you don't want users to see it (but keep it — we'll need it later)
 - Enable **sorting** and **filtering** on columns
 
+![Airlines table populated with 20 rows fetched from the `travel-sample.inventory.airline` collection](images/dashboard/airlines-table-populated.png)
+
 ## Step 5: View Airline Details (Get Document)
 
 Let's add the ability to view a single airline's full document when a user clicks a row.
@@ -287,7 +293,7 @@ Let's add the ability to view a single airline's full document when a user click
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
 
-![Get Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](get-doc.png)
+![Get Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](images/operations/get-document.png)
 
 2. Drag a **Modal** component onto the canvas and add **Text** components inside it to display:
    - `{{queries.getAirline.data.name}}` — Airline name
@@ -299,7 +305,9 @@ Let's add the ability to view a single airline's full document when a user click
    - **Action**: Run query → `getAirline`
    - Then **Show modal** → your modal component
 
-Now when you click any airline row, it fetches the full document and displays it in a modal.
+Now when you click any airline row, it fetches the full document and displays it in a modal:
+
+![Airline details modal populated with fields from the Get Document response](images/dashboard/airline-details-modal.png)
 
 ## Step 6: Create a New Airline (Create Document)
 
@@ -333,7 +341,7 @@ Now when you click any airline row, it fetches the full document and displays it
 }
 ```
 
-![Create Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](create-doc.png)
+![Create Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](images/operations/create-document.png)
 
 4. Wire it up:
    - "Add Airline" button → **Show modal** (the creation form modal)
@@ -369,7 +377,7 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
 }
 ```
 
-![Update Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](update-doc.png)
+![Update Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](images/operations/update-document.png)
 
 4. Wire the "Save" button to: **Run query** `updateAirline` → **Run query** `listAirlines` → **Hide modal**
 
@@ -386,7 +394,7 @@ Test it: Click "Add Airline", fill in the form, click "Create". The new airline 
    - **Collection**: `airline`
    - **Document ID**: `{{components.table1.selectedRow.doc_id}}`
 
-![Delete Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](delete-doc.png)
+![Delete Document operation in ToolJet — use `inventory` for Scope and `airline` for Collection in place of the `_default` values shown](images/operations/delete-document.png)
 
 3. Wire the "Delete" button to show a **confirmation dialog**, then:
    - **Run query** `deleteAirline` → **Run query** `listAirlines` (to refresh the table)
@@ -419,7 +427,7 @@ Now let's add a search bar that uses Couchbase's Full-Text Search to find airlin
 }
 ```
 
-![FTS Search operation in ToolJet — use `airline-name-index` for Index Name in place of the `hotel-index` value shown](fts-search-v2.png)
+![FTS Search operation in ToolJet — use `airline-name-index` for Index Name in place of the `hotel-index` value shown](images/operations/fts-search.png)
 
 3. Add an event handler on the search input: **On change** → **Run query** `searchAirlines`
 
