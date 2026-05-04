@@ -53,12 +53,18 @@ This package provides a seamless way to persist LangGraph agent states in Couchb
 
 ## Setup environment
 
-Requires Couchbase Python SDK and langgraph package
+Requires Couchbase Python SDK, LangGraph, and langchain-openai.
+
+Set `OPENAI_API_KEY` before running. For local Couchbase runs, this notebook also reads `CB_CONN_STR`, `CB_USER`, `CB_PASS`, `CB_BUCKET_NAME`, and `CB_SCOPE_NAME` from the environment.
+
+For the local example below, create bucket `test`, scope `langgraph`, and the `checkpoints` / `checkpoint_writes` collections first, or provide equivalent names through the environment variables. The default `CB_*` values shown later are for local development only.
+
 
 
 ```python
 %%capture --no-stderr
-%pip install -U langgraph==0.3.22 langgraph-checkpointer-couchbase 
+%pip install -U langgraph==1.1.10 langgraph-checkpointer-couchbase langchain-openai
+
 ```
 
 This particular example uses OpenAI's GPT 4.1-mini as the model
@@ -70,11 +76,22 @@ import os
 
 
 def _set_env(var: str):
-    if not os.environ.get(var):
-        os.environ[var] = getpass.getpass(f"{var}: ")
+    if os.environ.get(var):
+        return os.environ[var]
+    value = getpass.getpass(f"{var}: ")
+    if not value:
+        raise RuntimeError(f"{var} must be set before running this notebook")
+    os.environ[var] = value
+    return value
 
 
 _set_env("OPENAI_API_KEY")
+CB_CONN_STR = os.environ.get("CB_CONN_STR", "couchbase://localhost")
+CB_USERNAME = os.environ.get("CB_USER", "Administrator")
+CB_PASSWORD = os.environ.get("CB_PASS", "password")
+CB_BUCKET_NAME = os.environ.get("CB_BUCKET_NAME", "test")
+CB_SCOPE_NAME = os.environ.get("CB_SCOPE_NAME", "langgraph")
+
 ```
 
 ## Setup model and tools for the graph
@@ -88,7 +105,7 @@ We are using a tool `get_weather` which gives the weather information based on t
 from typing import Literal
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 
 @tool
@@ -106,7 +123,7 @@ tools = [get_weather]
 model = ChatOpenAI(model_name="gpt-4.1-mini", temperature=0)
 ```
 
-### Couchbase Connection and intialization
+### Couchbase Connection and initialization
 
 There are 2 ways to initialize a saver.
 
@@ -125,7 +142,7 @@ Below is usage of CouchbaseSaver (for synchronous use of graph, i.e. `.invoke()`
 - `.get_tuple` - Fetch a checkpoint tuple using a given configuration (`thread_id` and `checkpoint_id`).
 - `.list` - List checkpoints that match a given configuration and filter criteria.
 
-Here we will create a Couchbase connection. We are using local setup with bucket `test`, `langgraph` scope. You may change bucket and scope if required. We will also require `checkpoints` and `checkpoint_writes` as collections inside.
+Here we will create a Couchbase connection. We are using local setup with bucket `test`, `langgraph` scope. You may change bucket and scope if required. We will also require `checkpoints` and `checkpoint_writes` as collections inside the configured scope.
 
 Then a [ReAct Agent](https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/) is created with GPT Model, weather tool and Couchbase checkpointer.
 
@@ -136,19 +153,20 @@ LangGraph's graph is invoked with message for GPT, storing all the state in Couc
 from langgraph_checkpointer_couchbase import CouchbaseSaver
 
 with CouchbaseSaver.from_conn_info(
-    cb_conn_str="couchbase://localhost",
-    cb_username="Administrator",
-    cb_password="password",
-    bucket_name="test",
-    scope_name="langgraph",
+    cb_conn_str=CB_CONN_STR,
+    cb_username=CB_USERNAME,
+    cb_password=CB_PASSWORD,
+    bucket_name=CB_BUCKET_NAME,
+    scope_name=CB_SCOPE_NAME,
 ) as checkpointer:
-    graph = create_react_agent(model, tools=tools, checkpointer=checkpointer)
+    graph = create_agent(model, tools=tools, checkpointer=checkpointer)
     config = {"configurable": {"thread_id": "1"}}
     res = graph.invoke({"messages": [("human", "what's the weather in sf")]}, config)
     
     latest_checkpoint = checkpointer.get(config)
     latest_checkpoint_tuple = checkpointer.get_tuple(config)
     checkpoint_tuples = list(checkpointer.list(config))
+
 ```
 
 
@@ -208,7 +226,7 @@ checkpoint_tuples
 
 ## Use async connection (AsyncCouchbaseSaver)
 
-This is the asynchronous example, Here we will create a Couchbase connection. We are using local setup with bucket `test`, `langgraph` scope. We will also require `checkpoints` and `checkpoint_writes` as collections inside. These are the methods supported by the library
+This is the asynchronous example, Here we will create a Couchbase connection. We are using local setup with bucket `test`, `langgraph` scope. We will also require `checkpoints` and `checkpoint_writes` as collections inside the configured scope. These are the methods supported by the library
 
 - `.aput` - Store a checkpoint with its configuration and metadata.
 - `.aput_writes` - Store intermediate writes linked to a checkpoint (i.e. pending writes).
@@ -226,13 +244,10 @@ from acouchbase.cluster import Cluster as ACluster
 from couchbase.auth import PasswordAuthenticator
 from couchbase.options import ClusterOptions
 
-cb_conn_str = "couchbase://localhost"
-cb_username = "Administrator"
-cb_password = "password"
-
-auth = PasswordAuthenticator(cb_username, cb_password)
+auth = PasswordAuthenticator(CB_USERNAME, CB_PASSWORD)
 options = ClusterOptions(auth)
-cb_cluster = await ACluster.connect(cb_conn_str, options)
+cb_cluster = await ACluster.connect(CB_CONN_STR, options)
+
 ```
 
 
@@ -241,10 +256,10 @@ from langgraph_checkpointer_couchbase import AsyncCouchbaseSaver
 
 async with AsyncCouchbaseSaver.from_cluster(
     cluster=cb_cluster,
-    bucket_name="test",
-    scope_name="langgraph",
+    bucket_name=CB_BUCKET_NAME,
+    scope_name=CB_SCOPE_NAME,
 ) as checkpointer:
-    graph = create_react_agent(model, tools=tools, checkpointer=checkpointer)
+    graph = create_agent(model, tools=tools, checkpointer=checkpointer)
     config = {"configurable": {"thread_id": "2"}}
     res = await graph.ainvoke(
         {"messages": [("human", "what's the weather in nyc")]}, config
@@ -253,6 +268,7 @@ async with AsyncCouchbaseSaver.from_cluster(
     latest_checkpoint = await checkpointer.aget(config)
     latest_checkpoint_tuple = await checkpointer.aget_tuple(config)
     checkpoint_tuples = [c async for c in checkpointer.alist(config)]
+
 ```
 
 
