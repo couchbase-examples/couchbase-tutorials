@@ -87,7 +87,7 @@ Before running this notebook, ensure you have the following prerequisites met:
 
 
 ```python
-%pip install -q 'langchain==1.2.10' 'langgraph==1.0.9' 'langchain-openai==1.1.10' 'langchain-mcp-adapters==0.2.1' 'python-dotenv==1.2.1'
+%pip install -q 'langchain==1.2.17' 'langgraph==1.1.10' 'langchain-openai==1.1.14' 'langchain-mcp-adapters==0.2.1' 'python-dotenv==1.2.2'
 ```
 
     Note: you may need to restart the kernel to use updated packages.
