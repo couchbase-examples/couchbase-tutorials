@@ -87,7 +87,7 @@ Before running this notebook, ensure you have the following prerequisites met:
 
 
 ```python
-%pip install -q 'openai-agents==0.9.3' 'python-dotenv==1.2.1'
+%pip install -q 'openai-agents==0.9.3' 'python-dotenv==1.2.2'
 ```
 
     Note: you may need to restart the kernel to use updated packages.
