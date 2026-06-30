@@ -1,7 +1,7 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-capella-autovectorization-workflows-with-structured-data-and-langchain"
-title: Auto-Vectorization of Strucutured Data with Couchbase Capella AI Data Plane
+title: Auto-Vectorization of Structured Data with Couchbase Capella AI Data Plane
 short_title: Auto-Vectorization with Couchbase and Semantic Search using LangChain
 description:
   - Learn how to use Couchbase Capella's AI Data Plane auto-vectorization feature to automatically convert your structured data into vector embeddings. 
