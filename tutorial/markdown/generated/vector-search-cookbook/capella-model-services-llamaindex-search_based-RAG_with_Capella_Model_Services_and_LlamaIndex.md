@@ -34,7 +34,7 @@ This notebook demonstrates how to build a RAG system using:
 - The [BBC News dataset](https://huggingface.co/datasets/RealTimeData/bbc_news_alltime) containing news articles
 - Couchbase Capella as the vector store
 - LlamaIndex framework for the RAG pipeline
-- Capella AI Dataplane for embeddings and text generation
+- Capella AI Data Plane (formerly AI Services) for embeddings and text generation
 
 Semantic search goes beyond simple keyword matching by understanding the context and meaning behind the words in a query, making it an essential tool for applications that require intelligent information retrieval. This tutorial will equip you with the knowledge to create a fully functional RAG system using Capella Model Services and LlamaIndex.
 
@@ -437,9 +437,9 @@ try:
     
     # Configure LlamaIndex to use this LLM
     Settings.llm = llm
-    logging.info("Successfully created the LLM in Capella AI Dataplane")
+    logging.info("Successfully created the LLM in Capella AI Data Plane (formerly AI Services)")
 except Exception as e:
-    raise ValueError(f"Error creating LLM in Capella AI Dataplane: {str(e)}")
+    raise ValueError(f"Error creating LLM in Capella AI Data Plane (formerly AI Services): {str(e)}")
 ```
 
 # Creating the Vector Store Index
@@ -492,9 +492,9 @@ except RecursionError as e:
     raise RuntimeError(f"Error performing semantic search: {e}")
 ```
 
-## Caching in Capella AI Dataplane
+## Caching in Capella AI Data Plane (formerly AI Services)
 
-To optimize performance and reduce costs, Capella AI Dataplane employs two caching mechanisms:
+To optimize performance and reduce costs, Capella AI Data Plane (formerly AI Services) employs two caching mechanisms:
 
 1. Semantic Cache
 
@@ -560,6 +560,6 @@ The key components of our RAG system include:
 
 1. **Couchbase Capella** as the vector database for storing and retrieving document embeddings
 2. **LlamaIndex** as the framework for connecting our data to the LLM
-3. **Capella AI Dataplane** for generating embeddings and LLM responses
+3. **Capella AI Data Plane (formerly AI Services)** for generating embeddings and LLM responses
 
 This approach allows us to enhance the capabilities of large language models by grounding their responses in specific, up-to-date information from our knowledge base. 

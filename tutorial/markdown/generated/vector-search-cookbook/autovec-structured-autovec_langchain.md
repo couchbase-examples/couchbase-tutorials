@@ -1,10 +1,10 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-capella-autovectorization-workflows-with-structured-data-and-langchain"
-title: Auto-Vectorization of Structured Data with Couchbase Capella AI Dataplane
+title: Structured Vectorization with AI Data Plane (formerly AI Services)
 short_title: Auto-Vectorization with Couchbase and Semantic Search using LangChain
 description:
-  - Learn how to use Couchbase Capella's AI Dataplane auto-vectorization feature to automatically convert your structured data into vector embeddings. 
+  - Learn how to use Couchbase Capella's AI Data Plane (formerly AI Services) auto-vectorization feature to automatically convert your structured data into vector embeddings. 
   - To learn about the auto-vectorization of unstuctured data read the following [tutorial](tutorial-couchbase-autovectorization-workdlows-with-unstructured-data-and-langchain).
   - This tutorial demonstrates how to set up automated embedding generation workflows and perform semantic search using LangChain.
 content_type: tutorial
@@ -57,7 +57,7 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 > **⚠️ IMPORTANT:** The model **must** be deployed in the **same region** as your database cluster for workflows to function properly. Failing to match regions will prevent the workflow from working and may require cluster redeployment.
 
 ## Selecting the Model 
-1. To select the model, you first need to navigate to the "<B>AI Dataplane</B>" tab, then select "<B>Models</B>" and click on "<B>Deploy New Model</B>".
+1. To select the model, you first need to navigate to the "<B>AI Data Plane (formerly AI Services)</B>" tab, then select "<B>Models</B>" and click on "<B>Deploy New Model</B>".
    
    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/importing_model.png?raw=true" width="950px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
@@ -67,7 +67,7 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 
 ## Access Control to the Model
 
-1. After deploying the model, go to the "<B>Models</B>" tab in the <B>AI Dataplane</B> and click on "<B>Setup Access</B>".
+1. After deploying the model, go to the "<B>Models</B>" tab in the <B>AI Data Plane (formerly AI Services)</B> and click on "<B>Setup Access</B>".
 
     <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/model_setup_access.png?raw=true" width="1100px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
@@ -84,7 +84,7 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 
 Now, we are at the step that will help us create the embeddings/vectors. To proceed with the vectorization process, please follow the steps below. For more details, refer to the [data processing documentation](https://docs.couchbase.com/ai/build/vectorization-service/data-processing.html).
 
-1. For deploying the autovectorization, you need to go to the <B>`AI Dataplane`</B> tab, then click on <B>`Workflows`</B>, and then click on <B>`Create New Workflow`</B>.
+1. For deploying the autovectorization, you need to go to the <B>`AI Data Plane (formerly AI Services)`</B> tab, then click on <B>`Workflows`</B>, and then click on <B>`Create New Workflow`</B>.
 
    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec-structured/img/workflow.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
    

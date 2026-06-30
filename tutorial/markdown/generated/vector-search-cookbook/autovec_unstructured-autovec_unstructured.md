@@ -1,10 +1,10 @@
 ---
 # frontmatter
 path: "/tutorial-couchbase-autovectorization-workflows-with-unstructured-data-and-langchain"
-title: Auto-Vectorization on Unstructured Data Stored in S3 Buckets Using Couchbase Capella AI Dataplane 
+title: S3 Auto-Vectorization with AI Data Plane (formerly AI Services)
 short_title: Auto-Vectorization on Unstructured Data Stored in S3 Buckets
 description: 
-  - Learn how to use Couchbase Capella's AI Dataplane Auto-Vectorization feature to automatically process unstructured data from S3 buckets.
+  - Learn how to use Couchbase Capella's AI Data Plane (formerly AI Services) Auto-Vectorization feature to automatically process unstructured data from S3 buckets.
   - Configure workflows to chunk and vectorize documents (PDFs, images, etc.) and import them into Capella collections.
   - Perform semantic vector search using LangChain and the generated embeddings.
 content_type: tutorial
@@ -39,7 +39,7 @@ When running Couchbase using [Capella](https://cloud.couchbase.com/sign-in), the
 # Deploying the Model
 Now, before we actually create embeddings for the documents, we need to deploy a model that will create the embeddings for us. Make sure the model is deployed in the same region as that of database for workflows to work. To know more about model services click [here](https://docs.couchbase.com/ai/build/model-service/deploy-embed-model.html).
 ## Selecting the Model 
-1. To select the model, you first need to navigate to the "<B>AI Dataplane</B>" tab, then select "<B>Models</B>" and click on "<B>Deploy New Model</B>".
+1. To select the model, you first need to navigate to the "<B>AI Data Plane (formerly AI Services)</B>" tab, then select "<B>Models</B>" and click on "<B>Deploy New Model</B>".
    
    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec_unstructured/img/importing_model.png?raw=true" width="950px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
@@ -49,7 +49,7 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 
 ## Access Control to the Model
 
-1. After deploying the model, go to the "<B>Models</B>" tab in the <B>AI Dataplane</B> and click on "<B>Setup Access</B>".
+1. After deploying the model, go to the "<B>Models</B>" tab in the <B>AI Data Plane (formerly AI Services)</B> and click on "<B>Setup Access</B>".
 
     <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec_unstructured/img/model_setup_access.png?raw=true" width="1100px" height="400px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
 
@@ -64,7 +64,7 @@ Now, before we actually create embeddings for the documents, we need to deploy a
 # Data upload from S3 bucket to Couchbase (with chunking and vectorization)
 
 In order to import unstructured data from the S3 bucket, you need to create a workflow that connects to your S3 bucket and chunks your unstructured data before importing it into the collections. To do so, please follow the steps mentioned below:
-1) Let's start by creating a new workflow. This can be done by clicking on the <B>`AI Dataplane`</B> tab, then click on <B>`Workflows`</B>, and then click on <B>`Create New Workflow`</B>.
+1) Let's start by creating a new workflow. This can be done by clicking on the <B>`AI Data Plane (formerly AI Services)`</B> tab, then click on <B>`Workflows`</B>, and then click on <B>`Create New Workflow`</B>.
    
    <img src="https://github.com/couchbase-examples/vector-search-cookbook/blob/main/autovec_unstructured/img/workflow.png?raw=true" width="1000px" height="500px" style="padding: 5px; border-radius: 10px 20px 30px 40px; border: 2px solid #555;">
    
