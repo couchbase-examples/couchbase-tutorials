@@ -494,7 +494,7 @@ except RecursionError as e:
 
 ## Caching in Capella AI Data Plane
 
-To optimize performance and reduce costs, Capella AI Data Plane employ two caching mechanisms:
+To optimize performance and reduce costs, Capella AI Data Plane employs two caching mechanisms:
 
 1. Semantic Cache
 
