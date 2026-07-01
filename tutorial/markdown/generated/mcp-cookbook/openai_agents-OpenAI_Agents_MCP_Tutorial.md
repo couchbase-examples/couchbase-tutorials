@@ -306,7 +306,8 @@ async with MCPServerStdio(
             "CB_PASSWORD": os.getenv("CB_PASSWORD"),
             "CB_BUCKET_NAME": os.getenv("CB_BUCKET_NAME")
         }
-    }
+    },
+    client_session_timeout_seconds=30,
 ) as server:
     trace_id = gen_trace_id()
     with trace(trace_id=trace_id, workflow_name="CouchbaseDemo"):
