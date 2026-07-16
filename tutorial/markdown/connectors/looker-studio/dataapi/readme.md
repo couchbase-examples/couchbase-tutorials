@@ -49,7 +49,7 @@ To know more, please follow the [instructions](https://docs.couchbase.com/cloud/
 
 #### Capella Configuration
 
-- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) to access the travel-sample bucket (Read and Write) used in the connector. The user also needs permission to query the system catalogs (`system:buckets`, `system:all_scopes`, `system:keyspaces`) and run `INFER` — these are used for collection discovery and schema inference.
+- Create the [database credentials](https://docs.couchbase.com/cloud/clusters/manage-database-users.html) with Read access to the travel-sample bucket used in the connector. The user also needs permission to query the system catalogs (`system:buckets`, `system:all_scopes`, `system:keyspaces`) and run `INFER` — these are used for collection discovery and schema inference.
 - [Allow access](https://docs.couchbase.com/cloud/clusters/allow-ip-address.html) to the cluster by adding `0.0.0.0/0` (allow all) under Settings → Networking → Allowed IP Addresses. Looker Studio runs on Google's servers with dynamic IP addresses, so a fixed range cannot be allowlisted.
 - [Enable the Data API](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html#enable-the-data-api) on your cluster: go to Connect → Data API and click Enable Data API. Once enabled, copy your Data API endpoint — you'll need it during authentication.
 - Load the travel-sample bucket: go to Data Tools → Import and import travel-sample. This is used in the [Build your first report](#build-your-first-report) section.
@@ -90,7 +90,7 @@ Once added, click Insert → Bar chart. In the Data panel on the right, set Dime
 
 <!-- screenshot: resulting bar chart -->
 
-Every time Looker Studio refreshes, it re-queries the collection live — no cache, no ETL.
+The connector adds no intermediate storage or ETL — when it queries the source, it reads live from your cluster. Note, however, that Looker Studio caches query results on its own end (its "data freshness" cache), so charts may serve cached data between refreshes rather than hitting the cluster on every view. Community connectors typically use Looker Studio's default freshness (up to 12 hours), which is generally not user-adjustable. You can force a live re-query at any time with **Refresh data** in the report toolbar.
 
 ### Mode: Use Custom Query
 
@@ -161,5 +161,25 @@ Pre-aggregating in SQL++ is more efficient for large collections than pulling al
 
 ## Conclusion
 
-You've connected Google Looker Studio to Couchbase using the Data API connector and built a live report on travel-sample data. For the connector source code and to report issues, see the [Couchbase Data API Looker Studio connector on GitHub](https://github.com/Couchbase-Ecosystem/couchbase-gcp-lookerstudio-connector).
+You've connected Google Looker Studio to Couchbase using the Data API connector and built a live report on travel-sample data.
+
+## Next Steps
+
+Now that you have a live connection, you can:
+
+- Build additional charts and dashboards on other collections in your cluster.
+- Switch to `Use Custom Query` mode to filter, join, or pre-aggregate data with SQL++ before it reaches Looker Studio.
+
+### Support
+
+The connector is open source. For the source code, or to report a bug or request a feature, see the [Couchbase Data API Looker Studio connector on GitHub](https://github.com/Couchbase-Ecosystem/couchbase-gcp-lookerstudio-connector) and open an [issue](https://github.com/Couchbase-Ecosystem/couchbase-gcp-lookerstudio-connector/issues).
+
+### References
+
+- [Couchbase Data API guide](https://docs.couchbase.com/cloud/data-api-guide/data-api-start.html)
+- [Couchbase Data API reference](https://docs.couchbase.com/cloud/data-api-guide/data-api-intro.html)
+- [SQL++ (N1QL) language reference](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html)
+- [Couchbase Capella documentation](https://docs.couchbase.com/cloud/get-started/intro.html)
+- [Google Looker Studio Help Center](https://support.google.com/looker-studio)
+- [Looker Studio community connectors](https://developers.google.com/looker-studio/connector)
 
