@@ -66,7 +66,7 @@ To build our semantic search engine, we need a robust set of tools. The librarie
 
 
 ```python
-%pip install --quiet datasets==3.5.0 langchain-couchbase==0.5.0 langchain-openai==0.3.32 python-dotenv==1.1.1 pydantic-ai==0.1.1
+%pip install --quiet datasets==5.0.0 langchain-couchbase==1.1.0 langchain-openai==1.4.1 python-dotenv==1.2.2 pydantic-ai==2.17.0
 ```
 
 ## Importing Necessary Libraries
@@ -185,11 +185,14 @@ Additional Tasks:
 ```python
 def setup_collection(cluster, bucket_name, scope_name, collection_name):
     try:
-        # Check if bucket exists, create if it doesn't
+        bucket_manager = cluster.buckets()
+
+        # Check if bucket exists, create if it doesn't. cluster.bucket() only
+        # constructs a handle, so use the management API for existence checks.
         try:
-            bucket = cluster.bucket(bucket_name)
+            bucket_manager.get_bucket(bucket_name)
             logging.info(f"Bucket '{bucket_name}' exists.")
-        except Exception as e:
+        except Exception:
             logging.info(f"Bucket '{bucket_name}' does not exist. Creating it...")
             bucket_settings = CreateBucketSettings(
                 name=bucket_name,
@@ -198,21 +201,23 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
                 flush_enabled=True,
                 num_replicas=0
             )
-            cluster.buckets().create_bucket(bucket_settings)
-            time.sleep(2)  # Wait for bucket creation to complete and become available
-            bucket = cluster.bucket(bucket_name)
+            bucket_manager.create_bucket(bucket_settings)
             logging.info(f"Bucket '{bucket_name}' created successfully.")
 
-        bucket_manager = bucket.collections()
+        bucket = cluster.bucket(bucket_name)
+        time.sleep(5)  # Wait for bucket creation to complete and become available
+        collection_manager = bucket.collections()
 
         # Check if scope exists, create if it doesn't
-        scopes = bucket_manager.get_all_scopes()
+        scopes = collection_manager.get_all_scopes()
         scope_exists = any(scope.name == scope_name for scope in scopes)
         
         if not scope_exists and scope_name != "_default":
             logging.info(f"Scope '{scope_name}' does not exist. Creating it...")
-            bucket_manager.create_scope(scope_name)
+            collection_manager.create_scope(scope_name)
             logging.info(f"Scope '{scope_name}' created successfully.")
+            time.sleep(2)
+            scopes = collection_manager.get_all_scopes()
 
         # Check if collection exists, create if it doesn't
         collection_exists = any(
@@ -222,7 +227,7 @@ def setup_collection(cluster, bucket_name, scope_name, collection_name):
 
         if not collection_exists:
             logging.info(f"Collection '{collection_name}' does not exist. Creating it...")
-            bucket_manager.create_collection(scope_name, collection_name)
+            collection_manager.create_collection(scope_name, collection_name)
             logging.info(f"Collection '{collection_name}' created successfully.")
         else:
             logging.info(f"Collection '{collection_name}' already exists. Skipping creation.")
