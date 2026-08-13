@@ -56,7 +56,7 @@ This makes the connector ideal for RAG (Retrieval-Augmented Generation) applicat
 - Ensure you have sufficient API quota for embedding generation
 
 ### Development Environment
-- **.NET 8.0** or later
+- **.NET 9.0** or later
 - Visual Studio, VS Code, or JetBrains Rider
 - Basic understanding of C# and vector databases
 
@@ -114,13 +114,13 @@ internal sealed class Glossary
     [VectorStoreData(IsIndexed = true)] 
     public string Category { get; set; }
     
-    [VectorStoreData]                   
+    [VectorStoreData(IsIndexed = true)]
     public string Term { get; set; }
     
-    [VectorStoreData]                   
+    [VectorStoreData(IsIndexed = true)]
     public string Definition { get; set; }
     
-    [VectorStoreVector(Dimensions: 1536)]
+    [VectorStoreVector(1536)]
     public ReadOnlyMemory<float> DefinitionEmbedding { get; set; }
 }
 ```
@@ -182,22 +182,30 @@ This creates 6 sample glossary entries with technical terms, generates embedding
 
 ### Hyperscale Index Creation
 
-While the application works without creating indexes manually, you can optionally create a vector index for better performance.
+Searches work without an index, but creating one gives much better performance as the collection grows.
 
 This demo uses a **Hyperscale Vector Index** - optimized for pure vector searches without heavy scalar filtering.
 
-After documents are inserted, the demo creates the Hyperscale index:
+After documents are inserted, the demo asks the connector to create the index:
+
+```csharp
+await collection.EnsureVectorIndexExistsAsync();
+```
+
+The connector builds and runs the statement for you, deriving the vector field, dimensions and `INCLUDE` fields from the `Glossary` model and the similarity metric from `CouchbaseQueryCollectionOptions`:
 
 ```sql
 CREATE VECTOR INDEX `hyperscale_glossary_index` 
-ON `demo`.`semantic-kernel`.`glossary` (DefinitionEmbedding VECTOR) 
-INCLUDE (Category, Term, Definition)
+ON `demo`.`semantic-kernel`.`glossary` (`DefinitionEmbedding` VECTOR) 
+INCLUDE (`Category`, `Term`, `Definition`)
 USING GSI WITH {
     "dimension": 1536,
     "similarity": "cosine", 
     "description": "IVF,SQ8"
 }
 ```
+
+This runs **after** ingestion: Hyperscale indexes are IVF-based, and their centroids are trained from the vectors already present, so the collection has to contain data first.
 
 **Hyperscale Index Configuration:**
 - **Index Type**: Hyperscale Vector Index - best for pure vector similarity searches
@@ -279,7 +287,7 @@ Couchbase offers three types of vector indexes optimized for different use cases
 - Designed to scale to billions of vectors with low memory footprint
 - Optimized for high-performance concurrent operations
 - Ideal for: Large-scale semantic search, recommendations, content discovery
-- **Creation**: Using SQL++ `CREATE VECTOR INDEX` as shown in Step 3
+- **Creation**: Via the connector's `EnsureVectorIndexExistsAsync()`, as shown above
 
 **2. Composite Vector Indexes**
 - Uses SQL++ queries via `CouchbaseQueryCollection`
@@ -345,19 +353,19 @@ Using OpenAI model: text-embedding-3-small
 Step 1: Ingesting data into Couchbase vector store...
 Data ingestion completed
 
-Step 2: Creating Hyperscale vector index manually...
+Step 2: Creating Hyperscale vector index...
 Executing Hyperscale index creation query...
-Hyperscale vector index 'hyperscale_glossary_index' created successfully!
+Hyperscale vector index 'hyperscale_glossary_index' is ready.
 
 Step 3: Performing vector search...
    Found: API
    Definition: Application Programming Interface. A set of rules and specifications that allow software components to communicate and exchange data.
-   Score: 0.1847
+   Score: 0.4896
 
 Step 4: Performing filtered vector search...
    Found (AI category only): RAG
    Definition: Retrieval Augmented Generation - a term that refers to the process of retrieving additional data to provide as context to an LLM to use when generating a response (completion) to a user's question (prompt).
-   Score: 0.4226
+   Score: 1.2118
 
  Demo completed successfully!
 ```
@@ -371,7 +379,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 2. **Get Collection** - Use `GetCollection<TKey, TRecord>()` to get a typed collection reference
 3. **Generate Embeddings** - Use Semantic Kernel's `IEmbeddingGenerator` to convert text to vectors
 4. **Upsert Records** - Call `UpsertAsync()` to insert/update records with embeddings
-5. **Create Index** - Set up a vector index using SQL++ for optimal search performance
+5. **Create Index** - Call `EnsureVectorIndexExistsAsync()` to create the vector index for optimal search performance
 6. **Search** - Use `SearchAsync()` with optional `VectorSearchOptions` for filtered searches
 7. **Results** - Receive ranked results with similarity scores (lower = more similar)
 
@@ -386,6 +394,7 @@ The Couchbase Semantic Kernel connector provides a seamless integration between 
 - **`GetCollection<TKey, TRecord>()`** - Returns a typed collection for CRUD operations
 - **`UpsertAsync()`** - Inserts or updates records in the collection
 - **`SearchAsync()`** - Performs vector similarity search with optional filters
+- **`EnsureVectorIndexExistsAsync()`** - Creates the configured vector index (Hyperscale/Composite); call after ingestion
 - **`VectorSearchOptions`** - Configures search behavior including filters and result count
 
 **Configuration Options:**
