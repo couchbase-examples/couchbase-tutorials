@@ -87,7 +87,7 @@ Before running this notebook, ensure you have the following prerequisites met:
 
 
 ```python
-%pip install -q 'langchain==1.3.9' 'langgraph==1.2.5' 'langchain-openai==1.3.2' 'langchain-mcp-adapters==0.3.0' 'python-dotenv==1.2.2'
+%pip install -q 'langchain==1.3.11' 'langgraph==1.2.8' 'langchain-openai==1.3.3' 'langchain-mcp-adapters==0.3.0' 'python-dotenv==1.2.2'
 
 ```
 
