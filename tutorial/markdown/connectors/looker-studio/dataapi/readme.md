@@ -27,7 +27,7 @@ length: 20 Mins
 
 ## Introduction
 
-In this tutorial, you'll connect [Google Looker Studio](https://lookerstudio.google.com/) to Couchbase using the Couchbase Data API connector and build reports directly on live data in your cluster — with no ETL and no intermediate storage. You'll authenticate to your cluster, choose the data to visualize (either by selecting a `bucket.scope.collection` or by writing a custom [SQL++](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html) query), and let the connector infer your schema automatically so fields are ready to drop into charts and tables within minutes. The connector reaches your cluster through the [Couchbase Data API](https://docs.couchbase.com/server/current/rest-api/rest-intro.html) and runs your queries via the Query Service — all from within Looker Studio.
+In this tutorial, you'll connect [Google Looker Studio](https://lookerstudio.google.com/) to Couchbase using the Couchbase Data API connector and build reports directly on live data in your cluster — with no ETL and no intermediate storage. You'll authenticate to your cluster, choose the data to visualize (either by selecting a `bucket.scope.collection` or by writing a custom [SQL++](https://docs.couchbase.com/server/current/n1ql/n1ql-language-reference/index.html) query), and let the connector infer your schema automatically so fields are ready to drop into charts and tables within minutes. The connector reaches your cluster through the [Couchbase Data API](https://docs.couchbase.com/server/current/rest-api/rest-intro.html) and runs your queries via the Query Service — all from within Looker Studio. Note that Looker Studio caches query results on its own end, so charts may serve cached data between refreshes (covered in more detail below).
 
 What you'll build: a live Looker Studio data source connected to a Couchbase collection, with fields inferred and ready to use in charts and tables.
 
@@ -84,12 +84,10 @@ Select a `bucket > scope > collection` from the dropdown — the connector disco
 
 For this example, select travel-sample → inventory → airline and leave Maximum Rows at the default (100), then click Connect and Add to Report.
 
-<!-- screenshot: collection selector with travel-sample.inventory.airline selected -->
+![Couchbase Data API config screen: Query by Collection mode, travel-sample > inventory > airline selected, Maximum Rows 100](step-0.png)
+Once added, click Insert → Bar chart. In the Data panel on the right, set the **Dimension (X axis)** to `country`. For the **Metric (Y axis)**, Looker Studio adds a field such as `id` with the `Count` aggregation — this counts the number of airlines in each country. Click the metric if you want to change its aggregation. Looker Studio then renders a bar chart of the number of airlines grouped by country.
 
-Once added, click Insert → Bar chart. In the Data panel on the right, set Dimension to `country` and leave Metric as `Record Count`. Looker Studio renders a bar chart of airlines grouped by country.
-
-<!-- screenshot: resulting bar chart -->
-
+![Bar chart of airline count by country — United States, United Kingdom, and France](step-1.png)
 The connector adds no intermediate storage or ETL — when it queries the source, it reads live from your cluster. Note, however, that Looker Studio caches query results on its own end (its "data freshness" cache), so charts may serve cached data between refreshes rather than hitting the cluster on every view. Community connectors typically use Looker Studio's default freshness (up to 12 hours), which is generally not user-adjustable. You can force a live re-query at any time with **Refresh data** in the report toolbar.
 
 ### Mode: Use Custom Query
