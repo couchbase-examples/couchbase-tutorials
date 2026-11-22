@@ -57,6 +57,8 @@ To ensure frontmatter schema is adhered to, we've written some simple tests to e
 
 Run `npm run test:frontmatter` to check the frontmatter of **all** tutorials and learning paths.
 
+The accepted `sdk_language`, `tags`, `technology`, and `content_type` values live in [`utils/frontmatter_schema.json`](utils/frontmatter_schema.json). To introduce a new tag or technology, add it to that file (one value per line) in the same PR as the tutorial that uses it. The validation rules themselves are in `utils/validate_frontmatter.js`; run `npm run test:unit` after changing them.
+
 ----
 
 <p align="center" style="margin-top:16px;">
